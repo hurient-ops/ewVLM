@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Multi-Channel Playback View</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "border-subtle": "#232C3F",
+                        "surface-dim": "#10131c",
+                        "on-tertiary-container": "#76ffc2",
+                        "text-muted": "#7D8D9F",
+                        "surface-bright": "#363943",
+                        "secondary-fixed": "#d8e2ff",
+                        "on-tertiary": "#003824",
+                        "on-background": "#e0e2ef",
+                        "background": "#10131c",
+                        "tertiary-container": "#007650",
+                        "surface-container": "#1c1f29",
+                        "surface-variant": "#31343f",
+                        "on-primary-fixed-variant": "#5a00c6",
+                        "text-primary": "#E2E8F0",
+                        "on-error": "#690005",
+                        "outline-variant": "#4a4455",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "surface-tint": "#d2bbff",
+                        "surface-container-highest": "#31343f",
+                        "on-primary-fixed": "#25005a",
+                        "warning": "#F59E0B",
+                        "primary-fixed": "#eaddff",
+                        "surface-container-high": "#272a34",
+                        "on-secondary-container": "#e6ecff",
+                        "on-secondary-fixed": "#001a42",
+                        "neon-gold": "#F59E0B",
+                        "on-surface": "#e0e2ef",
+                        "on-primary": "#3f008e",
+                        "on-tertiary-fixed": "#002113",
+                        "primary": "#d2bbff",
+                        "tertiary": "#4edea3",
+                        "inverse-surface": "#e0e2ef",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "surface": "#121724",
+                        "on-secondary": "#002e6a",
+                        "primary-fixed-dim": "#d2bbff",
+                        "danger": "#EF4444",
+                        "primary-container": "#7c3aed",
+                        "error-container": "#93000a",
+                        "on-error-container": "#ffdad6",
+                        "on-surface-variant": "#ccc3d8",
+                        "outline": "#958da1",
+                        "inverse-on-surface": "#2d303a",
+                        "surface-container-low": "#181b25",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "tertiary-fixed": "#6ffbbe",
+                        "on-secondary-fixed-variant": "#004395",
+                        "on-primary-container": "#ede0ff",
+                        "secondary": "#adc6ff",
+                        "error": "#ffb4ab",
+                        "secondary-container": "#0566d9",
+                        "inverse-primary": "#732ee4",
+                        "surface-container-lowest": "#0b0e17"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "sidebar-width": "280px",
+                        "osd-margin": "8px",
+                        "container-padding": "16px",
+                        "gutter": "2px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Inter"],
+                        "osd-label": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "label-caps": ["JetBrains Mono"],
+                        "title-sm": ["Inter"],
+                        "mono-data": ["JetBrains Mono"],
+                        "body-base": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "osd-label": ["12px", { "lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "700" }],
+                        "display-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-sm": ["13px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "title-sm": ["16px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "mono-data": ["12px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "body-base": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .video-border {
+            border: 2px solid theme('colors.border-subtle');
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .video-border.active {
+            border-color: theme('colors.primary-container');
+            box-shadow: 0 0 10px theme('colors.primary-container');
+        }
+        
+        .timeline-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: theme('colors.border-subtle');
+            outline: none;
+            border-radius: 2px;
+        }
+
+        .timeline-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 24px;
+            background: theme('colors.primary-container');
+            cursor: pointer;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface h-screen flex flex-col overflow-hidden">
+<!-- TopNavBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-padding h-14 bg-surface dark:bg-surface border-b border-border-subtle dark:border-border-subtle bg-surface-dim">
+<div class="flex items-center gap-6">
+<span class="text-headline-md font-headline-md font-extrabold text-primary dark:text-primary tracking-tighter">ewVLM</span>
+<nav class="hidden md:flex gap-6 h-full items-center">
+<a class="text-on-surface-variant dark:text-on-surface-variant font-medium hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors px-2 py-1 rounded" href="#">Monitor A</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant font-medium hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors px-2 py-1 rounded" href="#">Monitor B</a>
+<a class="text-primary dark:text-primary border-b-2 border-primary pb-1 font-bold hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors px-2 pt-1 h-full flex items-center" href="#">Playback</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant font-medium hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors px-2 py-1 rounded" href="#">Dashboard</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined cursor-pointer hover:text-primary-container transition-colors" data-icon="memory">memory</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary-container transition-colors" data-icon="lan">lan</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary-container transition-colors" data-icon="notifications">notifications</span>
+<div class="w-8 h-8 rounded-full bg-surface-container border border-border-subtle overflow-hidden ml-2">
+<img class="w-full h-full object-cover" data-alt="A close-up portrait of a security operator in a dimly lit control room. The operator has a focused expression, wearing a dark tactical uniform. Ambient light from multiple monitors reflects on their face. The style is hyper-realistic, conveying a sense of mission-critical vigilance and professionalism." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBSukEr4FeZDguHcfWLGcD9H007-ot8cpxsL5naPzp6qOTyqZEnAQhMGR4UCU54Wg0mnjz6Nwzc8-RHYtx682HGMSos_HrJ4-JV4GsFzlRhgGKRjQ8SFo768mmj23Nbfn1lWH_UyDZkht30mLYe3NE__BAJDhw85t6B8mDcy9qAhB-r0dYh-A49sZTVI8_BFnBzJkdG3P1-7uhLfETJLm7RgZBV2DknXeyaELd_J8yu_Lnv5b0FMoinyQ"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-14 bottom-0 w-sidebar-width flex flex-col z-40 bg-surface-container dark:bg-surface-container bg-surface-container-low border-r border-border-subtle shadow-sm">
+<div class="p-4 border-b border-border-subtle flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-surface border border-border-subtle flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container" data-icon="hub">hub</span>
+</div>
+<div>
+<h2 class="text-title-sm font-title-sm text-on-surface">ASSET EXPLORER</h2>
+<p class="text-body-sm font-body-sm text-text-muted">32 Active Channels</p>
+</div>
+</div>
+<div class="p-4">
+<button class="w-full py-2 bg-primary-container text-white text-body-sm font-semibold rounded hover:bg-inverse-primary transition-colors">Add New Camera</button>
+</div>
+<nav class="flex-1 overflow-y-auto px-2 py-4 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded" href="#">
+<span class="material-symbols-outlined" data-icon="videocam">videocam</span>
+<span class="text-label-caps font-label-caps">Cameras</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded" href="#">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+<span class="text-label-caps font-label-caps">Sensors</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded" href="#">
+<span class="material-symbols-outlined" data-icon="map">map</span>
+<span class="text-label-caps font-label-caps">Map</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded" href="#">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+<span class="text-label-caps font-label-caps">AI Rules</span>
+</a>
+</nav>
+<div class="p-2 border-t border-border-subtle space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-label-caps font-label-caps">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="text-label-caps font-label-caps">Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-[280px] mt-[56px] h-[calc(100vh-56px)] p-container-padding flex flex-col gap-4 bg-[#070A13]">
+<!-- Header -->
+<div class="flex justify-between items-end mb-2">
+<div>
+<h1 class="text-headline-md font-headline-md text-on-surface">Synchronized Multi-Channel Playback</h1>
+<p class="text-body-sm font-body-sm text-text-muted mt-1">Precise time-division control for incident tracking.</p>
+</div>
+<div class="flex items-center gap-2 bg-surface-container px-3 py-1.5 rounded border border-border-subtle">
+<div class="w-2 h-2 rounded-full bg-tertiary-fixed shadow-[0_0_4px_theme('colors.tertiary-fixed')]"></div>
+<span class="text-mono-data font-mono-data text-tertiary-fixed">MASTER SYNC: LOCKED</span>
+</div>
+</div>
+<!-- 4-Split Video Grid -->
+<div class="grid grid-cols-2 grid-rows-2 gap-gutter flex-1 bg-surface-dim p-gutter rounded border border-border-subtle">
+<!-- CH 1 -->
+<div class="relative w-full h-full video-border active rounded overflow-hidden bg-surface-container-lowest">
+<div class="absolute inset-0 bg-[url('placeholder')] bg-cover bg-center opacity-40" data-alt="A wide-angle security camera view of a bustling urban intersection at night. Headlights trail on wet pavement. The scene is slightly grainy, typical of high-grade H.265 encoded surveillance footage. Cool, industrial dark mode color palette with faint streetlamp glows." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAE92JBNpin3x35y4mN51JHEfhWnPvnrDET_t781BidPY1uW22zAVJLqZOqEkM43vOGGDd1cz5ZUGkmki9j8QHD6EK3O41CAvii8SEYkte5RwCrvlgjjqmnWBZq6-xre_vum6cu5T7GTTcOd6_XOKIB1DGCWnkxLP9WP6naTS0qTGvGSVpaswq7S2yB4bJdfLwCGTV8DEbUgbVxpbagy6uG9tVw6DA1YevJBX_EWZRJ1a4Vv_lJYvKhYw')"></div>
+<!-- OSD Overlays -->
+<div class="absolute top-osd-margin left-osd-margin flex flex-col gap-1">
+<span class="bg-surface/80 border border-border-subtle text-osd-label font-osd-label px-2 py-0.5 rounded text-primary-container">CH 01 - MAIN INTERSECTION</span>
+<span class="bg-surface/80 border border-border-subtle text-mono-data font-mono-data px-2 py-0.5 rounded text-on-surface">2023-10-27 14:32:01.450</span>
+</div>
+<div class="absolute bottom-osd-margin right-osd-margin">
+<span class="bg-surface/80 border border-border-subtle text-mono-data font-mono-data px-2 py-0.5 rounded text-text-muted">H.265 / 4K / 30FPS</span>
+</div>
+<!-- Bounding Box Example -->
+<div class="absolute top-1/3 left-1/4 w-32 h-48 border-[1.5px] border-primary-container bg-primary-container/10 pointer-events-none">
+<span class="absolute -top-5 left-[-1.5px] bg-primary-container text-white text-[10px] font-mono-data px-1">VEHICLE_TRACK_01</span>
+</div>
+</div>
+<!-- CH 2 -->
+<div class="relative w-full h-full video-border rounded overflow-hidden bg-surface-container-lowest">
+<div class="absolute inset-0 bg-[url('placeholder')] bg-cover bg-center opacity-40" data-alt="A security camera feed showing the side entrance of a modern corporate building at night. Industrial metal doors and concrete stairs are visible. High-contrast lighting with harsh shadows. The style reflects a mission-critical monitoring system." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCOovSK6T3QufP9Sww5APta8jZNN-WpAOPFQWK-FN09ygk6nDLuKTkjGW8h33A1c445oQEBPlN0ib9V9glNdGwFMuep3upWZoiynxk2BTS6mYzOzSPCwGIDtakAOkLOisaiqff_sF3KtZb8zlCR-efYgYH6XwSf6sGrjitOPnXwuX_mnTS0U0s9GN3S8GZKulfKH5wtTAwMFIugelq1ylWSz6zKVLfnSux3OHQ1ejWw3rbnVTcu0aochA')"></div>
+<div class="absolute top-osd-margin left-osd-margin flex flex-col gap-1">
+<span class="bg-surface/80 border border-border-subtle text-osd-label font-osd-label px-2 py-0.5 rounded text-on-surface">CH 02 - EAST ALLEY</span>
+<span class="bg-surface/80 border border-border-subtle text-mono-data font-mono-data px-2 py-0.5 rounded text-on-surface">2023-10-27 14:32:01.450</span>
+</div>
+</div>
+<!-- CH 3 -->
+<div class="relative w-full h-full video-border rounded overflow-hidden bg-surface-container-lowest">
+<div class="absolute inset-0 bg-[url('placeholder')] bg-cover bg-center opacity-40" data-alt="A thermal imaging camera view of a perimeter fence line. The image is monochromatic with bright hot spots indicating movement against a cool, dark background. The aesthetic is tactical and analytic, typical of advanced perimeter security." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCsvbg8lxQA6WV5ymM5-wBgDKdDf5QzNkb20ihbYKW_ifh4aGd6kYvh7TcMd_WonaPiFal4r76rIdO-R20n8eya3jALwZNX88x4k0ZTUEYGX2ZRmFBtN0SM2ICZUkAqpN_lco9Z3APJDSQ__OwvuMa2Fts9wE2lsH-NMeziRRXvjr1PQXqiSQjQdIWyWIiueOADP9kZn640ef2vQAnZ3jLUaybK7i-ghfaZDxCaXx67NHI7c5s23XXFrw')"></div>
+<div class="absolute top-osd-margin left-osd-margin flex flex-col gap-1">
+<span class="bg-surface/80 border border-border-subtle text-osd-label font-osd-label px-2 py-0.5 rounded text-on-surface">CH 03 - PERIMETER FENCE</span>
+<span class="bg-surface/80 border border-border-subtle text-mono-data font-mono-data px-2 py-0.5 rounded text-on-surface">2023-10-27 14:32:01.450</span>
+</div>
+</div>
+<!-- CH 4 -->
+<div class="relative w-full h-full video-border rounded overflow-hidden bg-surface-container-lowest">
+<div class="absolute inset-0 bg-[url('placeholder')] bg-cover bg-center opacity-40" data-alt="An indoor security camera view of an empty underground parking garage. Stark fluorescent lighting casts long shadows over the concrete pillars. The scene is high-density, low-glare, fitting a deep canvas control room monitor." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAmEqg0hSVG_OcyMP-VmF8KdPC5kRsWhxmz025Rv1J-YIncnhfWek8RZaP5KV_VZja5qmlbjVQUmt9eG6_IuxSWCzpd8bZt-3x72NVKL2yj_6_E89p5RhzvfPbiK8gukLLVzaeOiV2k8DtF9Is7Jh1q_Ev5XkZa8Vt3F6M58VPk4VZRPSiEGik5RNXMOBdyhUQhgBxE5yeZXHFi5fliKl9M4pNqnA5qoepPl_-H8ydxHrvv-qbQrY-1ZQ')"></div>
+<div class="absolute top-osd-margin left-osd-margin flex flex-col gap-1">
+<span class="bg-surface/80 border border-border-subtle text-osd-label font-osd-label px-2 py-0.5 rounded text-on-surface">CH 04 - PARKING LVL B2</span>
+<span class="bg-surface/80 border border-border-subtle text-mono-data font-mono-data px-2 py-0.5 rounded text-on-surface">2023-10-27 14:32:01.450</span>
+</div>
+</div>
+</div>
+<!-- Transport Controls & Timeline -->
+<div class="bg-surface p-4 rounded-lg border border-border-subtle flex flex-col gap-4 shadow-sm">
+<!-- Controls Bar -->
+<div class="flex justify-between items-center">
+<!-- Speed Controls -->
+<div class="flex items-center gap-1 bg-surface-dim p-1 rounded border border-border-subtle">
+<button class="px-2 py-1 text-mono-data font-mono-data text-text-muted hover:text-on-surface hover:bg-surface-container rounded transition-colors">-8x</button>
+<button class="px-2 py-1 text-mono-data font-mono-data text-text-muted hover:text-on-surface hover:bg-surface-container rounded transition-colors">-2x</button>
+<button class="px-2 py-1 text-mono-data font-mono-data text-primary-container bg-surface-container-high rounded border border-border-subtle font-bold">1x</button>
+<button class="px-2 py-1 text-mono-data font-mono-data text-text-muted hover:text-on-surface hover:bg-surface-container rounded transition-colors">2x</button>
+<button class="px-2 py-1 text-mono-data font-mono-data text-text-muted hover:text-on-surface hover:bg-surface-container rounded transition-colors">8x</button>
+</div>
+<!-- Main Transport -->
+<div class="flex items-center gap-3">
+<button class="w-10 h-10 rounded-full border border-border-subtle flex items-center justify-center text-on-surface hover:bg-surface-container-high transition-colors" title="Frame Step Backward">
+<span class="material-symbols-outlined" data-icon="skip_previous">skip_previous</span>
+</button>
+<button class="w-14 h-14 rounded-full bg-primary-container text-white flex items-center justify-center hover:bg-inverse-primary transition-colors shadow-[0_0_15px_rgba(124,58,237,0.3)]">
+<span class="material-symbols-outlined text-3xl" data-icon="play_arrow">play_arrow</span>
+</button>
+<button class="w-10 h-10 rounded-full border border-border-subtle flex items-center justify-center text-on-surface hover:bg-surface-container-high transition-colors" title="Frame Step Forward">
+<span class="material-symbols-outlined" data-icon="skip_next">skip_next</span>
+</button>
+</div>
+<!-- Utility Tools -->
+<div class="flex items-center gap-2">
+<button class="p-2 border border-border-subtle rounded text-text-muted hover:text-on-surface hover:bg-surface-container-high transition-colors" title="Snapshot">
+<span class="material-symbols-outlined" data-icon="camera">camera</span>
+</button>
+<button class="p-2 border border-border-subtle rounded text-text-muted hover:text-on-surface hover:bg-surface-container-high transition-colors" title="Mark Event">
+<span class="material-symbols-outlined" data-icon="bookmark">bookmark</span>
+</button>
+<button class="p-2 border border-border-subtle rounded text-text-muted hover:text-on-surface hover:bg-surface-container-high transition-colors" title="Export Clip">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+</button>
+</div>
+</div>
+<!-- Unified Timeline -->
+<div class="relative h-16 bg-surface-dim border border-border-subtle rounded overflow-hidden flex flex-col justify-center px-4">
+<!-- Time Markers -->
+<div class="flex justify-between text-mono-data font-mono-data text-text-muted text-[10px] mb-2">
+<span>14:00</span>
+<span>14:15</span>
+<span>14:30</span>
+<span>14:45</span>
+<span>15:00</span>
+</div>
+<!-- Event Tracks (Background behind slider) -->
+<div class="absolute left-4 right-4 top-8 h-4 flex flex-col gap-px opacity-60">
+<!-- CH1 Events -->
+<div class="h-1 w-full bg-surface-container flex">
+<div class="w-[10%] ml-[20%] h-full bg-primary-container"></div>
+<div class="w-[5%] ml-[30%] h-full bg-warning"></div>
+</div>
+<!-- CH2 Events -->
+<div class="h-1 w-full bg-surface-container flex">
+<div class="w-[15%] ml-[55%] h-full bg-primary-container"></div>
+</div>
+</div>
+<!-- Slider -->
+<input class="timeline-slider relative z-10" max="100" min="0" type="range" value="65"/>
+<!-- Current Time Tooltip (Simulated) -->
+<div class="absolute top-1 left-[65%] -translate-x-1/2 bg-surface border border-primary-container text-primary-container px-1.5 py-0.5 rounded text-[10px] font-mono-data font-bold z-20 shadow-md">
+                    14:32:01.450
+                </div>
+</div>
+</div>
+</main>
+</body></html>

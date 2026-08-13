@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Centralized Multi-Site Federation &amp; RBAC Matrix</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed": "#eaddff",
+                    "on-surface-variant": "#ccc3d8",
+                    "on-secondary-fixed-variant": "#004395",
+                    "primary": "#d2bbff",
+                    "primary-container": "#7c3aed",
+                    "on-primary-fixed": "#25005a",
+                    "inverse-primary": "#732ee4",
+                    "tertiary-container": "#007650",
+                    "border-subtle": "#232C3F",
+                    "inverse-surface": "#e0e2ef",
+                    "text-muted": "#7D8D9F",
+                    "error-container": "#93000a",
+                    "secondary": "#adc6ff",
+                    "on-secondary": "#002e6a",
+                    "warning": "#F59E0B",
+                    "danger": "#EF4444",
+                    "surface-container-highest": "#31343f",
+                    "inverse-on-surface": "#2d303a",
+                    "surface-container-lowest": "#0b0e17",
+                    "tertiary-fixed": "#6ffbbe",
+                    "secondary-fixed": "#d8e2ff",
+                    "on-tertiary": "#003824",
+                    "surface-dim": "#10131c",
+                    "on-error": "#690005",
+                    "on-primary-fixed-variant": "#5a00c6",
+                    "on-primary": "#3f008e",
+                    "surface": "#121724",
+                    "secondary-fixed-dim": "#adc6ff",
+                    "on-surface": "#e0e2ef",
+                    "on-primary-container": "#ede0ff",
+                    "on-tertiary-fixed-variant": "#005236",
+                    "surface-bright": "#363943",
+                    "outline": "#958da1",
+                    "background": "#10131c",
+                    "text-primary": "#E2E8F0",
+                    "surface-container": "#1c1f29",
+                    "surface-tint": "#d2bbff",
+                    "on-tertiary-container": "#76ffc2",
+                    "primary-fixed-dim": "#d2bbff",
+                    "neon-gold": "#F59E0B",
+                    "on-secondary-fixed": "#001a42",
+                    "surface-container-high": "#272a34",
+                    "tertiary-fixed-dim": "#4edea3",
+                    "outline-variant": "#4a4455",
+                    "surface-container-low": "#181b25",
+                    "surface-variant": "#31343f",
+                    "on-tertiary-fixed": "#002113",
+                    "on-background": "#e0e2ef",
+                    "error": "#ffb4ab",
+                    "secondary-container": "#0566d9",
+                    "on-secondary-container": "#e6ecff",
+                    "tertiary": "#4edea3",
+                    "on-error-container": "#ffdad6"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "gutter": "2px",
+                    "sidebar-width": "280px",
+                    "container-padding": "16px",
+                    "osd-margin": "8px",
+                    "unit": "4px"
+            },
+            "fontFamily": {
+                    "osd-label": [
+                            "Inter"
+                    ],
+                    "body-base": [
+                            "Inter"
+                    ],
+                    "display-lg": [
+                            "Inter"
+                    ],
+                    "mono-data": [
+                            "JetBrains Mono"
+                    ],
+                    "headline-md": [
+                            "Inter"
+                    ],
+                    "label-caps": [
+                            "JetBrains Mono"
+                    ],
+                    "body-sm": [
+                            "Inter"
+                    ],
+                    "title-sm": [
+                            "Inter"
+                    ]
+            },
+            "fontSize": {
+                    "osd-label": [
+                            "12px",
+                            {
+                                    "lineHeight": "1",
+                                    "letterSpacing": "0.01em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "body-base": [
+                            "14px",
+                            {
+                                    "lineHeight": "1.5",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "display-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "1.2",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "mono-data": [
+                            "12px",
+                            {
+                                    "lineHeight": "1.4",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-md": [
+                            "24px",
+                            {
+                                    "lineHeight": "1.3",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "label-caps": [
+                            "12px",
+                            {
+                                    "lineHeight": "1",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "body-sm": [
+                            "13px",
+                            {
+                                    "lineHeight": "1.4",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "title-sm": [
+                            "16px",
+                            {
+                                    "lineHeight": "1.4",
+                                    "fontWeight": "600"
+                            }
+                    ]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[style*="FILL' 1"] {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Minimalist Scrollbar for data tables */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #10131c; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #232C3F; 
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4a4455; 
+        }
+        
+        .glow-active {
+            box-shadow: 0 0 8px rgba(124, 58, 237, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface h-screen w-screen overflow-hidden flex flex-col font-body-base antialiased">
+<!-- TopNavBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-padding h-14 bg-surface dark:bg-surface border-b border-border-subtle dark:border-border-subtle bg-surface-dim">
+<div class="flex items-center gap-6 h-full">
+<span class="text-headline-md font-headline-md font-extrabold text-primary dark:text-primary tracking-tighter">ewVLM</span>
+<nav class="hidden md:flex items-center gap-4 h-full">
+<a class="text-on-surface-variant dark:text-on-surface-variant font-medium hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors h-full flex items-center px-3" href="#">Monitor A</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant font-medium hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors h-full flex items-center px-3" href="#">Monitor B</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant font-medium hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors h-full flex items-center px-3" href="#">Playback</a>
+<a class="text-primary dark:text-primary border-b-2 border-primary pb-1 font-bold h-full flex items-center px-3 active:scale-95 duration-100" href="#">Dashboard</a>
+</nav>
+</div>
+<div class="flex items-center gap-4 h-full">
+<div class="relative hidden lg:block">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-text-muted text-sm">search</span>
+<input class="bg-surface-container-high border border-border-subtle rounded text-body-sm font-body-sm text-on-surface pl-8 pr-3 py-1.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-64 transition-all" placeholder="Search resources..." type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-1.5 rounded hover:bg-surface-container-highest transition-colors text-text-muted hover:text-on-surface" title="memory">
+<span class="material-symbols-outlined text-lg">memory</span>
+</button>
+<button class="p-1.5 rounded hover:bg-surface-container-highest transition-colors text-text-muted hover:text-on-surface" title="lan">
+<span class="material-symbols-outlined text-lg">lan</span>
+</button>
+<button class="p-1.5 rounded hover:bg-surface-container-highest transition-colors text-text-muted hover:text-on-surface relative" title="notifications">
+<span class="material-symbols-outlined text-lg">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full border border-surface"></span>
+</button>
+</div>
+<div class="h-8 w-8 rounded bg-surface-container-high border border-border-subtle overflow-hidden ml-2 cursor-pointer">
+<img alt="Security Operator Profile" class="w-full h-full object-cover" data-alt="A futuristic, high-contrast avatar placeholder image featuring an abstract, low-poly wireframe geometric face. The color palette consists of deep space navy (#070A13) and electric violet (#7C3AED) neon glowing edges. The image has an industrial, cybernetic mood suitable for a high-tech security interface. High resolution, sharp focus." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDM6_9jMv5DX87PVM0DYZaw2qhQz0qgxF0bLdAbP8uXSkkRtwJIJyKCRMbMz2JvF_IPP3MHq6Sv4BoXp6_aIafA3IMlEOn8_uiQJ3suJsk034334a9pA5IAV5F0Qdxrgv89vdovPloGV_OZviCu24WX7C3JmYJZ6QU5VtTaVmhMEh4W0PkE_WzGfPjMYc_vERgqMENIi4rRe9IlYRi1OaNg_KIRIGB1xQggkHHjfxdojoPzEPaXvXWeQw"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-14 bottom-0 w-sidebar-width flex flex-col z-40 bg-surface-container dark:bg-surface-container bg-surface-container-low border-r border-border-subtle shadow-sm">
+<div class="p-4 border-b border-border-subtle flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high border border-border-subtle overflow-hidden flex items-center justify-center">
+<img alt="System Status" class="w-full h-full object-cover" data-alt="A highly technical, minimalist system status icon representing a server node or a high-tech radar dish. It is designed in a crisp, vector-like aesthetic with neon green and sharp white accents against a dark slate background. The image should convey precision, surveillance, and robust connectivity. Perfect clarity, flat design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBroBDk64Vgkm4bmI2-8xITfT3H342wqVLlPQ8bBgi2SPBw2K6zgUCm0Cpfwn7nNpp8Ow3puXgrgIqNHpwrypKDxhmExbmnttcv9sehc7Kac4JYsHdEMF7sZEAfnTJFEjZivq9_0cJALzVfKzEW64JYOiWSq72tNFJL-fOltz75FLiXy3N9oyvVTQbzz0VqwmM8Xg-D0fvZJtDE_UIiZ4cpAxvuftSNDWUPSEiaO9k1vVttrepggW0ciQ"/>
+</div>
+<div>
+<h2 class="text-title-sm font-title-sm text-on-surface leading-tight tracking-wide">ASSET EXPLORER</h2>
+<p class="text-body-sm font-body-sm text-tertiary mt-0.5 flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
+                    32 Active Channels
+                </p>
+</div>
+</div>
+<nav class="flex-1 overflow-y-auto p-2 flex flex-col gap-1 mt-2">
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg group text-label-caps font-label-caps" href="#">
+<span class="material-symbols-outlined text-lg group-hover:text-primary transition-colors">videocam</span>
+                Cameras
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg group text-label-caps font-label-caps" href="#">
+<span class="material-symbols-outlined text-lg group-hover:text-primary transition-colors">sensors</span>
+                Sensors
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg group text-label-caps font-label-caps" href="#">
+<span class="material-symbols-outlined text-lg group-hover:text-primary transition-colors">map</span>
+                Map
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg group text-label-caps font-label-caps" href="#">
+<span class="material-symbols-outlined text-lg group-hover:text-primary transition-colors">psychology</span>
+                AI Rules
+            </a>
+<div class="mt-4 mb-2 px-3">
+<button class="w-full bg-primary-container text-on-primary-container py-2 rounded flex items-center justify-center gap-2 text-label-caps font-label-caps hover:bg-inverse-primary transition-colors border border-primary-container">
+<span class="material-symbols-outlined text-sm font-bold">add</span>
+                    Add New Camera
+                </button>
+</div>
+<!-- Contextual Section added to pad out menu as expected in high end UI -->
+<div class="mt-4 px-3 text-osd-label font-osd-label text-text-muted uppercase tracking-wider mb-1">
+                Administration
+            </div>
+<a class="flex items-center gap-3 px-3 py-2 bg-primary-container text-on-primary-container rounded-lg font-bold translate-x-1 duration-200 text-label-caps font-label-caps shadow-[0_0_8px_rgba(124,58,237,0.3)] border border-primary/30" href="#">
+<span class="material-symbols-outlined text-lg">admin_panel_settings</span>
+                Federation &amp; RBAC
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg group text-label-caps font-label-caps" href="#">
+<span class="material-symbols-outlined text-lg group-hover:text-primary transition-colors">policy</span>
+                Audit Logs
+            </a>
+</nav>
+<div class="p-2 border-t border-border-subtle flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg group text-label-caps font-label-caps" href="#">
+<span class="material-symbols-outlined text-lg">settings</span>
+                Settings
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg group text-label-caps font-label-caps" href="#">
+<span class="material-symbols-outlined text-lg">help</span>
+                Support
+            </a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="ml-[280px] mt-14 flex-1 overflow-y-auto p-container-padding flex flex-col gap-4 relative bg-surface-container-lowest">
+<!-- Header -->
+<div class="flex justify-between items-end mb-2">
+<div>
+<h1 class="text-headline-md font-headline-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-3xl">hub</span>
+                    Centralized Multi-Site Federation
+                </h1>
+<p class="text-body-base font-body-base text-text-muted mt-1">Manage remote NVR/CCTV node clusters and Role-Based Access Control (RBAC) matrices globally.</p>
+</div>
+<div class="flex gap-2">
+<button class="px-4 py-1.5 border border-border-subtle rounded text-body-sm font-body-sm text-on-surface hover:bg-surface-container-high transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">sync</span> Sync Policies
+                </button>
+<button class="px-4 py-1.5 bg-primary-container text-on-primary-container rounded text-body-sm font-body-sm hover:bg-inverse-primary transition-colors flex items-center gap-2 border border-primary-container shadow-[0_0_10px_rgba(124,58,237,0.4)]">
+<span class="material-symbols-outlined text-sm">save</span> Save Configuration
+                </button>
+</div>
+</div>
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-4 flex-1">
+<!-- Left Column: Node Topology -->
+<div class="xl:col-span-1 flex flex-col gap-4">
+<!-- Cluster Map Widget -->
+<div class="bg-surface border border-border-subtle rounded-lg flex flex-col h-[400px] overflow-hidden relative group">
+<div class="p-3 border-b border-border-subtle bg-surface-container-low flex justify-between items-center z-10">
+<h3 class="text-title-sm font-title-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-primary">share</span>
+                            Node Cluster Topology
+                        </h3>
+<div class="flex gap-1">
+<button class="p-1 text-text-muted hover:text-on-surface rounded hover:bg-surface-container-high"><span class="material-symbols-outlined text-sm">zoom_in</span></button>
+<button class="p-1 text-text-muted hover:text-on-surface rounded hover:bg-surface-container-high"><span class="material-symbols-outlined text-sm">zoom_out</span></button>
+</div>
+</div>
+<div class="flex-1 relative bg-background overflow-hidden cursor-crosshair" style="background-image: radial-gradient(circle at 50% 50%, #1c1f29 0%, #0b0e17 100%);">
+<!-- Abstract Node Representation -->
+<div class="absolute inset-0" style="background-image: linear-gradient(rgba(35, 44, 63, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(35, 44, 63, 0.3) 1px, transparent 1px); background-size: 20px 20px;"></div>
+<!-- HQ Node -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full border-2 border-primary bg-surface flex items-center justify-center shadow-[0_0_15px_rgba(124,58,237,0.6)] z-20">
+<span class="material-symbols-outlined text-primary">corporate_fare</span>
+</div>
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 mt-8 text-osd-label font-osd-label text-on-surface whitespace-nowrap bg-surface-container/80 px-2 py-0.5 rounded backdrop-blur z-20">HQ-Core</div>
+<!-- Lines connecting nodes (SVG would be better but CSS for simplicity here) -->
+<div class="absolute top-1/2 left-1/2 w-32 h-0 border-t-2 border-dashed border-tertiary/50 origin-left -rotate-45 z-10"></div>
+<div class="absolute top-1/2 left-1/2 w-40 h-0 border-t-2 border-dashed border-warning/50 origin-left rotate-15 z-10"></div>
+<div class="absolute top-1/2 left-1/2 w-28 h-0 border-t-2 border-dashed border-tertiary/50 origin-left rotate-[135deg] z-10"></div>
+<!-- Node 1 -->
+<div class="absolute top-[25%] left-[75%] -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full border-2 border-tertiary bg-surface flex items-center justify-center z-20 hover:border-white transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-tertiary text-sm">router</span>
+</div>
+<div class="absolute top-[25%] left-[75%] -translate-x-1/2 mt-6 text-osd-label font-osd-label text-text-muted whitespace-nowrap z-20">Site-Alpha</div>
+<!-- Node 2 (Warning State) -->
+<div class="absolute top-[60%] left-[85%] -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full border-2 border-warning bg-surface flex items-center justify-center z-20 hover:border-white transition-colors cursor-pointer shadow-[0_0_10px_rgba(245,158,11,0.4)]">
+<span class="material-symbols-outlined text-warning text-sm">router</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 bg-warning rounded-full animate-ping"></span>
+</div>
+<div class="absolute top-[60%] left-[85%] -translate-x-1/2 mt-6 text-osd-label font-osd-label text-warning whitespace-nowrap z-20">Site-Beta (Syncing)</div>
+<!-- Node 3 -->
+<div class="absolute top-[75%] left-[20%] -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full border-2 border-tertiary bg-surface flex items-center justify-center z-20 hover:border-white transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-tertiary text-sm">router</span>
+</div>
+<div class="absolute top-[75%] left-[20%] -translate-x-1/2 mt-6 text-osd-label font-osd-label text-text-muted whitespace-nowrap z-20">Site-Gamma</div>
+</div>
+</div>
+<!-- Node Properties List -->
+<div class="bg-surface border border-border-subtle rounded-lg flex-1 flex flex-col min-h-[250px]">
+<div class="p-3 border-b border-border-subtle bg-surface-container-low">
+<h3 class="text-title-sm font-title-sm text-on-surface">Federated Nodes</h3>
+</div>
+<div class="flex-1 overflow-y-auto">
+<table class="w-full text-left border-collapse">
+<tbody>
+<tr class="border-b border-border-subtle hover:bg-surface-container-highest cursor-pointer transition-colors bg-surface-container-highest">
+<td class="p-3 w-8"><span class="material-symbols-outlined text-primary text-sm">corporate_fare</span></td>
+<td class="p-3">
+<div class="text-body-sm font-body-sm text-on-surface font-semibold">HQ-Core</div>
+<div class="text-mono-data font-mono-data text-text-muted text-[10px]">192.168.1.1</div>
+</td>
+<td class="p-3 text-right">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-tertiary-container/30 text-tertiary border border-tertiary/50">MASTER</span>
+</td>
+</tr>
+<tr class="border-b border-border-subtle hover:bg-surface-container-highest cursor-pointer transition-colors">
+<td class="p-3 w-8"><span class="material-symbols-outlined text-tertiary text-sm">router</span></td>
+<td class="p-3">
+<div class="text-body-sm font-body-sm text-on-surface">Site-Alpha</div>
+<div class="text-mono-data font-mono-data text-text-muted text-[10px]">10.0.4.55</div>
+</td>
+<td class="p-3 text-right">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-tertiary/10 text-tertiary border border-tertiary/20">ONLINE</span>
+</td>
+</tr>
+<tr class="border-b border-border-subtle hover:bg-surface-container-highest cursor-pointer transition-colors">
+<td class="p-3 w-8"><span class="material-symbols-outlined text-warning text-sm">router</span></td>
+<td class="p-3">
+<div class="text-body-sm font-body-sm text-on-surface">Site-Beta</div>
+<div class="text-mono-data font-mono-data text-text-muted text-[10px]">10.0.5.12</div>
+</td>
+<td class="p-3 text-right">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">SYNCING</span>
+</td>
+</tr>
+<tr class="border-b border-border-subtle hover:bg-surface-container-highest cursor-pointer transition-colors">
+<td class="p-3 w-8"><span class="material-symbols-outlined text-tertiary text-sm">router</span></td>
+<td class="p-3">
+<div class="text-body-sm font-body-sm text-on-surface">Site-Gamma</div>
+<div class="text-mono-data font-mono-data text-text-muted text-[10px]">10.0.8.200</div>
+</td>
+<td class="p-3 text-right">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-tertiary/10 text-tertiary border border-tertiary/20">ONLINE</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Right Column: RBAC Matrix -->
+<div class="xl:col-span-2 bg-surface border border-border-subtle rounded-lg flex flex-col overflow-hidden shadow-lg">
+<div class="p-4 border-b border-border-subtle bg-surface-container-low flex justify-between items-center">
+<div>
+<h2 class="text-title-sm font-title-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">admin_panel_settings</span>
+                            Role-Based Access Control (RBAC) Matrix
+                        </h2>
+<p class="text-mono-data font-mono-data text-text-muted mt-1">Context: Global Federation Policies / Selected: HQ-Core</p>
+</div>
+<div class="flex gap-2">
+<div class="relative">
+<select class="appearance-none bg-surface-container-high border border-border-subtle rounded text-body-sm font-body-sm text-on-surface pl-3 pr-8 py-1.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-40">
+<option>All Resources</option>
+<option>Cameras Only</option>
+<option>PTZ Controls</option>
+<option>System Config</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-text-muted text-sm pointer-events-none">arrow_drop_down</span>
+</div>
+<button class="px-3 py-1.5 border border-border-subtle rounded text-body-sm font-body-sm text-on-surface hover:bg-surface-container-high transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">add</span> Role
+                        </button>
+</div>
+</div>
+<div class="flex-1 overflow-auto bg-surface-container-lowest p-4 relative">
+<!-- High density table design -->
+<table class="w-full text-left border-collapse min-w-[800px]">
+<thead>
+<tr>
+<th class="sticky top-0 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle text-label-caps font-label-caps text-text-muted min-w-[150px]">
+                                    Role / Group
+                                </th>
+<th class="sticky top-0 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle border-l text-center text-label-caps font-label-caps text-on-surface bg-surface-container/50" colspan="4">
+                                    Video Streams
+                                </th>
+<th class="sticky top-0 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle border-l text-center text-label-caps font-label-caps text-on-surface bg-surface-container/50" colspan="3">
+                                    PTZ &amp; Controls
+                                </th>
+<th class="sticky top-0 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle border-l text-center text-label-caps font-label-caps text-on-surface bg-surface-container/50" colspan="2">
+                                    Federation
+                                </th>
+</tr>
+<tr>
+<th class="sticky top-8 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle text-osd-label font-osd-label text-text-muted"></th>
+<!-- Video -->
+<th class="sticky top-8 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle border-l text-center text-mono-data text-text-muted w-16 group cursor-pointer hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-sm block mb-1">visibility</span>Live
+                                </th>
+<th class="sticky top-8 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle text-center text-mono-data text-text-muted w-16 group cursor-pointer hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-sm block mb-1">history</span>Play
+                                </th>
+<th class="sticky top-8 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle text-center text-mono-data text-text-muted w-16 group cursor-pointer hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-sm block mb-1">download</span>Exprt
+                                </th>
+<th class="sticky top-8 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle text-center text-mono-data text-text-muted w-16 group cursor-pointer hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-sm block mb-1">psychology</span>AI
+                                </th>
+<!-- PTZ -->
+<th class="sticky top-8 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle border-l text-center text-mono-data text-text-muted w-16 group cursor-pointer hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-sm block mb-1">gamepad</span>Move
+                                </th>
+<th class="sticky top-8 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle text-center text-mono-data text-text-muted w-16 group cursor-pointer hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-sm block mb-1">center_focus_strong</span>Prst
+                                </th>
+<th class="sticky top-8 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle text-center text-mono-data text-text-muted w-16 group cursor-pointer hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-sm block mb-1">lock</span>Lock
+                                </th>
+<!-- System -->
+<th class="sticky top-8 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle border-l text-center text-mono-data text-text-muted w-16 group cursor-pointer hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-sm block mb-1">settings_ethernet</span>Cnfg
+                                </th>
+<th class="sticky top-8 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle text-center text-mono-data text-text-muted w-16 group cursor-pointer hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-sm block mb-1">policy</span>RBAC
+                                </th>
+</tr>
+</thead>
+<tbody>
+<!-- Row 1: Global Admin -->
+<tr class="border-b border-border-subtle hover:bg-surface/50 group">
+<td class="p-3 bg-surface-container-low/50 group-hover:bg-surface">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-danger shadow-[0_0_5px_rgba(239,68,68,0.8)]"></div>
+<div>
+<div class="text-body-sm font-body-sm text-on-surface font-semibold">Global Admin</div>
+<div class="text-[10px] text-text-muted">Full System Access</div>
+</div>
+</div>
+</td>
+<!-- Video -->
+<td class="p-2 border-l border-border-subtle text-center bg-surface-container-low/20">
+<button class="w-6 h-6 rounded bg-primary/20 border border-primary/50 text-primary mx-auto flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors"><span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span></button>
+</td>
+<td class="p-2 text-center bg-surface-container-low/20">
+<button class="w-6 h-6 rounded bg-primary/20 border border-primary/50 text-primary mx-auto flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors"><span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span></button>
+</td>
+<td class="p-2 text-center bg-surface-container-low/20">
+<button class="w-6 h-6 rounded bg-primary/20 border border-primary/50 text-primary mx-auto flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors"><span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span></button>
+</td>
+<td class="p-2 text-center bg-surface-container-low/20">
+<button class="w-6 h-6 rounded bg-primary/20 border border-primary/50 text-primary mx-auto flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors"><span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span></button>
+</td>
+<!-- PTZ -->
+<td class="p-2 border-l border-border-subtle text-center bg-surface-container-low/20">
+<button class="w-6 h-6 rounded bg-primary/20 border border-primary/50 text-primary mx-auto flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors"><span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span></button>
+</td>
+<td class="p-2 text-center bg-surface-container-low/20">
+<button class="w-6 h-6 rounded bg-primary/20 border border-primary/50 text-primary mx-auto flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors"><span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span></button>
+</td>
+<td class="p-2 text-center bg-surface-container-low/20">
+<button class="w-6 h-6 rounded bg-primary/20 border border-primary/50 text-primary mx-auto flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors"><span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span></button>
+</td>
+<!-- System -->
+<td class="p-2 border-l border-border-subtle text-center bg-surface-container-low/20">
+<button class="w-6 h-6 rounded bg-primary/20 border border-primary/50 text-primary mx-auto flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors"><span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span></button>
+</td>
+<td class="p-2 text-center bg-surface-container-low/20">
+<button class="w-6 h-6 rounded bg-primary/20 border border-primary/50 text-primary mx-auto flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors"><span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span></button>
+</td>
+</tr>
+<!-- Row 2: Site Manager -->
+<tr class="border-b border-border-subtle hover:bg-surface/50 group">
+<td class="p-3 bg-surface-container-low/50 group-hover:bg-surface">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-warning"></div>
+<div>
+<div class="text-body-sm font-body-sm text-on-surface">Site Manager</div>
+<div class="text-[10px] text-text-muted">Node-level Control</div>
+</div>
+</div>
+</td>
+<!-- Video -->
+<td class="p-2 border-l border-border-subtle text-center">
+<button class="w-6 h-6 rounded bg-primary/20 border border-primary/50 text-primary mx-auto flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors"><span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span></button>
+</td>
+<td class="p-2 text-center">
+<button class="w-6 h-6 rounded bg-primary/20 border border-primary/50 text-primary mx-auto flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors"><span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span></button>
+</td>
+<td class="p-2 text-center">
+<button class="w-6 h-6 rounded bg-primary/20 border border-primary/50 text-primary mx-auto flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors"><span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span></button>
+</td>
+<td class="p-2 text-center">
+<button class="w-6 h-6 rounded border border-border-subtle text-text-muted mx-auto flex items-center justify-center hover:bg-surface-container-highest transition-colors"><span class="material-symbols-outlined text-sm">close</span></button>
+</td>
+<!-- PTZ -->
+<td class="p-2 border-l border-border-subtle text-center">
+<button class="w-6 h-6 rounded bg-primary/20 border border-primary/50 text-primary mx-auto flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors"><span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span></button>
+</td>
+<td class="p-2 text-center">
+<button class="w-6 h-6 rounded bg-primary/20 border border-primary/50 text-primary mx-auto flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors"><span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span></button>
+</td>
+<td class="p-2 text-center">
+<button class="w-6 h-6 rounded border border-border-subtle text-text-muted mx-auto flex items-center justify-center hover:bg-surface-container-highest transition-colors"><span class="material-symbols-outlined text-sm">close</span></button>
+</td>
+<!-- System -->
+<td class="p-2 border-l border-border-subtle text-center">
+<button class="w-6 h-6 rounded bg-tertiary/20 border border-tertiary/50 text-tertiary mx-auto flex items-center justify-center hover:bg-tertiary hover:text-on-tertiary transition-colors" title="Partial Access"><span class="material-symbols-outlined text-sm">horizontal_rule</span></button>
+</td>
+<td class="p-2 text-center">
+<button class="w-6 h-6 rounded border border-border-subtle text-text-muted mx-auto flex items-center justify-center hover:bg-surface-container-highest transition-colors"><span class="material-symbols-outlined text-sm">close</span></button>
+</td>
+</tr>
+<!-- Row 3: Operator (Standard) -->
+<tr class="border-b border-border-subtle hover:bg-surface/50 group">
+<td class="p-3 bg-surface-container-low/50 group-hover:bg-surface">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-tertiary"></div>
+<div>
+<div class="text-body-sm font-body-sm text-on-surface">Standard Operator</div>
+<div class="text-[10px] text-text-muted">Viewing Only</div>
+</div>
+</div>
+</td>
+<!-- Video -->
+<td class="p-2 border-l border-border-subtle text-center">
+<button class="w-6 h-6 rounded bg-primary/20 border border-primary/50 text-primary mx-auto flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors"><span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span></button>
+</td>
+<td class="p-2 text-center">
+<button class="w-6 h-6 rounded bg-primary/20 border border-primary/50 text-primary mx-auto flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors"><span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span></button>
+</td>
+<td class="p-2 text-center">
+<button class="w-6 h-6 rounded border border-border-subtle text-text-muted mx-auto flex items-center justify-center hover:bg-surface-container-highest transition-colors"><span class="material-symbols-outlined text-sm">close</span></button>
+</td>
+<td class="p-2 text-center">
+<button class="w-6 h-6 rounded border border-border-subtle text-text-muted mx-auto flex items-center justify-center hover:bg-surface-container-highest transition-colors"><span class="material-symbols-outlined text-sm">close</span></button>
+</td>
+<!-- PTZ -->
+<td class="p-2 border-l border-border-subtle text-center">
+<button class="w-6 h-6 rounded bg-tertiary/20 border border-tertiary/50 text-tertiary mx-auto flex items-center justify-center hover:bg-tertiary hover:text-on-tertiary transition-colors" title="Time Restricted"><span class="material-symbols-outlined text-sm">schedule</span></button>
+</td>
+<td class="p-2 text-center">
+<button class="w-6 h-6 rounded border border-border-subtle text-text-muted mx-auto flex items-center justify-center hover:bg-surface-container-highest transition-colors"><span class="material-symbols-outlined text-sm">close</span></button>
+</td>
+<td class="p-2 text-center">
+<button class="w-6 h-6 rounded border border-border-subtle text-text-muted mx-auto flex items-center justify-center hover:bg-surface-container-highest transition-colors"><span class="material-symbols-outlined text-sm">close</span></button>
+</td>
+<!-- System -->
+<td class="p-2 border-l border-border-subtle text-center">
+<button class="w-6 h-6 rounded border border-border-subtle text-text-muted mx-auto flex items-center justify-center hover:bg-surface-container-highest transition-colors"><span class="material-symbols-outlined text-sm">close</span></button>
+</td>
+<td class="p-2 text-center">
+<button class="w-6 h-6 rounded border border-border-subtle text-text-muted mx-auto flex items-center justify-center hover:bg-surface-container-highest transition-colors"><span class="material-symbols-outlined text-sm">close</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-3 border-t border-border-subtle bg-surface-container-low flex justify-between items-center text-xs text-text-muted">
+<div class="flex gap-4">
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-primary/50 border border-primary inline-block"></span> Granted</span>
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded border border-border-subtle inline-block"></span> Denied</span>
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-tertiary/50 border border-tertiary inline-block"></span> Conditional</span>
+</div>
+<span>Last modified: 14:32:01 UTC</span>
+</div>
+</div>
+</div>
+</main>
+</body></html>

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Crisis Management War Room - ewVLM</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#eaddff",
+                        "on-surface-variant": "#ccc3d8",
+                        "on-secondary-fixed-variant": "#004395",
+                        "primary": "#d2bbff",
+                        "primary-container": "#7c3aed",
+                        "on-primary-fixed": "#25005a",
+                        "inverse-primary": "#732ee4",
+                        "tertiary-container": "#007650",
+                        "border-subtle": "#232C3F",
+                        "inverse-surface": "#e0e2ef",
+                        "text-muted": "#7D8D9F",
+                        "error-container": "#93000a",
+                        "secondary": "#adc6ff",
+                        "on-secondary": "#002e6a",
+                        "warning": "#F59E0B",
+                        "danger": "#EF4444",
+                        "surface-container-highest": "#31343f",
+                        "inverse-on-surface": "#2d303a",
+                        "surface-container-lowest": "#0b0e17",
+                        "tertiary-fixed": "#6ffbbe",
+                        "secondary-fixed": "#d8e2ff",
+                        "on-tertiary": "#003824",
+                        "surface-dim": "#10131c",
+                        "on-error": "#690005",
+                        "on-primary-fixed-variant": "#5a00c6",
+                        "on-primary": "#3f008e",
+                        "surface": "#121724",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "on-surface": "#e0e2ef",
+                        "on-primary-container": "#ede0ff",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "surface-bright": "#363943",
+                        "outline": "#958da1",
+                        "background": "#10131c",
+                        "text-primary": "#E2E8F0",
+                        "surface-container": "#1c1f29",
+                        "surface-tint": "#d2bbff",
+                        "on-tertiary-container": "#76ffc2",
+                        "primary-fixed-dim": "#d2bbff",
+                        "neon-gold": "#F59E0B",
+                        "on-secondary-fixed": "#001a42",
+                        "surface-container-high": "#272a34",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "outline-variant": "#4a4455",
+                        "surface-container-low": "#181b25",
+                        "surface-variant": "#31343f",
+                        "on-tertiary-fixed": "#002113",
+                        "on-background": "#e0e2ef",
+                        "error": "#ffb4ab",
+                        "secondary-container": "#0566d9",
+                        "on-secondary-container": "#e6ecff",
+                        "tertiary": "#4edea3",
+                        "on-error-container": "#ffdad6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "2px",
+                        "sidebar-width": "280px",
+                        "container-padding": "16px",
+                        "osd-margin": "8px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "osd-label": ["Inter"],
+                        "body-base": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "mono-data": ["JetBrains Mono"],
+                        "headline-md": ["Inter"],
+                        "label-caps": ["JetBrains Mono"],
+                        "body-sm": ["Inter"],
+                        "title-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "osd-label": ["12px", { "lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "700" }],
+                        "body-base": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "display-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "mono-data": ["12px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "body-sm": ["13px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "title-sm": ["16px", { "lineHeight": "1.4", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #070A13; color: #E2E8F0; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
+        .video-cell { border: 2px solid #232C3F; position: relative; overflow: hidden; background-color: #121724; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .video-cell.active { border-color: #7c3aed; box-shadow: 0 0 15px rgba(124, 58, 237, 0.4), 0 4px 12px rgba(0,0,0,0.5); }
+        .led { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .led-live { background-color: #EF4444; box-shadow: 0 0 4px #EF4444; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body class="flex flex-col font-body-base text-body-base bg-background text-text-primary">
+<!-- TopNavBar -->
+<nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-padding h-14 bg-surface dark:bg-surface border-b border-border-subtle dark:border-border-subtle bg-surface-dim">
+<div class="flex items-center gap-6">
+<span class="text-headline-md font-headline-md font-extrabold text-primary dark:text-primary tracking-tighter">ewVLM</span>
+<div class="hidden md:flex gap-4">
+<a class="text-on-surface-variant dark:text-on-surface-variant font-medium hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors px-2 py-1 rounded" href="#">Monitor A</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant font-medium hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors px-2 py-1 rounded" href="#">Monitor B</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant font-medium hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors px-2 py-1 rounded" href="#">Playback</a>
+<a class="text-primary dark:text-primary border-b-2 border-primary pb-1 font-bold hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors px-2 py-1" href="#">Dashboard</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" data-icon="memory">memory</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" data-icon="lan">lan</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" data-icon="notifications">notifications</span>
+<img alt="Security Operator Profile" class="w-8 h-8 rounded-full border border-border-subtle object-cover" data-alt="A small circular profile picture of a security operator in a dimly lit control room setting. The operator is wearing a dark headset. The lighting is primarily blue and violet, reflecting screen glare, ensuring an industrial, technical look." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDe8G_g5U4apHZTn5-q7jEwAotaKVY2l1NuIKAEVLWQOX89riyuSiklJ8zMVvpuAX0tP-Ol18FYdzRmpQBSvFlRbokaSaTmvJobvA4Z-jcBO0epNniajMIefJotqaRY4fNH6O2iCYD4GKdVRVI1UAgC9xWko2-EPaGJKN0zYzWyYX4AnluG9qU55BsFpVFchDz88qWOIX9LFM-ZWxGyYVwJtKtJYikvCkFTUw_mb5zte7P1CfTqUJOWWg"/>
+</div>
+</nav>
+<div class="flex flex-1 pt-14 h-full">
+<!-- Main Canvas: Virtual War Room Grid -->
+<main class="flex-1 flex flex-col p-container-padding gap-container-padding h-full overflow-hidden bg-background">
+<!-- Alert Header -->
+<div class="bg-surface border border-danger p-4 flex items-center justify-between rounded shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+<div class="flex items-center gap-4">
+<div class="bg-error-container text-on-error p-2 rounded flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<div>
+<h1 class="text-title-sm font-title-sm text-danger flex items-center gap-2">
+<span class="led led-live"></span>
+                            CRITICAL INCIDENT PROTOCOL INITIATED
+                        </h1>
+<p class="text-mono-data font-mono-data text-on-surface-variant mt-1">INCIDENT ID: VLM-992-A | LOC: METRO SECTOR 7 | TIME: 00:14:02 ELAPSED</p>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="bg-surface-container border border-border-subtle text-on-surface px-4 py-2 rounded text-body-sm font-body-sm hover:bg-surface-container-high transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">download</span> Export Log
+                    </button>
+<button class="bg-danger text-white px-6 py-2 rounded text-body-sm font-body-sm font-bold shadow-[0_0_10px_rgba(239,68,68,0.5)] hover:bg-red-600 transition-colors">
+                        ESCALATE TO REGIONAL
+                    </button>
+</div>
+</div>
+<!-- Multi-Agency Video Fusion Grid -->
+<div class="flex-1 grid grid-cols-3 grid-rows-2 gap-gutter min-h-0">
+<!-- Main Feed (VLM Source) -->
+<div class="col-span-2 row-span-2 video-cell active">
+<div class="absolute inset-0 bg-surface-container-lowest flex items-center justify-center">
+<img alt="Main Incident Feed" class="w-full h-full object-cover opacity-80" data-alt="A high-contrast night vision camera feed showing a large industrial chemical plant. Plumes of smoke are visible in the center. The image features a technical overlay with bounding boxes highlighting active fires in red and responding fire trucks in green. The lighting is harsh, typical of security footage, with a gritty, realistic texture." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBw47fM_56rONWEyXn5rghRFD8NQcwru0ZCCu3AyNWroNfQWDNEO0edGBfWQBIICkJork55hKT0vGB52g2NKqe4Si1aRhmfpTEvcXr_ZavvlJpLRQPWnNMTsrv34AaYaDqILotOtGtBjnzq7963pqIXiizg4o5CqIXnkkicekULSKeFt9ZAI2QlLT13RuffOahfMfrGjOAKIdR-Ak3X3G-wb-gNzJRPDzbHFYcuN-1vBHn6f4cRB9dCjQ"/>
+</div>
+<!-- OSD -->
+<div class="absolute top-osd-margin left-osd-margin flex flex-col gap-1">
+<span class="bg-surface/80 backdrop-blur px-2 py-1 text-osd-label font-osd-label text-primary flex items-center gap-1 border border-border-subtle">
+<span class="material-symbols-outlined text-[12px]">videocam</span> CAM_MAIN_01 (VLM_SOURCE)
+                        </span>
+<span class="bg-error-container/80 backdrop-blur px-2 py-1 text-osd-label font-osd-label text-on-error border border-danger">
+                            VLM DETECT: HAZMAT LEAK + FIRE
+                        </span>
+</div>
+<!-- Bounding Box Example -->
+<div class="absolute top-[30%] left-[40%] w-1/4 h-1/4 border-[1.5px] border-danger bg-danger/10">
+<span class="absolute -top-5 left-0 text-osd-label font-osd-label text-danger bg-surface-dim px-1">FIRE CONFIRMED (98%)</span>
+</div>
+<!-- PTZ Controls (Ghost) -->
+<div class="absolute bottom-osd-margin right-osd-margin flex gap-1">
+<button class="bg-surface/50 backdrop-blur border border-border-subtle p-1 hover:bg-primary/20 transition-colors rounded"><span class="material-symbols-outlined text-on-surface">zoom_in</span></button>
+<button class="bg-surface/50 backdrop-blur border border-border-subtle p-1 hover:bg-primary/20 transition-colors rounded"><span class="material-symbols-outlined text-on-surface">zoom_out</span></button>
+</div>
+</div>
+<!-- Agency Feed 1: Police -->
+<div class="video-cell">
+<div class="absolute inset-0 bg-surface-container flex items-center justify-center">
+<img alt="Police Dashcam Feed" class="w-full h-full object-cover opacity-70" data-alt="Dashboard camera view from a police cruiser approaching a roadblock at night. Flashing blue and red lights illuminate the wet asphalt. The UI overlay shows speed and GPS coordinates in a crisp, monospaced font. The scene is tense and urgent, maintaining the dark, industrial color palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1wW4gwLmgBLRV3JoqiCkFWj-NdIU3D4yjlMSReiSLOoEYZWQvanwtKZtw7MZdW94xCNUl0DifoOejhDoVzPw4a0vjz1M6RmcNUu0ZsjPHa7yyYv68vsW1TOdmTiU0hoXmwb_4rJWAYns_eGWG_MmSxV2WC7JATpZjnrR5YE-4ni2zaiz7hGqSMbrgiULCLbdCQDU-1SzyhP5E1QnZyXUN2U_IvEDK9rWArvX0pET7FftjulX5Kwjytg"/>
+</div>
+<div class="absolute top-osd-margin left-osd-margin">
+<span class="bg-surface-dim/90 px-2 py-1 text-osd-label font-osd-label text-secondary flex items-center gap-1 border border-border-subtle">
+<span class="material-symbols-outlined text-[12px]">local_police</span> UNIT P-402 (POLICE)
+                        </span>
+</div>
+</div>
+<!-- Agency Feed 2: Fire Dept Drone -->
+<div class="video-cell">
+<div class="absolute inset-0 bg-surface-container flex items-center justify-center">
+<img alt="Drone Thermal Feed" class="w-full h-full object-cover opacity-70" data-alt="Thermal imaging view from a firefighting drone looking down at an industrial building roof. Hot spots are highlighted in bright yellow and orange against a dark blue background. Data points like altitude and temperature are overlaid in green technical text. The aesthetic is strictly military-grade utility." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdSrJ8dUIcfBtJdhKvr8wFCi2hJVmmvah_UfDp-pramkpypMGLfk__LDtOYILNfdJQzZE7mjAV_TcZMX5JXPlkGZjcADEe0ySm9rh2Z-O9u2NXEnj3Dz_janKad5kn1BWpSVam68WG34ewwDFHjjidTOQLRPxxkbY6v4LIHeoW9irw2pZPgolrLYvQXe-I1dRlDKinEnCclXtRD2ZTbdzSPMghQkhrNKl8_DZWRc2CQi_ZANB72P7eZg"/>
+</div>
+<div class="absolute top-osd-margin left-osd-margin">
+<span class="bg-surface-dim/90 px-2 py-1 text-osd-label font-osd-label text-warning flex items-center gap-1 border border-border-subtle">
+<span class="material-symbols-outlined text-[12px]">flight_takeoff</span> UAV T-09 (FIRE_DEPT)
+                        </span>
+</div>
+</div>
+</div>
+</main>
+<!-- Right Panel: Hotline & Collaboration -->
+<aside class="w-[320px] bg-surface flex flex-col border-l border-border-subtle shadow-[-4px_0_15px_rgba(0,0,0,0.3)] z-10 h-full">
+<!-- Panel Header -->
+<div class="p-4 border-b border-border-subtle bg-surface-container-low flex justify-between items-center">
+<h2 class="text-title-sm font-title-sm text-on-surface font-bold tracking-wide">AGENCY HOTLINE</h2>
+<span class="bg-primary-container text-on-primary-container text-label-caps font-label-caps px-2 py-1 rounded">LIVE</span>
+</div>
+<!-- Agency Status List -->
+<div class="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
+<!-- Agency Item: Fire -->
+<div class="bg-surface-container p-3 border border-border-subtle rounded flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded bg-danger/20 flex items-center justify-center border border-danger/50 text-danger">
+<span class="material-symbols-outlined text-sm">local_fire_department</span>
+</div>
+<div>
+<h3 class="text-body-sm font-body-sm font-semibold text-on-surface">Metro Fire Command</h3>
+<p class="text-mono-data font-mono-data text-text-muted">LINK: ESTABLISHED</p>
+</div>
+</div>
+<span class="led led-live"></span>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 bg-surface-variant hover:bg-surface-bright text-text-primary text-mono-data font-mono-data py-1 rounded transition-colors border border-border-subtle flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[14px]">mic</span> PTT
+                        </button>
+<button class="flex-1 bg-surface-variant hover:bg-surface-bright text-text-primary text-mono-data font-mono-data py-1 rounded transition-colors border border-border-subtle flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[14px]">screen_share</span> SHARE
+                        </button>
+</div>
+</div>
+<!-- Agency Item: Police -->
+<div class="bg-surface-container p-3 border border-border-subtle rounded flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded bg-secondary/20 flex items-center justify-center border border-secondary/50 text-secondary">
+<span class="material-symbols-outlined text-sm">local_police</span>
+</div>
+<div>
+<h3 class="text-body-sm font-body-sm font-semibold text-on-surface">PD Dispatch - Sec 7</h3>
+<p class="text-mono-data font-mono-data text-text-muted">LINK: ESTABLISHED</p>
+</div>
+</div>
+<span class="led led-live"></span>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 bg-surface-variant hover:bg-surface-bright text-text-primary text-mono-data font-mono-data py-1 rounded transition-colors border border-border-subtle flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[14px]">mic</span> PTT
+                        </button>
+<button class="flex-1 bg-surface-variant hover:bg-surface-bright text-text-primary text-mono-data font-mono-data py-1 rounded transition-colors border border-border-subtle flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[14px]">screen_share</span> SHARE
+                        </button>
+</div>
+</div>
+<!-- Agency Item: Local Gov (Connecting) -->
+<div class="bg-surface-container p-3 border border-border-subtle rounded flex flex-col gap-3 opacity-60">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded bg-surface-variant flex items-center justify-center border border-outline-variant text-text-muted">
+<span class="material-symbols-outlined text-sm">location_city</span>
+</div>
+<div>
+<h3 class="text-body-sm font-body-sm font-semibold text-on-surface">City Emergency Mgmt</h3>
+<p class="text-mono-data font-mono-data text-text-muted">LINK: CONNECTING...</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-text-muted text-sm animate-spin">sync</span>
+</div>
+</div>
+</div>
+<!-- VLM Action Log (Bottom of Panel) -->
+<div class="h-1/3 border-t border-border-subtle bg-surface-container-lowest flex flex-col">
+<div class="p-2 border-b border-border-subtle flex items-center gap-2 bg-surface-dim">
+<span class="material-symbols-outlined text-primary text-sm">psychology</span>
+<span class="text-label-caps font-label-caps text-on-surface">VLM JOINT-LOG</span>
+</div>
+<div class="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+<div class="flex flex-col gap-1">
+<span class="text-mono-data font-mono-data text-text-muted text-[10px]">00:14:02</span>
+<div class="bg-surface border-l-2 border-danger p-2 text-body-sm font-body-sm text-on-surface">
+                            VLM detected critical anomaly. Escalated to War Room.
+                        </div>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-mono-data font-mono-data text-text-muted text-[10px]">00:13:45</span>
+<div class="bg-surface border-l-2 border-secondary p-2 text-body-sm font-body-sm text-on-surface">
+                            PD Unit P-402 confirmed on scene. Establishing perimeter.
+                        </div>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-mono-data font-mono-data text-text-muted text-[10px]">00:12:10</span>
+<div class="bg-surface border-l-2 border-primary p-2 text-body-sm font-body-sm text-on-surface">
+                            Auto-dispatched Fire &amp; Rescue based on VLM severity classification.
+                        </div>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</body></html>

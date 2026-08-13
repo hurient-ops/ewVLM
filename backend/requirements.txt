@@ -1,0 +1,28 @@
+# =================================================================------------
+# ewVLM - Backend Python Core Dependencies
+# =================================================================------------
+# This file contains the exact packages needed to run the ewVLM FastAPI 
+# gateway, Ollama bridge, and related machine learning/streaming pipelines.
+
+# FastAPI & Web Server
+fastapi>=0.110.0
+uvicorn>=0.28.0
+pydantic>=2.6.0
+
+# HTTP & API Communications
+requests>=2.31.0
+httpx>=0.27.0
+
+# Video Processing & Computer Vision
+opencv-python>=4.9.0.80
+numpy>=1.26.0
+Pillow>=10.2.0
+
+# Message Broker (Kafka)
+aiokafka>=0.10.0
+
+# Database & Vector Operations
+SQLAlchemy>=2.0.25
+psycopg2-binary>=2.9.9
+asyncpg>=0.29.0
+pgvector>=0.2.5

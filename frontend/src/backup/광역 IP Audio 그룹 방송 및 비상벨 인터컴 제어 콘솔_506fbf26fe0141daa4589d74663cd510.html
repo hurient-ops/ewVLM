@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>IP Audio Console - ewVLM</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#eaddff",
+                        "on-surface-variant": "#ccc3d8",
+                        "on-secondary-fixed-variant": "#004395",
+                        "primary": "#d2bbff",
+                        "primary-container": "#7c3aed",
+                        "on-primary-fixed": "#25005a",
+                        "inverse-primary": "#732ee4",
+                        "tertiary-container": "#007650",
+                        "border-subtle": "#232C3F",
+                        "inverse-surface": "#e0e2ef",
+                        "text-muted": "#7D8D9F",
+                        "error-container": "#93000a",
+                        "secondary": "#adc6ff",
+                        "on-secondary": "#002e6a",
+                        "warning": "#F59E0B",
+                        "danger": "#EF4444",
+                        "surface-container-highest": "#31343f",
+                        "inverse-on-surface": "#2d303a",
+                        "surface-container-lowest": "#0b0e17",
+                        "tertiary-fixed": "#6ffbbe",
+                        "secondary-fixed": "#d8e2ff",
+                        "on-tertiary": "#003824",
+                        "surface-dim": "#10131c",
+                        "on-error": "#690005",
+                        "on-primary-fixed-variant": "#5a00c6",
+                        "on-primary": "#3f008e",
+                        "surface": "#121724",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "on-surface": "#e0e2ef",
+                        "on-primary-container": "#ede0ff",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "surface-bright": "#363943",
+                        "outline": "#958da1",
+                        "background": "#10131c",
+                        "text-primary": "#E2E8F0",
+                        "surface-container": "#1c1f29",
+                        "surface-tint": "#d2bbff",
+                        "on-tertiary-container": "#76ffc2",
+                        "primary-fixed-dim": "#d2bbff",
+                        "neon-gold": "#F59E0B",
+                        "on-secondary-fixed": "#001a42",
+                        "surface-container-high": "#272a34",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "outline-variant": "#4a4455",
+                        "surface-container-low": "#181b25",
+                        "surface-variant": "#31343f",
+                        "on-tertiary-fixed": "#002113",
+                        "on-background": "#e0e2ef",
+                        "error": "#ffb4ab",
+                        "secondary-container": "#0566d9",
+                        "on-secondary-container": "#e6ecff",
+                        "tertiary": "#4edea3",
+                        "on-error-container": "#ffdad6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "2px",
+                        "sidebar-width": "280px",
+                        "container-padding": "16px",
+                        "osd-margin": "8px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "osd-label": ["Inter"],
+                        "body-base": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "mono-data": ["JetBrains Mono"],
+                        "headline-md": ["Inter"],
+                        "label-caps": ["JetBrains Mono"],
+                        "body-sm": ["Inter"],
+                        "title-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "osd-label": ["12px", { "lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "700" }],
+                        "body-base": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "display-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "mono-data": ["12px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "body-sm": ["13px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "title-sm": ["16px", { "lineHeight": "1.4", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Custom Styles for visual effects */
+        .glass-panel {
+            background: rgba(18, 23, 36, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(35, 44, 63, 0.8);
+        }
+        .active-glow {
+            box-shadow: 0 0 12px rgba(124, 58, 237, 0.4);
+            border-color: #7c3aed;
+        }
+        .alert-glow {
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+            border-color: #EF4444;
+            animation: pulse-alert 2s infinite;
+        }
+        @keyframes pulse-alert {
+            0% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.6); }
+            50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.9); }
+            100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.6); }
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #10131c;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #31343f;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="bg-background text-text-primary h-screen w-screen overflow-hidden flex flex-col font-body-base">
+<!-- TopNavBar -->
+<nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-padding h-14 bg-surface border-b border-border-subtle bg-surface-dim">
+<div class="flex items-center gap-8">
+<span class="text-headline-md font-headline-md font-extrabold text-primary tracking-tighter">ewVLM</span>
+<div class="hidden md:flex gap-6 h-full items-center">
+<a class="text-on-surface-variant font-medium hover:bg-surface-container-highest transition-colors px-2 py-1 rounded" href="#">Monitor A</a>
+<a class="text-on-surface-variant font-medium hover:bg-surface-container-highest transition-colors px-2 py-1 rounded" href="#">Monitor B</a>
+<a class="text-on-surface-variant font-medium hover:bg-surface-container-highest transition-colors px-2 py-1 rounded" href="#">Playback</a>
+<a class="text-on-surface-variant font-medium hover:bg-surface-container-highest transition-colors px-2 py-1 rounded" href="#">Dashboard</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex gap-2">
+<button class="p-2 rounded-full hover:bg-surface-container-highest transition-colors text-on-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">memory</span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container-highest transition-colors text-on-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">lan</span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container-highest transition-colors text-on-surface-variant flex items-center justify-center relative">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full"></span>
+</button>
+</div>
+<div class="h-8 w-8 rounded-full bg-surface-variant border border-border-subtle overflow-hidden">
+<img alt="Security Operator Profile" class="w-full h-full object-cover" data-alt="A futuristic, high-contrast portrait of a security operator in a dark, high-tech control room. The lighting is dominated by deep navies and bright violet accents reflecting off their face. The mood is serious, vigilant, and highly professional. Modern industrial design elements surround them." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlCTDD_fVKJquehEtBTS1Q93adi-eRu0usYPA0w4Qq3COMr1xSUq7X4fyrfvBugowrJfoTnn_WLw8W1xHbbtIZ-qRKg6T1tP1GXnzaguPiLoS2HARGnedUNxKSFu53t8CIiK4eF2B0obkyk6MlffIK9h8FAsdyq_ZimS0Z56lZ-98_bKbbLKpAxPUvMVpYMDRGU60M0k-wghlv48tEgVPUNi0B4tvNEdODc7dTWo00eJ-Pw5ZTK1raVA"/>
+</div>
+</div>
+</nav>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-14 bottom-0 w-sidebar-width flex flex-col z-40 bg-surface-container-low border-r border-border-subtle shadow-sm">
+<div class="p-container-padding border-b border-border-subtle">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-10 h-10 rounded bg-surface-variant flex items-center justify-center border border-border-subtle">
+<span class="material-symbols-outlined text-primary">campaign</span>
+</div>
+<div>
+<h2 class="text-title-sm font-title-sm text-on-surface">IP AUDIO CONSOLE</h2>
+<p class="text-body-sm font-body-sm text-text-muted">12 Active Zones</p>
+</div>
+</div>
+<button class="w-full py-2 bg-primary-container text-white text-body-sm font-bold rounded-DEFAULT hover:bg-inverse-primary transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">add</span> Add New Device
+            </button>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">videocam</span>
+<span class="text-label-caps font-label-caps">Cameras</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">sensors</span>
+<span class="text-label-caps font-label-caps">Sensors</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">map</span>
+<span class="text-label-caps font-label-caps">Map</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">psychology</span>
+<span class="text-label-caps font-label-caps">AI Rules</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary-container text-on-primary-container font-bold translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">speaker</span>
+<span class="text-label-caps font-label-caps">Audio Routing</span>
+</a>
+</div>
+<div class="p-2 border-t border-border-subtle mt-auto">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-label-caps font-label-caps">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="text-label-caps font-label-caps">Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-sidebar-width mt-14 p-container-padding flex-1 flex gap-gutter bg-surface-container-lowest overflow-hidden">
+<!-- Left Column: Zone Tree -->
+<section class="w-1/4 glass-panel rounded-lg flex flex-col h-full border border-border-subtle">
+<div class="p-3 border-b border-border-subtle bg-surface flex justify-between items-center rounded-t-lg">
+<h3 class="text-title-sm font-title-sm text-on-surface">Zone Routing</h3>
+<span class="material-symbols-outlined text-text-muted cursor-pointer hover:text-primary transition-colors">filter_list</span>
+</div>
+<div class="p-3 flex-1 overflow-y-auto custom-scrollbar">
+<!-- Zone Items -->
+<div class="space-y-2">
+<div class="flex items-center gap-2 p-2 hover:bg-surface-container-high rounded cursor-pointer group">
+<span class="material-symbols-outlined text-primary text-sm group-hover:rotate-90 transition-transform">chevron_right</span>
+<span class="material-symbols-outlined text-text-muted text-sm">business</span>
+<span class="text-body-sm font-body-sm text-text-primary">Sector Alpha (North)</span>
+<span class="ml-auto w-2 h-2 rounded-full bg-tertiary shadow-[0_0_4px_#4edea3]"></span>
+</div>
+<div class="pl-6 space-y-1 border-l border-border-subtle ml-3">
+<div class="flex items-center justify-between p-1.5 hover:bg-surface-container-high rounded cursor-pointer active-glow">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-xs">speaker</span>
+<span class="text-mono-data font-mono-data text-on-surface">Z-A-01 Main Gate</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xs cursor-pointer">volume_up</span>
+<span class="text-mono-data font-mono-data text-primary">85%</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-1.5 hover:bg-surface-container-high rounded cursor-pointer">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-xs">speaker</span>
+<span class="text-mono-data font-mono-data text-text-muted">Z-A-02 Parking L1</span>
+</div>
+<span class="material-symbols-outlined text-text-muted text-xs cursor-pointer hover:text-primary">volume_off</span>
+</div>
+</div>
+<div class="flex items-center gap-2 p-2 hover:bg-surface-container-high rounded cursor-pointer mt-2">
+<span class="material-symbols-outlined text-primary text-sm rotate-90">chevron_right</span>
+<span class="material-symbols-outlined text-text-muted text-sm">warehouse</span>
+<span class="text-body-sm font-body-sm text-text-primary">Sector Beta (Warehouse)</span>
+<span class="ml-auto w-2 h-2 rounded-full bg-tertiary shadow-[0_0_4px_#4edea3]"></span>
+</div>
+<div class="pl-6 space-y-1 border-l border-border-subtle ml-3">
+<div class="flex items-center justify-between p-1.5 bg-surface-container rounded cursor-pointer alert-glow">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-danger text-xs animate-pulse">crisis_alert</span>
+<span class="text-mono-data font-mono-data text-danger font-bold">Z-B-04 Loading Dock B</span>
+</div>
+<span class="text-mono-data font-mono-data text-danger bg-error-container px-1 rounded">INTERCOM ACTIVE</span>
+</div>
+</div>
+</div>
+</div>
+<div class="p-3 border-t border-border-subtle bg-surface-container-low rounded-b-lg">
+<button class="w-full py-1.5 border border-border-subtle text-text-muted text-body-sm font-body-sm rounded hover:bg-surface-container-high transition-colors">Select All Zones</button>
+</div>
+</section>
+<!-- Center/Right Column: Control Panel -->
+<section class="flex-1 flex flex-col gap-gutter">
+<!-- Top Half: Live Audio & Intercom -->
+<div class="flex-1 flex gap-gutter">
+<!-- Microphone Control -->
+<div class="w-1/2 glass-panel rounded-lg border border-border-subtle flex flex-col">
+<div class="p-3 border-b border-border-subtle bg-surface flex justify-between items-center rounded-t-lg">
+<h3 class="text-title-sm font-title-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">mic</span> Live Broadcast
+                        </h3>
+<span class="text-mono-data font-mono-data text-primary px-2 py-0.5 bg-primary-fixed-dim bg-opacity-20 rounded border border-primary">READY</span>
+</div>
+<div class="flex-1 flex flex-col items-center justify-center p-6 relative">
+<!-- Decorative visualization -->
+<div class="absolute inset-0 opacity-20 pointer-events-none">
+<div class="w-full h-full bg-cover bg-center" data-alt="A dark, abstract digital visualization of soundwaves in an industrial setting. Glowing violet lines undulate against a deep black-blue background, representing audio frequencies. The style is modern, technical, and data-driven." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDLH-4kJeCx1BSIlwKKZaysB9eowJHlTof-AjdZMo0roJ16FmK6YBJh3BuA2KyL4_nJTCZMv5zJ5zrZlFMbAhR0AFfqddC8USXZZ3KT2ciEsFPECKln7wXHM3oCM-Q1_0CGTEiv9qHNOwGnELXTJpTOIGL6FGbqX6DOxxmjIhVx9itWU_cu7ekhQfVwGqZf138XzQsHr4w8zVJYItvXMS6G_wJ__WhmEkUv8av5YgTyDSyaYP4pz7Cwnw')"></div>
+</div>
+<button class="w-32 h-32 rounded-full bg-surface-container-highest border-4 border-surface-variant flex flex-col items-center justify-center gap-2 hover:border-primary transition-all shadow-[0_4px_12px_rgba(0,0,0,0.5)] z-10" id="pttBtn">
+<span class="material-symbols-outlined text-4xl text-text-muted" id="pttIcon">mic_none</span>
+<span class="text-label-caps font-label-caps text-text-muted" id="pttLabel">HOLD TO TALK</span>
+</button>
+<div class="mt-8 w-full px-8 z-10">
+<div class="flex justify-between text-mono-data font-mono-data text-text-muted mb-2">
+<span>Input Gain</span>
+<span>0 dB</span>
+</div>
+<input class="w-full accent-primary h-1 bg-surface-variant rounded-full appearance-none" max="20" min="-20" type="range" value="0"/>
+</div>
+</div>
+</div>
+<!-- Emergency Intercom -->
+<div class="w-1/2 glass-panel rounded-lg border border-danger flex flex-col relative overflow-hidden">
+<div class="absolute inset-0 bg-danger opacity-5 pointer-events-none"></div>
+<div class="p-3 border-b border-danger/30 bg-surface/80 flex justify-between items-center rounded-t-lg">
+<h3 class="text-title-sm font-title-sm text-danger flex items-center gap-2 font-bold">
+<span class="material-symbols-outlined animate-pulse">emergency</span> Active Intercom
+                        </h3>
+<span class="text-mono-data font-mono-data text-danger animate-pulse">00:01:24</span>
+</div>
+<div class="p-4 flex-1 flex flex-col justify-between z-10">
+<div class="bg-surface-container p-4 rounded border border-border-subtle">
+<div class="text-osd-label font-osd-label text-text-muted mb-1">CALLER ID</div>
+<div class="text-headline-md font-headline-md text-on-surface">Z-B-04 Loading Dock B</div>
+<div class="text-body-sm font-body-sm text-warning mt-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">warning</span> Unauthorized access detected by Camera C-12
+                            </div>
+</div>
+<div class="space-y-4 mt-4">
+<div class="flex items-center justify-between bg-surface-container p-2 rounded">
+<span class="text-mono-data font-mono-data text-text-muted">Acoustic Echo Cancellation (AEC)</span>
+<div class="w-8 h-4 bg-primary rounded-full relative cursor-pointer">
+<div class="w-3 h-3 bg-white rounded-full absolute right-0.5 top-0.5"></div>
+</div>
+</div>
+<div class="flex items-center justify-between bg-surface-container p-2 rounded">
+<span class="text-mono-data font-mono-data text-text-muted">Auto Gain Control (AGC)</span>
+<div class="w-8 h-4 bg-primary rounded-full relative cursor-pointer">
+<div class="w-3 h-3 bg-white rounded-full absolute right-0.5 top-0.5"></div>
+</div>
+</div>
+</div>
+<div class="flex gap-2 mt-auto pt-4">
+<button class="flex-1 py-2 bg-danger text-white text-body-sm font-bold rounded hover:bg-error-container transition-colors shadow-lg">END CALL</button>
+<button class="px-4 py-2 border border-border-subtle text-text-primary rounded hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">more_horiz</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Half: TTS & Scenarios -->
+<div class="glass-panel rounded-lg border border-border-subtle flex flex-col h-64">
+<div class="p-3 border-b border-border-subtle bg-surface flex justify-between items-center rounded-t-lg">
+<h3 class="text-title-sm font-title-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">record_voice_over</span> Text-to-Speech &amp; Scenarios
+                    </h3>
+<div class="flex gap-2">
+<select class="bg-surface-container border border-border-subtle text-mono-data text-text-primary rounded px-2 py-1 focus:ring-primary focus:border-primary">
+<option>Voice: Male (Command)</option>
+<option>Voice: Female (Alert)</option>
+</select>
+<select class="bg-surface-container border border-border-subtle text-mono-data text-text-primary rounded px-2 py-1 focus:ring-primary focus:border-primary">
+<option>Lang: EN</option>
+<option>Lang: KO</option>
+</select>
+</div>
+</div>
+<div class="flex flex-1 p-0">
+<!-- Quick Scenarios -->
+<div class="w-1/3 border-r border-border-subtle p-3 overflow-y-auto custom-scrollbar bg-surface-container-low">
+<div class="text-osd-label font-osd-label text-text-muted mb-2">QUICK SCENARIOS</div>
+<div class="space-y-2">
+<button class="w-full text-left p-2 bg-surface-container hover:bg-surface-container-high border border-border-subtle rounded text-body-sm font-body-sm text-text-primary transition-colors flex items-center justify-between">
+                                Evacuation Warning
+                                <span class="material-symbols-outlined text-danger text-sm">play_arrow</span>
+</button>
+<button class="w-full text-left p-2 bg-surface-container hover:bg-surface-container-high border border-border-subtle rounded text-body-sm font-body-sm text-text-primary transition-colors flex items-center justify-between">
+                                Trespasser Alert
+                                <span class="material-symbols-outlined text-warning text-sm">play_arrow</span>
+</button>
+<button class="w-full text-left p-2 bg-surface-container hover:bg-surface-container-high border border-border-subtle rounded text-body-sm font-body-sm text-text-primary transition-colors flex items-center justify-between">
+                                Shift Change Notify
+                                <span class="material-symbols-outlined text-primary text-sm">play_arrow</span>
+</button>
+</div>
+</div>
+<!-- TTS Input -->
+<div class="flex-1 p-3 flex flex-col">
+<textarea class="flex-1 w-full bg-surface-container border border-border-subtle rounded p-3 text-body-base font-body-base text-text-primary focus:ring-1 focus:ring-primary focus:border-primary resize-none placeholder-text-muted" placeholder="Type message to broadcast to selected zones..."></textarea>
+<div class="flex justify-between items-center mt-3">
+<span class="text-mono-data font-mono-data text-text-muted">Target: Sector Alpha (North) • 2 Zones</span>
+<button class="py-2 px-6 bg-primary-container text-white text-body-sm font-bold rounded flex items-center gap-2 hover:bg-inverse-primary transition-colors shadow-[0_4px_12px_rgba(124,58,237,0.3)]">
+<span class="material-symbols-outlined text-sm">send</span> BROADCAST
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<script>
+        // Simple Interaction for PTT Button to demonstrate UI feel
+        const pttBtn = document.getElementById('pttBtn');
+        const pttIcon = document.getElementById('pttIcon');
+        const pttLabel = document.getElementById('pttLabel');
+
+        pttBtn.addEventListener('mousedown', () => {
+            pttBtn.classList.remove('bg-surface-container-highest', 'border-surface-variant');
+            pttBtn.classList.add('bg-primary-container', 'border-primary', 'shadow-[0_0_20px_rgba(124,58,237,0.6)]');
+            pttIcon.classList.remove('text-text-muted');
+            pttIcon.classList.add('text-white');
+            pttIcon.textContent = 'mic';
+            pttLabel.classList.remove('text-text-muted');
+            pttLabel.classList.add('text-white', 'animate-pulse');
+            pttLabel.textContent = 'TRANSMITTING...';
+        });
+
+        const releasePtt = () => {
+            pttBtn.classList.add('bg-surface-container-highest', 'border-surface-variant');
+            pttBtn.classList.remove('bg-primary-container', 'border-primary', 'shadow-[0_0_20px_rgba(124,58,237,0.6)]');
+            pttIcon.classList.add('text-text-muted');
+            pttIcon.classList.remove('text-white');
+            pttIcon.textContent = 'mic_none';
+            pttLabel.classList.add('text-text-muted');
+            pttLabel.classList.remove('text-white', 'animate-pulse');
+            pttLabel.textContent = 'HOLD TO TALK';
+        };
+
+        pttBtn.addEventListener('mouseup', releasePtt);
+        pttBtn.addEventListener('mouseleave', releasePtt);
+    </script>
+</body></html>

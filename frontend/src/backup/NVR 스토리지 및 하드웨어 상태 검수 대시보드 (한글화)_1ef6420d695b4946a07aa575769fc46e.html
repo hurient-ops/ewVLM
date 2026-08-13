@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NVR 스토리지 및 하드웨어 상태 검수 대시보드</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "border-subtle": "#232C3F",
+                      "surface-dim": "#10131c",
+                      "on-tertiary-container": "#76ffc2",
+                      "text-muted": "#7D8D9F",
+                      "surface-bright": "#363943",
+                      "secondary-fixed": "#d8e2ff",
+                      "on-tertiary": "#003824",
+                      "on-background": "#e0e2ef",
+                      "background": "#10131c",
+                      "tertiary-container": "#007650",
+                      "surface-container": "#1c1f29",
+                      "surface-variant": "#31343f",
+                      "on-primary-fixed-variant": "#5a00c6",
+                      "text-primary": "#E2E8F0",
+                      "on-error": "#690005",
+                      "outline-variant": "#4a4455",
+                      "on-tertiary-fixed-variant": "#005236",
+                      "surface-tint": "#d2bbff",
+                      "surface-container-highest": "#31343f",
+                      "on-primary-fixed": "#25005a",
+                      "warning": "#F59E0B",
+                      "primary-fixed": "#eaddff",
+                      "surface-container-high": "#272a34",
+                      "on-secondary-container": "#e6ecff",
+                      "on-secondary-fixed": "#001a42",
+                      "neon-gold": "#F59E0B",
+                      "on-surface": "#e0e2ef",
+                      "on-primary": "#3f008e",
+                      "on-tertiary-fixed": "#002113",
+                      "primary": "#d2bbff",
+                      "tertiary": "#4edea3",
+                      "inverse-surface": "#e0e2ef",
+                      "tertiary-fixed-dim": "#4edea3",
+                      "surface": "#121724",
+                      "on-secondary": "#002e6a",
+                      "primary-fixed-dim": "#d2bbff",
+                      "danger": "#EF4444",
+                      "primary-container": "#7c3aed",
+                      "error-container": "#93000a",
+                      "on-error-container": "#ffdad6",
+                      "on-surface-variant": "#ccc3d8",
+                      "outline": "#958da1",
+                      "inverse-on-surface": "#2d303a",
+                      "surface-container-low": "#181b25",
+                      "secondary-fixed-dim": "#adc6ff",
+                      "tertiary-fixed": "#6ffbbe",
+                      "on-secondary-fixed-variant": "#004395",
+                      "on-primary-container": "#ede0ff",
+                      "secondary": "#adc6ff",
+                      "error": "#ffb4ab",
+                      "secondary-container": "#0566d9",
+                      "inverse-primary": "#732ee4",
+                      "surface-container-lowest": "#0b0e17"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "unit": "4px",
+                      "sidebar-width": "280px",
+                      "osd-margin": "8px",
+                      "container-padding": "16px",
+                      "gutter": "2px"
+              },
+              "fontFamily": {
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "osd-label": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ],
+                      "label-caps": [
+                              "JetBrains Mono"
+                      ],
+                      "title-sm": [
+                              "Inter"
+                      ],
+                      "mono-data": [
+                              "JetBrains Mono"
+                      ],
+                      "body-base": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "osd-label": [
+                              "12px",
+                              {
+                                      "lineHeight": "1",
+                                      "letterSpacing": "0.01em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "display-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-sm": [
+                              "13px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "1",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "title-sm": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "mono-data": [
+                              "12px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-base": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        body {
+            background-color: #070A13;
+            color: #E2E8F0;
+        }
+        
+        /* Utility for LED glow */
+        .led-active {
+            box-shadow: 0 0 4px #7c3aed;
+        }
+        .led-danger {
+            box-shadow: 0 0 4px #EF4444;
+        }
+        .led-warning {
+            box-shadow: 0 0 4px #F59E0B;
+        }
+        .led-safe {
+            box-shadow: 0 0 4px #4edea3;
+        }
+        
+        /* Minimal Scrollbar for dense data tables */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #121724; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #232C3F; 
+            border-radius: 2px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #31343f; 
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col overflow-hidden">
+<!-- TopNavBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-padding h-14 bg-surface dark:bg-surface border-b border-border-subtle dark:border-border-subtle bg-surface-dim">
+<div class="flex items-center gap-6">
+<h1 class="text-headline-md font-headline-md font-extrabold text-primary dark:text-primary tracking-tighter">ewVLM</h1>
+<nav class="hidden md:flex items-center h-full gap-4">
+<a class="h-full flex items-center px-2 text-on-surface-variant dark:text-on-surface-variant font-medium hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors active:scale-95 duration-100" href="#">
+<span class="text-body-base font-body-base">모니터 A</span>
+</a>
+<a class="h-full flex items-center px-2 text-on-surface-variant dark:text-on-surface-variant font-medium hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors active:scale-95 duration-100" href="#">
+<span class="text-body-base font-body-base">모니터 B</span>
+</a>
+<a class="h-full flex items-center px-2 text-on-surface-variant dark:text-on-surface-variant font-medium hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors active:scale-95 duration-100" href="#">
+<span class="text-body-base font-body-base">재생</span>
+</a>
+<a class="h-full flex items-center px-2 text-primary dark:text-primary border-b-2 border-primary pb-1 font-bold hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors active:scale-95 duration-100" href="#">
+<span class="text-body-base font-body-base">대시보드</span>
+</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">memory</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">lan</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden border border-border-subtle">
+<img alt="Security Operator Profile" class="w-full h-full object-cover" data-alt="A detailed headshot of a serious security operator in a dimly lit control room setting. High contrast, industrial aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIKUhRXI8qz3AX0cxecsgbRmD3SBOr1ZpLZLq-8nkXlgSMgS2OZHgP1KTMMUH1vwbhqflNkEVHB5mqu9WHIPov-7qg4fDLqIWZD-3Nxak75Egsmym6kQPMPmOPjPWAABkYPkFqS9RdG5qBL0RHXEe2B84DgnTzg90fYEaEm_UpHIMwx075OLJh67zT2HRPtrm9T7y8dRVoMZ5fkcrEJt5dWorFo8JwPWq4gfwK7BvoPMgkMn4kjv5MOQ"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-14 bottom-0 w-sidebar-width flex flex-col z-40 bg-surface-container dark:bg-surface-container shadow-sm bg-surface-container-low border-r border-border-subtle">
+<div class="p-6 border-b border-border-subtle">
+<div class="flex items-center gap-4 mb-6">
+<div class="w-10 h-10 rounded bg-surface-variant border border-border-subtle flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">dns</span>
+</div>
+<div>
+<h2 class="text-title-sm font-title-sm text-on-surface">자산 탐색기</h2>
+<p class="text-body-sm font-body-sm text-text-muted">32 활성 채널</p>
+</div>
+</div>
+<button class="w-full py-2 px-4 bg-primary-container text-on-primary-container rounded flex items-center justify-center gap-2 font-title-sm text-title-sm hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-sm">add</span>
+                새 카메라 추가
+            </button>
+</div>
+<nav class="flex-1 p-4 flex flex-col gap-2 overflow-y-auto">
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">videocam</span>
+<span class="text-label-caps font-label-caps">카메라</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-primary-container text-on-primary-container rounded-lg font-bold hover:bg-surface-container-high transition-all translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">sensors</span>
+<span class="text-label-caps font-label-caps">센서</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">map</span>
+<span class="text-label-caps font-label-caps">지도</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">psychology</span>
+<span class="text-label-caps font-label-caps">AI 규칙</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-subtle flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+<span class="text-label-caps font-label-caps">설정</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">help</span>
+<span class="text-label-caps font-label-caps">지원</span>
+</a>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="ml-[280px] mt-14 flex-1 p-container-padding flex flex-col gap-4 overflow-hidden relative">
+<!-- Header Section -->
+<div class="flex justify-between items-end pb-2 border-b border-border-subtle">
+<div>
+<h1 class="text-headline-md lg:text-[28px] font-display-lg text-primary whitespace-nowrap overflow-hidden text-ellipsis">NVR 스토리지 및 하드웨어 상태 검수 대시보드</h1>
+<p class="text-body-base font-body-base text-text-muted mt-1">스토리지 및 녹화 서버 상태 모니터링</p>
+</div>
+<div class="flex items-center gap-4 text-mono-data font-mono-data">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-tertiary led-safe"></div>
+<span class="text-tertiary">시스템 정상</span>
+</div>
+<div class="px-2 py-1 bg-surface-variant rounded border border-border-subtle">
+                    가동 시간: 94일 14시간 22분
+                </div>
+</div>
+</div>
+<!-- Dashboard Grid -->
+<div class="flex-1 grid grid-cols-12 gap-4 min-h-0">
+<!-- Left Column: NVR Assets -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-4 min-h-0">
+<div class="bg-surface rounded-lg border border-border-subtle flex flex-col flex-1 overflow-hidden shadow-lg shadow-black/50 relative">
+<!-- Glassmorphism accent -->
+<div class="absolute inset-0 bg-gradient-to-br from-surface-variant/20 to-transparent pointer-events-none"></div>
+<div class="p-4 border-b border-border-subtle flex justify-between items-center bg-surface-container-low">
+<h3 class="text-title-sm font-title-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">dns</span>
+                            녹화 서버
+                        </h3>
+<span class="text-mono-data font-mono-data text-text-muted">3 노드</span>
+</div>
+<div class="p-4 flex flex-col gap-4 overflow-y-auto">
+<!-- Node 1 -->
+<div class="p-3 border border-border-subtle rounded bg-surface-container relative">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-tertiary rounded-l"></div>
+<div class="flex justify-between items-start mb-2">
+<div class="flex flex-col">
+<span class="text-label-caps font-label-caps text-on-surface">NVR-01-PRIMARY</span>
+<span class="text-mono-data font-mono-data text-text-muted mt-1">10.0.4.12</span>
+</div>
+<div class="flex items-center gap-1 bg-tertiary/10 px-2 py-0.5 rounded border border-tertiary/30">
+<div class="w-1.5 h-1.5 rounded-full bg-tertiary led-safe"></div>
+<span class="text-mono-data font-mono-data text-tertiary">활성</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 mt-4 text-mono-data font-mono-data">
+<div>
+<div class="text-text-muted mb-1 flex justify-between">
+<span>CPU</span>
+<span class="text-on-surface">42%</span>
+</div>
+<div class="w-full h-1 bg-surface-variant rounded overflow-hidden">
+<div class="h-full bg-primary" style="width: 42%"></div>
+</div>
+</div>
+<div>
+<div class="text-text-muted mb-1 flex justify-between">
+<span>RAM</span>
+<span class="text-on-surface">64%</span>
+</div>
+<div class="w-full h-1 bg-surface-variant rounded overflow-hidden">
+<div class="h-full bg-primary" style="width: 64%"></div>
+</div>
+</div>
+</div>
+<div class="mt-3 pt-3 border-t border-border-subtle flex justify-between text-mono-data font-mono-data">
+<span class="text-text-muted">할당된 카메라: <span class="text-on-surface">14</span></span>
+<span class="text-text-muted">IOPS: <span class="text-on-surface">1.2k</span></span>
+</div>
+</div>
+<!-- Node 2 -->
+<div class="p-3 border border-border-subtle rounded bg-surface-container relative">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-warning rounded-l"></div>
+<div class="flex justify-between items-start mb-2">
+<div class="flex flex-col">
+<span class="text-label-caps font-label-caps text-on-surface">NVR-02-PRIMARY</span>
+<span class="text-mono-data font-mono-data text-text-muted mt-1">10.0.4.13</span>
+</div>
+<div class="flex items-center gap-1 bg-warning/10 px-2 py-0.5 rounded border border-warning/30">
+<div class="w-1.5 h-1.5 rounded-full bg-warning led-warning"></div>
+<span class="text-mono-data font-mono-data text-warning">높은 부하</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 mt-4 text-mono-data font-mono-data">
+<div>
+<div class="text-text-muted mb-1 flex justify-between">
+<span>CPU</span>
+<span class="text-warning">88%</span>
+</div>
+<div class="w-full h-1 bg-surface-variant rounded overflow-hidden">
+<div class="h-full bg-warning" style="width: 88%"></div>
+</div>
+</div>
+<div>
+<div class="text-text-muted mb-1 flex justify-between">
+<span>RAM</span>
+<span class="text-on-surface">72%</span>
+</div>
+<div class="w-full h-1 bg-surface-variant rounded overflow-hidden">
+<div class="h-full bg-primary" style="width: 72%"></div>
+</div>
+</div>
+</div>
+<div class="mt-3 pt-3 border-t border-border-subtle flex justify-between text-mono-data font-mono-data">
+<span class="text-text-muted">할당된 카메라: <span class="text-on-surface">18</span></span>
+<span class="text-text-muted">IOPS: <span class="text-on-surface">2.4k</span></span>
+</div>
+</div>
+<!-- Failover Node -->
+<div class="p-3 border border-border-subtle rounded bg-surface-container relative border-dashed">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-text-muted rounded-l"></div>
+<div class="flex justify-between items-start mb-2">
+<div class="flex flex-col">
+<span class="text-label-caps font-label-caps text-text-muted">NVR-03-FAILOVER</span>
+<span class="text-mono-data font-mono-data text-text-muted mt-1">10.0.4.14</span>
+</div>
+<div class="flex items-center gap-1 bg-surface-variant px-2 py-0.5 rounded border border-border-subtle">
+<div class="w-1.5 h-1.5 rounded-full bg-text-muted"></div>
+<span class="text-mono-data font-mono-data text-text-muted">대기</span>
+</div>
+</div>
+<div class="mt-4 pt-2 border-t border-border-subtle text-mono-data font-mono-data text-text-muted text-center italic">
+                                주 서버 장애 시 제어 권한 인계 준비 완료.
+                            </div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Storage & Network -->
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-4 min-h-0">
+<!-- Storage Array Health -->
+<div class="bg-surface rounded-lg border border-border-subtle p-4 flex flex-col shadow-lg shadow-black/50">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-title-sm font-title-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">storage</span>
+                            스토리지 볼륨 및 드라이브 베이 상태
+                        </h3>
+<div class="flex items-center gap-4 text-mono-data font-mono-data">
+<div class="flex items-center gap-1"><div class="w-2 h-2 rounded bg-tertiary"></div><span class="text-text-muted">정상</span></div>
+<div class="flex items-center gap-1"><div class="w-2 h-2 rounded bg-warning"></div><span class="text-text-muted">경고</span></div>
+<div class="flex items-center gap-1"><div class="w-2 h-2 rounded bg-danger"></div><span class="text-text-muted">실패</span></div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-6">
+<!-- Volume A -->
+<div class="border border-border-subtle rounded p-3 bg-surface-container-low">
+<div class="flex justify-between items-center mb-3">
+<span class="text-label-caps font-label-caps text-on-surface">VOLUME-A (NVR-01)</span>
+<span class="text-mono-data font-mono-data text-tertiary">RAID 5 - OK</span>
+</div>
+<!-- Drive Bays -->
+<div class="grid grid-cols-4 gap-2 mb-4">
+<div class="bg-surface-variant border border-tertiary/50 rounded h-12 flex items-center justify-center relative overflow-hidden">
+<div class="absolute bottom-0 left-0 w-full h-1 bg-tertiary"></div>
+<span class="text-mono-data font-mono-data text-text-muted text-[10px]">HDD 0</span>
+</div>
+<div class="bg-surface-variant border border-tertiary/50 rounded h-12 flex items-center justify-center relative overflow-hidden">
+<div class="absolute bottom-0 left-0 w-full h-1 bg-tertiary"></div>
+<span class="text-mono-data font-mono-data text-text-muted text-[10px]">HDD 1</span>
+</div>
+<div class="bg-surface-variant border border-tertiary/50 rounded h-12 flex items-center justify-center relative overflow-hidden">
+<div class="absolute bottom-0 left-0 w-full h-1 bg-tertiary"></div>
+<span class="text-mono-data font-mono-data text-text-muted text-[10px]">HDD 2</span>
+</div>
+<div class="bg-surface-variant border border-tertiary/50 rounded h-12 flex items-center justify-center relative overflow-hidden">
+<div class="absolute bottom-0 left-0 w-full h-1 bg-tertiary"></div>
+<span class="text-mono-data font-mono-data text-text-muted text-[10px]">HDD 3</span>
+</div>
+</div>
+<div class="flex flex-col gap-1 text-mono-data font-mono-data">
+<div class="flex justify-between text-text-muted">
+<span>용량</span>
+<span>12.4 TB / 16.0 TB</span>
+</div>
+<div class="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 77%"></div>
+</div>
+</div>
+</div>
+<!-- Volume B -->
+<div class="border border-danger/30 rounded p-3 bg-surface-container-low relative">
+<div class="absolute inset-0 bg-danger/5 rounded pointer-events-none"></div>
+<div class="flex justify-between items-center mb-3">
+<span class="text-label-caps font-label-caps text-on-surface">VOLUME-B (NVR-02)</span>
+<span class="text-mono-data font-mono-data text-danger animate-pulse">RAID 5 - DEGRADED</span>
+</div>
+<!-- Drive Bays -->
+<div class="grid grid-cols-4 gap-2 mb-4">
+<div class="bg-surface-variant border border-tertiary/50 rounded h-12 flex items-center justify-center relative overflow-hidden">
+<div class="absolute bottom-0 left-0 w-full h-1 bg-tertiary"></div>
+<span class="text-mono-data font-mono-data text-text-muted text-[10px]">HDD 0</span>
+</div>
+<div class="bg-surface-variant border border-danger/80 rounded h-12 flex items-center justify-center relative overflow-hidden bg-danger/10">
+<div class="absolute bottom-0 left-0 w-full h-1 bg-danger led-danger"></div>
+<span class="text-mono-data font-mono-data text-danger text-[10px] font-bold">불량 섹터</span>
+</div>
+<div class="bg-surface-variant border border-tertiary/50 rounded h-12 flex items-center justify-center relative overflow-hidden">
+<div class="absolute bottom-0 left-0 w-full h-1 bg-tertiary"></div>
+<span class="text-mono-data font-mono-data text-text-muted text-[10px]">HDD 2</span>
+</div>
+<div class="bg-surface-variant border border-tertiary/50 rounded h-12 flex items-center justify-center relative overflow-hidden">
+<div class="absolute bottom-0 left-0 w-full h-1 bg-tertiary"></div>
+<span class="text-mono-data font-mono-data text-text-muted text-[10px]">HDD 3</span>
+</div>
+</div>
+<div class="flex flex-col gap-1 text-mono-data font-mono-data">
+<div class="flex justify-between text-text-muted">
+<span>용량</span>
+<span>14.1 TB / 16.0 TB</span>
+</div>
+<div class="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-warning" style="width: 88%"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Network & Retention Bottom Row -->
+<div class="flex-1 grid grid-cols-2 gap-4 min-h-0">
+<!-- Network Transport -->
+<div class="bg-surface rounded-lg border border-border-subtle p-4 flex flex-col shadow-lg shadow-black/50">
+<div class="flex justify-between items-center border-b border-border-subtle pb-2 mb-3">
+<h3 class="text-title-sm font-title-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">router</span>
+                                수신 대역폭
+                            </h3>
+<span class="text-display-lg font-display-lg text-primary">845<span class="text-body-base text-text-muted"> Mbps</span></span>
+</div>
+<div class="flex-1 relative flex flex-col justify-end min-h-[100px] border-b border-l border-border-subtle pl-2 pb-2">
+<!-- Abstract Chart Representation -->
+<div class="absolute bottom-2 left-2 right-0 h-16 flex items-end gap-1 px-1">
+<div class="w-full bg-primary/20 h-[40%] rounded-t border-t border-primary relative"></div>
+<div class="w-full bg-primary/30 h-[45%] rounded-t border-t border-primary relative"></div>
+<div class="w-full bg-primary/20 h-[50%] rounded-t border-t border-primary relative"></div>
+<div class="w-full bg-primary/40 h-[60%] rounded-t border-t border-primary relative"></div>
+<div class="w-full bg-primary/30 h-[55%] rounded-t border-t border-primary relative"></div>
+<div class="w-full bg-primary/50 h-[70%] rounded-t border-t border-primary relative"></div>
+<div class="w-full bg-warning/50 h-[90%] rounded-t border-t border-warning relative">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 text-mono-data text-[10px] text-warning bg-surface-dim px-1 rounded border border-border-subtle">최고점</div>
+</div>
+<div class="w-full bg-primary/40 h-[65%] rounded-t border-t border-primary relative"></div>
+<div class="w-full bg-primary/60 h-[80%] rounded-t border-t border-primary relative"></div>
+<div class="w-full bg-primary/50 h-[75%] rounded-t border-t border-primary relative"></div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-border-subtle">
+<div>
+<div class="text-osd-label text-text-muted mb-1">패킷 손실률</div>
+<div class="text-title-sm font-title-sm text-tertiary">0.02%</div>
+</div>
+<div>
+<div class="text-osd-label text-text-muted mb-1">네트워크 지터</div>
+<div class="text-title-sm font-title-sm text-on-surface">12ms</div>
+</div>
+</div>
+</div>
+<!-- Retention Policy -->
+<div class="bg-surface rounded-lg border border-border-subtle p-4 flex flex-col shadow-lg shadow-black/50">
+<div class="flex justify-between items-center border-b border-border-subtle pb-2 mb-3">
+<h3 class="text-title-sm font-title-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">history</span>
+                                보존 정책 상태
+                            </h3>
+</div>
+<div class="flex-1 flex flex-col justify-center gap-4">
+<!-- Policy Item 1 -->
+<div class="flex items-center gap-4">
+<div class="w-16 h-16 rounded-full border-4 border-surface-variant flex items-center justify-center relative">
+<svg class="absolute inset-0 w-full h-full -rotate-90" viewbox="0 0 36 36">
+<path class="text-tertiary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="100, 100" stroke-width="4"></path>
+</svg>
+<span class="text-title-sm font-bold text-on-surface z-10">30일</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between text-mono-data font-mono-data mb-1">
+<span class="text-on-surface">고해상도 스트림 (1080p+)</span>
+<span class="text-tertiary">충족</span>
+</div>
+<p class="text-body-sm font-body-sm text-text-muted">목표: 30일. 현재 32일 분량의 영상 보존 중.</p>
+</div>
+</div>
+<!-- Policy Item 2 -->
+<div class="flex items-center gap-4">
+<div class="w-16 h-16 rounded-full border-4 border-surface-variant flex items-center justify-center relative">
+<svg class="absolute inset-0 w-full h-full -rotate-90" viewbox="0 0 36 36">
+<path class="text-warning" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="85, 100" stroke-width="4"></path>
+</svg>
+<span class="text-title-sm font-bold text-on-surface z-10">90일</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between text-mono-data font-mono-data mb-1">
+<span class="text-on-surface">저해상도 스트림 (보조)</span>
+<span class="text-warning">위험</span>
+</div>
+<p class="text-body-sm font-body-sm text-text-muted">목표: 90일. 현재 볼륨 B 성능 저하로 인해 85일 분량 보존 중.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

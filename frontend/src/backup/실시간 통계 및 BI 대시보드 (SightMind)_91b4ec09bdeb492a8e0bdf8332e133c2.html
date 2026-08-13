@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ewVLM Statistics Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=JetBrains+Mono:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-container": "#76ffc2",
+                        "outline-variant": "#4a4455",
+                        "primary-fixed-dim": "#d2bbff",
+                        "text-muted": "#7D8D9F",
+                        "primary": "#d2bbff",
+                        "inverse-on-surface": "#2d303a",
+                        "surface-container-high": "#272a34",
+                        "on-secondary-container": "#e6ecff",
+                        "surface-container": "#1c1f29",
+                        "on-surface": "#e0e2ef",
+                        "surface-dim": "#10131c",
+                        "inverse-primary": "#732ee4",
+                        "tertiary-fixed": "#6ffbbe",
+                        "surface-container-lowest": "#0b0e17",
+                        "neon-gold": "#F59E0B",
+                        "on-tertiary": "#003824",
+                        "on-surface-variant": "#ccc3d8",
+                        "surface-tint": "#d2bbff",
+                        "secondary": "#adc6ff",
+                        "on-secondary-fixed-variant": "#004395",
+                        "text-primary": "#E2E8F0",
+                        "on-tertiary-fixed": "#002113",
+                        "on-primary-container": "#ede0ff",
+                        "on-error": "#690005",
+                        "outline": "#958da1",
+                        "error-container": "#93000a",
+                        "tertiary-container": "#007650",
+                        "on-error-container": "#ffdad6",
+                        "primary-container": "#7c3aed",
+                        "danger": "#EF4444",
+                        "on-background": "#e0e2ef",
+                        "secondary-fixed": "#d8e2ff",
+                        "warning": "#F59E0B",
+                        "tertiary": "#4edea3",
+                        "inverse-surface": "#e0e2ef",
+                        "surface-container-low": "#181b25",
+                        "secondary-container": "#0566d9",
+                        "primary-fixed": "#eaddff",
+                        "border-subtle": "#232C3F",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "on-secondary": "#002e6a",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "background": "#070A13", /* Enforced Deep Canvas from prompt */
+                        "on-primary-fixed": "#25005a",
+                        "surface-bright": "#363943",
+                        "surface-variant": "#31343f",
+                        "error": "#ffb4ab",
+                        "on-primary-fixed-variant": "#5a00c6",
+                        "on-primary": "#3f008e",
+                        "surface": "#121724",
+                        "on-secondary-fixed": "#001a42",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "surface-container-highest": "#31343f"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "sidebar-width": "280px",
+                        "osd-margin": "8px",
+                        "unit": "4px",
+                        "gutter": "2px",
+                        "container-padding": "16px"
+                    },
+                    "fontFamily": {
+                        "mono-data": ["JetBrains Mono"],
+                        "body-sm": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "osd-label": ["Inter"],
+                        "title-sm": ["Inter"],
+                        "body-base": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "label-caps": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "mono-data": ["12px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "body-sm": ["13px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "osd-label": ["12px", { "lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "700" }],
+                        "title-sm": ["16px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "body-base": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "display-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-base overflow-hidden">
+<!-- TopNavBar -->
+<header class="bg-surface dark:bg-surface border-b border-border-subtle dark:border-border-subtle bg-surface-dim fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-padding h-14">
+<div class="flex items-center gap-8">
+<div class="text-headline-md font-headline-md font-extrabold text-primary dark:text-primary tracking-tighter">ewVLM</div>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-on-surface-variant dark:text-on-surface-variant font-medium hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors px-2 py-1 rounded" href="#">Monitor A</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant font-medium hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors px-2 py-1 rounded" href="#">Monitor B</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant font-medium hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors px-2 py-1 rounded" href="#">Playback</a>
+<a class="text-primary dark:text-primary border-b-2 border-primary pb-1 font-bold" href="#">Dashboard</a>
+</nav>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">memory</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">lan</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">notifications</span>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest border border-border-subtle overflow-hidden ml-2">
+<img alt="Security Operator Profile" class="w-full h-full object-cover" data-alt="A small circular avatar profile picture of a male security operator in a dark, high-tech control room environment, sharp focus, cool lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB3aTG6qnB8cAnEvK1t2rhJ1oG7BkEje1eFH4JJC1_6SmBr9-Qn2e4nn2093rb_zFyBzITJAJEKs8QqzTyd5TAoh7CoFyqtVz8FyFeT15P3dKu6lXy2Ngx6JuZbPDbGDcs2dptq5LrP3ftFmKTUyWWy31tiV39CT-g46rsTim7xFOn2w-qrrfIFfq-OZISHDSVKn-2l7AXX31j1FeNsRkeUGeHSmEYVZ5yYDtQpDKSfkbH9-wogmuE28g"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="bg-surface-container-low border-r border-border-subtle fixed left-0 top-14 bottom-0 w-sidebar-width flex flex-col z-40 shadow-sm">
+<div class="p-4 border-b border-border-subtle">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-weight="fill">shield</span>
+</div>
+<div>
+<div class="text-title-sm font-title-sm text-on-surface">ASSET EXPLORER</div>
+<div class="text-text-muted text-body-sm font-body-sm">32 Active Channels</div>
+</div>
+</div>
+<button class="w-full mt-4 bg-surface-container-highest hover:bg-surface-container-high transition-all text-on-surface border border-border-subtle py-2 rounded flex items-center justify-center gap-2 text-label-caps font-label-caps">
+<span class="material-symbols-outlined text-[16px]">add</span> Add New Camera
+            </button>
+</div>
+<nav class="flex-1 py-4 flex flex-col gap-1 px-2">
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">videocam</span>
+<span class="text-label-caps font-label-caps">Cameras</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">sensors</span>
+<span class="text-label-caps font-label-caps">Sensors</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">map</span>
+<span class="text-label-caps font-label-caps">Map</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">psychology</span>
+<span class="text-label-caps font-label-caps">AI Rules</span>
+</a>
+</nav>
+<div class="p-2 border-t border-border-subtle mt-auto">
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-label-caps font-label-caps">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="text-label-caps font-label-caps">Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-[280px] mt-14 p-container-padding h-[calc(100vh-56px)] overflow-y-auto">
+<div class="grid grid-cols-2 gap-4 h-full">
+<!-- Row 1 Left: Area Crowd Density Heatmap -->
+<div class="bg-surface border border-border-subtle rounded-lg flex flex-col overflow-hidden relative">
+<div class="p-4 border-b border-border-subtle bg-surface-dim flex justify-between items-center z-10 relative">
+<h2 class="text-title-sm font-title-sm font-semibold">지역 인파 밀집도 히트맵</h2>
+<div class="flex gap-3 text-mono-data font-mono-data text-text-muted">
+<div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-danger"></div> High (위험)</div>
+<div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-warning"></div> Warning (주의)</div>
+<div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-tertiary"></div> Safe (안전)</div>
+</div>
+</div>
+<div class="flex-1 relative bg-surface-container-lowest" data-alt="Top-down thermal and optical view of a modern urban plaza at dusk, deep dark industrial aesthetic. Overlaid with glowing vibrant red, yellow, and green heatmap spots indicating crowd density. High contrast, mission-critical UI styling." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB88HhFHD6XbdD3hSvXaE0drmNQNZedMJn_loKhmmWtUhgq48o9-0nYmxFOFJY9EPGnqK0dn4FH77Hj6WpI0wq_8l_T6qK3pq3gTehqanaeIF3Yfq4T2_Vopuxrj3ZHWbW4GR57xAU50aopvj0VszqBbCICjP5wnsxD2j5qcru8zahudjx7s6xAXPSaHZBBs4REPKAgOOUqQlyciCumZNRXNRcR7sgFDdBzgfLIdOyDbRgJAe3kEtNpfg')">
+<!-- Faux heatmap spots for UI context -->
+<div class="absolute top-[30%] left-[40%] w-32 h-32 bg-danger/40 rounded-full blur-2xl"></div>
+<div class="absolute top-[60%] left-[20%] w-24 h-24 bg-warning/30 rounded-full blur-xl"></div>
+<div class="absolute top-[20%] right-[30%] w-40 h-40 bg-tertiary/20 rounded-full blur-2xl"></div>
+<div class="absolute bottom-4 left-4 bg-surface/90 border border-border-subtle p-2 rounded backdrop-blur-sm text-mono-data font-mono-data">
+                        West Playground - Live feed active
+                    </div>
+</div>
+</div>
+<!-- Row 1 Right: Incident Alert Trend -->
+<div class="bg-surface border border-border-subtle rounded-lg flex flex-col">
+<div class="p-4 border-b border-border-subtle bg-surface-dim">
+<h2 class="text-title-sm font-title-sm font-semibold">사건 경고 추이</h2>
+</div>
+<div class="flex-1 p-6 flex flex-col">
+<div class="flex-1 border-b border-l border-border-subtle relative flex items-end justify-between px-4 pb-2 pt-8 gap-2">
+<!-- Simulated Chart Grid -->
+<div class="absolute top-1/4 left-0 w-full border-t border-border-subtle/50 border-dashed"></div>
+<div class="absolute top-2/4 left-0 w-full border-t border-border-subtle/50 border-dashed"></div>
+<div class="absolute top-3/4 left-0 w-full border-t border-border-subtle/50 border-dashed"></div>
+<!-- Simulated Bars -->
+<div class="w-full bg-tertiary/20 border border-tertiary/50 h-[30%] relative group cursor-pointer hover:bg-tertiary/40 transition-colors rounded-t-sm"></div>
+<div class="w-full bg-tertiary/20 border border-tertiary/50 h-[45%] relative group cursor-pointer hover:bg-tertiary/40 transition-colors rounded-t-sm"></div>
+<div class="w-full bg-warning/30 border border-warning/50 h-[60%] relative group cursor-pointer hover:bg-warning/50 transition-colors rounded-t-sm"></div>
+<div class="w-full bg-danger/40 border border-danger/60 h-[85%] relative group cursor-pointer hover:bg-danger/60 transition-colors rounded-t-sm">
+<!-- Alert Marker -->
+<div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-danger text-white text-[10px] px-2 py-1 rounded whitespace-nowrap hidden group-hover:block z-10 after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-danger">
+                                추락 감지 (15:00)
+                            </div>
+</div>
+<div class="w-full bg-tertiary/20 border border-tertiary/50 h-[50%] relative group cursor-pointer hover:bg-tertiary/40 transition-colors rounded-t-sm"></div>
+<div class="w-full bg-tertiary/20 border border-tertiary/50 h-[35%] relative group cursor-pointer hover:bg-tertiary/40 transition-colors rounded-t-sm"></div>
+</div>
+<div class="flex justify-between mt-2 text-mono-data font-mono-data text-text-muted px-4">
+<span>10:00</span>
+<span>12:00</span>
+<span>14:00</span>
+<span class="text-danger font-bold">15:00</span>
+<span>16:00</span>
+<span>18:00</span>
+</div>
+<div class="flex justify-center gap-6 mt-4 text-mono-data font-mono-data">
+<div class="flex items-center gap-2"><div class="w-3 h-3 bg-danger/60 border border-danger rounded-sm"></div> 추락 (Fall)</div>
+<div class="flex items-center gap-2"><div class="w-3 h-3 bg-warning/50 border border-warning rounded-sm"></div> 침입 (Intrusion)</div>
+<div class="flex items-center gap-2"><div class="w-3 h-3 bg-primary/50 border border-primary rounded-sm"></div> 화재 (Fire)</div>
+</div>
+</div>
+</div>
+<!-- Row 2 Left: Object Counting Data -->
+<div class="bg-surface border border-border-subtle rounded-lg flex flex-col">
+<div class="p-4 border-b border-border-subtle bg-surface-dim">
+<h2 class="text-title-sm font-title-sm font-semibold">객체 계수 데이터 (누적)</h2>
+</div>
+<div class="flex-1 p-4 grid grid-cols-1 gap-4">
+<div class="bg-surface-container-high border border-border-subtle rounded-lg p-6 flex justify-between items-center hover:border-primary/50 transition-colors">
+<div>
+<div class="text-text-muted text-label-caps font-label-caps mb-1">사람 (People)</div>
+<div class="text-display-lg font-display-lg text-on-surface">45,820</div>
+</div>
+<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+<span class="material-symbols-outlined text-primary text-3xl">directions_walk</span>
+</div>
+</div>
+<div class="bg-surface-container-high border border-border-subtle rounded-lg p-6 flex justify-between items-center hover:border-secondary/50 transition-colors">
+<div>
+<div class="text-text-muted text-label-caps font-label-caps mb-1">차량 (Vehicles)</div>
+<div class="text-display-lg font-display-lg text-on-surface">12,430</div>
+</div>
+<div class="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center border border-secondary/20">
+<span class="material-symbols-outlined text-secondary text-3xl">directions_car</span>
+</div>
+</div>
+<div class="bg-surface-container-high border border-danger/30 rounded-lg p-6 flex justify-between items-center hover:border-danger transition-colors relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-danger"></div>
+<div>
+<div class="text-danger text-label-caps font-label-caps mb-1">고위험 오토바이 (High-risk)</div>
+<div class="text-display-lg font-display-lg text-danger">145</div>
+</div>
+<div class="w-12 h-12 rounded-full bg-danger/10 flex items-center justify-center border border-danger/20">
+<span class="material-symbols-outlined text-danger text-3xl">two_wheeler</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Row 2 Right: Dwell Time Analytics -->
+<div class="bg-surface border border-border-subtle rounded-lg flex flex-col">
+<div class="p-4 border-b border-border-subtle bg-surface-dim">
+<h2 class="text-title-sm font-title-sm font-semibold">체류 시간 분석 (평균 대기 시간)</h2>
+</div>
+<div class="flex-1 p-6 flex flex-col gap-6 overflow-y-auto">
+<div class="space-y-2">
+<div class="flex justify-between items-end">
+<div class="text-body-base font-body-base font-medium">A-3 지하철 출구</div>
+<div class="text-mono-data font-mono-data text-primary">1m 24s</div>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 25%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-end">
+<div class="text-body-base font-body-base font-medium">C-1 버스 정류장</div>
+<div class="text-mono-data font-mono-data text-danger">8m 45s</div>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden">
+<div class="bg-danger h-full rounded-full" style="width: 85%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-end">
+<div class="text-body-base font-body-base font-medium">중앙 로비 대기열</div>
+<div class="text-mono-data font-mono-data text-warning">4m 12s</div>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden">
+<div class="bg-warning h-full rounded-full" style="width: 50%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-end">
+<div class="text-body-base font-body-base font-medium">북문 출입 관리소</div>
+<div class="text-mono-data font-mono-data text-tertiary">0m 45s</div>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden">
+<div class="bg-tertiary h-full rounded-full" style="width: 15%"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

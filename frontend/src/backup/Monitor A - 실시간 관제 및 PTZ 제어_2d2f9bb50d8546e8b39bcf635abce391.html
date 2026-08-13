@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ewVLM - Monitor A</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#1c1f29",
+                        "secondary-container": "#0566d9",
+                        "on-primary-fixed": "#25005a",
+                        "danger": "#EF4444",
+                        "on-background": "#e0e2ef",
+                        "primary-fixed": "#eaddff",
+                        "on-secondary-container": "#e6ecff",
+                        "surface": "#121724",
+                        "surface-dim": "#10131c",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "secondary-fixed": "#d8e2ff",
+                        "neon-gold": "#F59E0B",
+                        "primary": "#d2bbff",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "surface-bright": "#363943",
+                        "surface-container-highest": "#31343f",
+                        "surface-container-lowest": "#0b0e17",
+                        "surface-variant": "#31343f",
+                        "surface-tint": "#d2bbff",
+                        "border-subtle": "#232C3F",
+                        "inverse-primary": "#732ee4",
+                        "text-muted": "#7D8D9F",
+                        "on-primary-fixed-variant": "#5a00c6",
+                        "on-primary-container": "#ede0ff",
+                        "on-secondary-fixed-variant": "#004395",
+                        "on-primary": "#3f008e",
+                        "on-surface-variant": "#ccc3d8",
+                        "on-surface": "#e0e2ef",
+                        "surface-container-high": "#272a34",
+                        "on-error-container": "#ffdad6",
+                        "outline": "#958da1",
+                        "outline-variant": "#4a4455",
+                        "on-tertiary-fixed": "#002113",
+                        "on-error": "#690005",
+                        "error": "#ffb4ab",
+                        "on-tertiary": "#003824",
+                        "error-container": "#93000a",
+                        "on-tertiary-container": "#76ffc2",
+                        "on-secondary-fixed": "#001a42",
+                        "inverse-surface": "#e0e2ef",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "surface-container-low": "#181b25",
+                        "text-primary": "#E2E8F0",
+                        "on-secondary": "#002e6a",
+                        "primary-fixed-dim": "#d2bbff",
+                        "tertiary-container": "#007650",
+                        "inverse-on-surface": "#2d303a",
+                        "tertiary-fixed": "#6ffbbe",
+                        "warning": "#F59E0B",
+                        "primary-container": "#7c3aed",
+                        "tertiary": "#4edea3",
+                        "secondary": "#adc6ff",
+                        "background": "#070A13"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "sidebar-width": "280px",
+                        "unit": "4px",
+                        "container-padding": "16px",
+                        "osd-margin": "8px",
+                        "gutter": "2px"
+                    },
+                    "fontFamily": {
+                        "title-sm": ["Inter"],
+                        "label-caps": ["JetBrains Mono"],
+                        "osd-label": ["Inter"],
+                        "body-base": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "mono-data": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "title-sm": ["16px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "osd-label": ["12px", { "lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "700" }],
+                        "body-base": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "display-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "body-sm": ["13px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "mono-data": ["12px", { "lineHeight": "1.4", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #070A13; color: #E2E8F0; margin: 0; overflow-x: hidden; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .material-symbols-outlined.fill { font-variation-settings: 'FILL' 1; }
+        
+        /* Video Wall Gutters & Layout */
+        .video-grid {
+            display: grid;
+            gap: 2px;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            height: calc(100vh - 56px - 140px); /* 100vh - TopNav - BottomControls */
+            padding: 2px;
+        }
+
+        .video-cell {
+            position: relative;
+            background-color: #121724;
+            border: 2px solid #232C3F;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-cell.active {
+            border-color: #7C3AED;
+            box-shadow: 0 0 15px rgba(124, 58, 237, 0.4);
+        }
+
+        .osd-overlay {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(18, 23, 36, 0.8);
+            padding: 4px 8px;
+            border-radius: 0.125rem;
+            z-index: 10;
+        }
+
+        .ai-bbox {
+            position: absolute;
+            border: 1.5px solid #7C3AED;
+            z-index: 20;
+            background: rgba(124, 58, 237, 0.1);
+        }
+
+        .ai-label {
+            position: absolute;
+            top: -18px;
+            left: -1.5px;
+            background-color: #7C3AED;
+            color: #ffffff;
+            padding: 2px 4px;
+            white-space: nowrap;
+        }
+
+        /* Status LEDs */
+        .status-led {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-led.live { background-color: #4edea3; box-shadow: 0 0 4px #4edea3; }
+        .status-led.offline { background-color: #EF4444; }
+
+        /* PTZ Control Styles */
+        .ptz-btn {
+            background-color: transparent;
+            border: 1px solid #232C3F;
+            color: #E2E8F0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .ptz-btn:hover { background-color: #31343f; }
+        .ptz-btn:active { background-color: #7C3AED; border-color: #7C3AED; }
+        
+        .jog-shuttle {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            width: 120px;
+            height: 120px;
+        }
+
+        /* Custom Scrollbar for sidebar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #31343f; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4a4455; }
+    </style>
+</head>
+<body class="font-body-base text-body-base bg-background h-screen flex flex-col overflow-hidden">
+<!-- TopNavBar (Shared Component) -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-padding h-14 bg-surface border-b border-border-subtle shadow-sm">
+<div class="flex items-center gap-8 h-full">
+<div class="text-headline-md font-headline-md font-extrabold text-primary tracking-tighter">
+                ewVLM
+            </div>
+<nav class="hidden md:flex h-full">
+<!-- Monitor A: Active -->
+<a class="h-full flex items-center px-4 text-primary border-b-2 border-primary font-bold transition-colors" href="#">
+                    Monitor A
+                </a>
+<a class="h-full flex items-center px-4 text-on-surface-variant font-medium hover:bg-surface-container-highest transition-colors" href="#">
+                    Monitor B
+                </a>
+<a class="h-full flex items-center px-4 text-on-surface-variant font-medium hover:bg-surface-container-highest transition-colors" href="#">
+                    Playback
+                </a>
+<a class="h-full flex items-center px-4 text-on-surface-variant font-medium hover:bg-surface-container-highest transition-colors" href="#">
+                    Dashboard
+                </a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex gap-2">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-highest rounded-full transition-colors active:scale-95 duration-100">
+<span class="material-symbols-outlined">memory</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-highest rounded-full transition-colors active:scale-95 duration-100">
+<span class="material-symbols-outlined">lan</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-highest rounded-full transition-colors active:scale-95 duration-100 relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-danger rounded-full"></span>
+</button>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden border border-border-subtle">
+<img alt="Security Operator Profile" class="w-full h-full object-cover" data-alt="A headshot of a security operator in a dimly lit control room setting. They are wearing a dark headset, looking focused, illuminated by the cool blue light of monitors. The style is highly professional and serious, matching an industrial security brand." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmXfPZahRP6VpaAbGLqDMMAWeeVj6w0SNfOd1B5sxH4AGDG2jo0c--ohbGnIkfrZQ2eBkK-gcOmf_t_4y9YGvqygbJROvulkcJDrxQoMqXv6SHN4s8ATgzE8mPc3uFcv_h2CW8HtZEx3A_pxR4gh-67dLJ4SYNNlu72mGnaQpgqT47axy9VmOKMg8V5YDlxZFFYvPwoxQBin4SKTxwDWKr88-M7XGZiOX4eEh2MoN9kNSa67BTLBml3Q"/>
+</div>
+</div>
+</header>
+<div class="flex flex-1 pt-14 h-full">
+<!-- SideNavBar (Shared Component) -->
+<aside class="fixed left-0 top-14 bottom-0 w-sidebar-width flex flex-col z-40 bg-surface-container border-r border-border-subtle shadow-sm">
+<!-- Asset Explorer Header -->
+<div class="p-4 border-b border-border-subtle flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-surface flex items-center justify-center border border-border-subtle">
+<span class="material-symbols-outlined text-primary">analytics</span>
+</div>
+<div>
+<h2 class="text-title-sm font-title-sm text-on-surface">ASSET EXPLORER</h2>
+<p class="text-mono-data font-mono-data text-text-muted mt-1">32 Active Channels</p>
+</div>
+</div>
+<!-- Tabs -->
+<div class="flex border-b border-border-subtle bg-surface-container-low px-2 pt-2">
+<!-- Cameras: Active -->
+<button class="flex-1 pb-2 flex flex-col items-center gap-1 border-b-2 border-primary text-primary">
+<span class="material-symbols-outlined text-[20px]">videocam</span>
+<span class="text-[10px] font-label-caps uppercase">Cameras</span>
+</button>
+<button class="flex-1 pb-2 flex flex-col items-center gap-1 border-b-2 border-transparent text-text-muted hover:text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[20px]">sensors</span>
+<span class="text-[10px] font-label-caps uppercase">Sensors</span>
+</button>
+<button class="flex-1 pb-2 flex flex-col items-center gap-1 border-b-2 border-transparent text-text-muted hover:text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[20px]">map</span>
+<span class="text-[10px] font-label-caps uppercase">Map</span>
+</button>
+<button class="flex-1 pb-2 flex flex-col items-center gap-1 border-b-2 border-transparent text-text-muted hover:text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[20px]">psychology</span>
+<span class="text-[10px] font-label-caps uppercase">AI Rules</span>
+</button>
+</div>
+<!-- Camera List -->
+<div class="flex-1 overflow-y-auto py-2">
+<!-- CCTV-0024 Active -->
+<div class="px-3 py-2 flex items-center justify-between bg-primary-container text-on-primary-container mx-2 rounded-lg mb-1 cursor-pointer">
+<div class="flex items-center gap-3">
+<span class="status-led live"></span>
+<span class="font-mono-data text-mono-data">CCTV-0024-WEST</span>
+</div>
+<span class="material-symbols-outlined text-[16px]">visibility</span>
+</div>
+<div class="px-3 py-2 flex items-center justify-between text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high mx-2 rounded-lg mb-1 cursor-pointer transition-all">
+<div class="flex items-center gap-3">
+<span class="status-led live"></span>
+<span class="font-mono-data text-mono-data">CCTV-0025-EAST</span>
+</div>
+</div>
+<div class="px-3 py-2 flex items-center justify-between text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high mx-2 rounded-lg mb-1 cursor-pointer transition-all">
+<div class="flex items-center gap-3">
+<span class="status-led live"></span>
+<span class="font-mono-data text-mono-data">CCTV-0026-NORTH</span>
+</div>
+</div>
+<div class="px-3 py-2 flex items-center justify-between text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high mx-2 rounded-lg mb-1 cursor-pointer transition-all">
+<div class="flex items-center gap-3">
+<span class="status-led offline"></span>
+<span class="font-mono-data text-mono-data">CCTV-0027-SOUTH</span>
+</div>
+<span class="material-symbols-outlined text-[16px] text-danger">warning</span>
+</div>
+<div class="px-3 py-2 flex items-center justify-between text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high mx-2 rounded-lg mb-1 cursor-pointer transition-all">
+<div class="flex items-center gap-3">
+<span class="status-led live"></span>
+<span class="font-mono-data text-mono-data">CCTV-0028-GATE</span>
+</div>
+</div>
+<div class="px-3 py-2 flex items-center justify-between text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high mx-2 rounded-lg mb-1 cursor-pointer transition-all">
+<div class="flex items-center gap-3">
+<span class="status-led offline"></span>
+<span class="font-mono-data text-mono-data">CCTV-0029-LOBBY</span>
+</div>
+</div>
+</div>
+<!-- Footer Actions -->
+<div class="p-4 border-t border-border-subtle mt-auto">
+<button class="w-full py-2 bg-primary-container hover:bg-primary-fixed-dim text-white font-bold text-sm rounded flex items-center justify-center gap-2 transition-colors mb-4">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    Add New Camera
+                </button>
+<div class="flex justify-between">
+<button class="flex items-center gap-2 text-text-muted hover:text-on-surface-variant text-sm transition-colors">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+                        Settings
+                    </button>
+<button class="flex items-center gap-2 text-text-muted hover:text-on-surface-variant text-sm transition-colors">
+<span class="material-symbols-outlined text-[18px]">help</span>
+                        Support
+                    </button>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-[280px] flex-1 flex flex-col bg-background">
+<!-- Video Grid -->
+<div class="video-grid">
+<!-- CH 01: Active with AI Overlay -->
+<div class="video-cell active">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A security camera view of an outdoor walkway near a modern building. A single pedestrian is walking across the frame. The scene is brightly lit but with a slightly desaturated, industrial look typical of high-end surveillance footage. The color palette is muted grays, concrete, and deep shadows." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA-pa5aEuS-7JXe1CjMVyyyGqECa86a9KmVB5yypuypmAdh-hU1mBBmJHMWoTTcQz3uMC1eFxmlaKGPLKm1vfzc2lCtcMSoyBOS__sqZVLn8PBhCAhdmC8Q1tO_SEf1uRgqhJeabETRa8M3Dnr0Kj-y0gh9laLifimQOg1J--Urlp5KyIcjvKEWTS3tmOnn8X-fonvQxTyZ5iqiKmgQR2_8k302-TUF9W8f0r4NtYxGHG5X-VE8otln6g')"></div>
+<!-- OSD -->
+<div class="osd-overlay font-osd-label text-osd-label text-white">
+<div class="flex items-center gap-2 mb-1">
+<span class="status-led live"></span>
+<span>CH 01 | CCTV-0024-WEST</span>
+</div>
+<div class="text-[10px] text-text-muted">1920x1080 | 30fps | H.265</div>
+</div>
+<!-- AI Bounding Box -->
+<div class="ai-bbox" style="top: 30%; left: 40%; width: 15%; height: 50%;">
+<div class="ai-label font-mono-data text-[10px] font-bold">
+                            PEDESTRIAN-4022 | 98.5%
+                        </div>
+</div>
+<!-- PTZ Reticle (subtle) -->
+<div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30">
+<div class="w-[100px] h-[100px] border border-primary rounded-full relative">
+<div class="absolute top-1/2 left-0 w-full h-[1px] bg-primary"></div>
+<div class="absolute top-0 left-1/2 w-[1px] h-full bg-primary"></div>
+</div>
+</div>
+</div>
+<!-- CH 02: Park Gate -->
+<div class="video-cell">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A wide-angle security camera view of a heavy industrial park gate. The gate is metallic and imposing. The lighting is overcast, giving a flat, functional look. No people are present. Muted colors, predominantly grays and dark greens from distant foliage." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDsxZwLD4szB3LPob7cWSyKkhHWzNG2nWkxRRRtqQ4N1AyPFmWqy5Se6_lZF1wh9cLlUff-BQIe_whMoBg3e97S-tqEIIoaHgef3IKEZ8O6Eky9d6t8EYH1KiFEvv21q4Xe_eKwiobQi63bcRzCvQcxC5ZaWGyU4f7RpwuDKBtvkt_FnXgtWH2uqbQoWHWoO7f_gdqRu1vIkn8m57jDwFokHtwaSiRf_KRITFa85xs1va1HpUIluJOA4Q')"></div>
+<div class="osd-overlay font-osd-label text-osd-label text-white">
+<div class="flex items-center gap-2 mb-1">
+<span class="status-led live"></span>
+<span>CH 02 | CCTV-0025-EAST</span>
+</div>
+</div>
+</div>
+<!-- CH 03: Intersection -->
+<div class="video-cell">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A high-angle traffic camera view of a city intersection. Several cars are stopped at a light. The image has a slightly grainy, high-contrast look typical of traffic cams. Colors are subdued except for the bright red of brake lights." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDyLnz0nb52gy5Rr-XXdL9kdHeeOGNiGZNApFBUtD9jv8dzwAhQFWWvunGaGo6c6dYKsDR61pJ_4CbfcfUPezprgqfekSwENx1Lyh_H2vZbiKKlJzDlcb1Ytn_jYXS9CH-AB9056v2X-CwyUbKfIWDFN-A5roSFZ5CAWCOxP0K62bV0xjrHPybspXhvugiuTHzTHOBfL8yrTaXUH-VMaDtrA8kZntj6ltFzbUdPQvcqf4-1s-NPzIJlCg')"></div>
+<div class="osd-overlay font-osd-label text-osd-label text-white">
+<div class="flex items-center gap-2 mb-1">
+<span class="status-led live"></span>
+<span>CH 03 | CCTV-0026-NORTH</span>
+</div>
+</div>
+</div>
+<!-- CH 04: Empty Slot -->
+<div class="video-cell border-dashed bg-surface-container border-border-subtle">
+<div class="flex flex-col items-center justify-center text-text-muted hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-[48px] mb-2">add_circle</span>
+<span class="font-title-sm text-title-sm">Drag &amp; Drop Camera</span>
+</div>
+</div>
+</div>
+<!-- Bottom Control Area -->
+<div class="h-[140px] bg-surface border-t border-border-subtle flex p-2 gap-4">
+<!-- Left: PTZ Controls -->
+<div class="flex bg-surface-container p-2 rounded border border-border-subtle gap-6 min-w-max">
+<!-- Jog Shuttle -->
+<div class="flex flex-col gap-1 items-center">
+<span class="font-label-caps text-label-caps text-text-muted mb-1">PTZ</span>
+<div class="jog-shuttle">
+<button class="ptz-btn rounded-tl-full"><span class="material-symbols-outlined text-[16px] -rotate-45">arrow_upward</span></button>
+<button class="ptz-btn rounded-t"><span class="material-symbols-outlined text-[16px]">arrow_upward</span></button>
+<button class="ptz-btn rounded-tr-full"><span class="material-symbols-outlined text-[16px] rotate-45">arrow_upward</span></button>
+<button class="ptz-btn rounded-l"><span class="material-symbols-outlined text-[16px]">arrow_back</span></button>
+<div class="bg-surface-variant rounded flex items-center justify-center border border-border-subtle cursor-pointer hover:bg-surface-bright">
+<div class="w-3 h-3 rounded-full bg-primary shadow-[0_0_8px_#7c3aed]"></div>
+</div>
+<button class="ptz-btn rounded-r"><span class="material-symbols-outlined text-[16px]">arrow_forward</span></button>
+<button class="ptz-btn rounded-bl-full"><span class="material-symbols-outlined text-[16px] -rotate-45">arrow_downward</span></button>
+<button class="ptz-btn rounded-b"><span class="material-symbols-outlined text-[16px]">arrow_downward</span></button>
+<button class="ptz-btn rounded-br-full"><span class="material-symbols-outlined text-[16px] rotate-45">arrow_downward</span></button>
+</div>
+</div>
+<!-- Zoom/Focus/Speed -->
+<div class="flex flex-col justify-center gap-3">
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-label-caps text-text-muted w-10">ZOOM</span>
+<div class="flex border border-border-subtle rounded overflow-hidden">
+<button class="ptz-btn w-8 h-6"><span class="material-symbols-outlined text-[14px]">remove</span></button>
+<button class="ptz-btn w-8 h-6 border-l-0"><span class="material-symbols-outlined text-[14px]">add</span></button>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-label-caps text-text-muted w-10">FOCUS</span>
+<div class="flex border border-border-subtle rounded overflow-hidden">
+<button class="ptz-btn w-8 h-6"><span class="material-symbols-outlined text-[14px]">remove</span></button>
+<button class="ptz-btn w-8 h-6 border-l-0"><span class="material-symbols-outlined text-[14px]">add</span></button>
+</div>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-text-muted text-[14px]">speed</span>
+<input class="w-24 h-1 bg-surface-variant rounded-lg appearance-none cursor-pointer accent-primary" max="100" min="1" type="range" value="50"/>
+</div>
+</div>
+</div>
+<!-- Right: Layout & Presets -->
+<div class="flex-1 flex gap-4 h-full">
+<!-- Layout Selectors -->
+<div class="flex flex-col bg-surface-container p-2 rounded border border-border-subtle gap-2 flex-1">
+<span class="font-label-caps text-label-caps text-text-muted">GRID LAYOUT</span>
+<div class="flex gap-2">
+<button class="flex-1 h-10 border border-border-subtle rounded bg-surface hover:bg-surface-bright text-text-muted flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined">crop_din</span>
+</button>
+<button class="flex-1 h-10 border border-primary rounded bg-primary/10 text-primary flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined">grid_view</span>
+</button>
+<button class="flex-1 h-10 border border-border-subtle rounded bg-surface hover:bg-surface-bright text-text-muted flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined">grid_on</span>
+</button>
+<button class="flex-1 h-10 border border-border-subtle rounded bg-surface hover:bg-surface-bright text-text-muted flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined">apps</span>
+</button>
+</div>
+</div>
+<!-- Presets -->
+<div class="flex flex-col bg-surface-container p-2 rounded border border-border-subtle gap-2 flex-1">
+<span class="font-label-caps text-label-caps text-text-muted">PRESETS</span>
+<div class="flex gap-1 h-10">
+<button class="flex-1 border border-border-subtle rounded bg-surface hover:bg-surface-bright text-text-muted font-mono-data text-mono-data transition-colors">P1</button>
+<button class="flex-1 border border-border-subtle rounded bg-surface hover:bg-surface-bright text-text-muted font-mono-data text-mono-data transition-colors">P2</button>
+<button class="flex-1 border border-border-subtle rounded bg-surface hover:bg-surface-bright text-text-muted font-mono-data text-mono-data transition-colors">P3</button>
+<button class="flex-1 border border-border-subtle rounded bg-surface hover:bg-surface-bright text-text-muted font-mono-data text-mono-data transition-colors">P4</button>
+<button class="flex-1 border border-border-subtle rounded bg-surface hover:bg-surface-bright text-text-muted font-mono-data text-mono-data transition-colors">P5</button>
+</div>
+</div>
+</div>
+<!-- Far Right: Actions -->
+<div class="flex flex-col gap-2 w-[160px]">
+<button class="flex-1 w-full bg-surface-container border border-border-subtle hover:border-primary rounded flex items-center justify-center gap-2 text-text-muted hover:text-primary transition-all">
+<span class="material-symbols-outlined text-[18px]">history</span>
+<span class="font-body-sm text-body-sm">Playback</span>
+</button>
+<button class="flex-1 w-full bg-surface-container border border-border-subtle hover:border-primary rounded flex items-center justify-center gap-2 text-text-muted hover:text-primary transition-all">
+<span class="material-symbols-outlined text-[18px]">tune</span>
+<span class="font-body-sm text-body-sm">Settings</span>
+</button>
+</div>
+</div>
+</main>
+</div>
+</body></html>

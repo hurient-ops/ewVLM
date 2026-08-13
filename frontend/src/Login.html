@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ewVLM-Core - System Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary": "#003824",
+                      "surface-dim": "#10131c",
+                      "on-background": "#e0e2ef",
+                      "background": "#10131c",
+                      "on-tertiary-fixed": "#002113",
+                      "surface-tint": "#d2bbff",
+                      "on-secondary": "#002e6a",
+                      "on-primary-fixed-variant": "#5a00c6",
+                      "neon-gold": "#F59E0B",
+                      "outline-variant": "#4a4455",
+                      "on-error-container": "#ffdad6",
+                      "secondary-fixed-dim": "#adc6ff",
+                      "primary-fixed": "#eaddff",
+                      "inverse-primary": "#732ee4",
+                      "on-surface-variant": "#ccc3d8",
+                      "surface-bright": "#363943",
+                      "on-secondary-container": "#e6ecff",
+                      "inverse-on-surface": "#2d303a",
+                      "error-container": "#93000a",
+                      "tertiary-fixed-dim": "#4edea3",
+                      "primary-fixed-dim": "#d2bbff",
+                      "danger": "#EF4444",
+                      "surface-container-highest": "#31343f",
+                      "error": "#ffb4ab",
+                      "on-surface": "#e0e2ef",
+                      "surface-container-lowest": "#0b0e17",
+                      "inverse-surface": "#e0e2ef",
+                      "tertiary-container": "#007650",
+                      "surface": "#121724",
+                      "border-subtle": "#232C3F",
+                      "secondary": "#adc6ff",
+                      "on-tertiary-container": "#76ffc2",
+                      "tertiary-fixed": "#6ffbbe",
+                      "text-muted": "#7D8D9F",
+                      "on-primary-container": "#ede0ff",
+                      "surface-variant": "#31343f",
+                      "on-secondary-fixed": "#001a42",
+                      "tertiary": "#4edea3",
+                      "primary-container": "#7c3aed",
+                      "text-primary": "#E2E8F0",
+                      "on-error": "#690005",
+                      "surface-container": "#1c1f29",
+                      "surface-container-high": "#272a34",
+                      "on-tertiary-fixed-variant": "#005236",
+                      "on-secondary-fixed-variant": "#004395",
+                      "warning": "#F59E0B",
+                      "secondary-container": "#0566d9",
+                      "on-primary-fixed": "#25005a",
+                      "secondary-fixed": "#d8e2ff",
+                      "on-primary": "#3f008e",
+                      "primary": "#d2bbff",
+                      "surface-container-low": "#181b25",
+                      "outline": "#958da1"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "sidebar-width": "280px",
+                      "gutter": "2px",
+                      "container-padding": "16px",
+                      "unit": "4px",
+                      "osd-margin": "8px"
+              },
+              "fontFamily": {
+                      "title-sm": ["Inter"],
+                      "label-caps": ["JetBrains Mono"],
+                      "display-lg": ["Inter"],
+                      "body-base": ["Inter"],
+                      "mono-data": ["JetBrains Mono"],
+                      "body-sm": ["Inter"],
+                      "osd-label": ["Inter"],
+                      "headline-md": ["Inter"]
+              },
+              "fontSize": {
+                      "title-sm": ["16px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                      "label-caps": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                      "display-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-base": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                      "mono-data": ["12px", {"lineHeight": "1.4", "fontWeight": "400"}],
+                      "body-sm": ["13px", {"lineHeight": "1.4", "fontWeight": "400"}],
+                      "osd-label": ["12px", {"lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "700"}],
+                      "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        /* Custom grid background to simulate industrial technical canvas */
+        .bg-grid-pattern {
+            background-size: 40px 40px;
+            background-image: 
+                linear-gradient(to right, rgba(35, 44, 63, 0.2) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(35, 44, 63, 0.2) 1px, transparent 1px);
+        }
+        .glow-input:focus-within {
+            box-shadow: 0 0 0 1px #7c3aed, 0 0 8px rgba(124, 58, 237, 0.3);
+            border-color: #7c3aed;
+        }
+    </style>
+</head>
+<body class="bg-[#070A13] text-on-surface h-screen flex flex-col font-body-base overflow-hidden relative">
+<!-- Technical Grid Background Layer -->
+<div class="absolute inset-0 bg-grid-pattern pointer-events-none z-0 opacity-50"></div>
+<!-- TopNavBar (Rendered based on JSON, suppressing nav links as per instructions for transactional screen) -->
+<header class="bg-surface-container-lowest dark:bg-surface-container-lowest text-primary dark:text-primary w-full top-0 bg-surface-container-lowest border-b border-outline-variant flat no shadows flex justify-between items-center px-gutter py-2 w-full max-w-full z-10 relative">
+<div class="flex items-center px-container-padding">
+<span class="material-symbols-outlined mr-2" style="font-variation-settings: 'FILL' 1;">security</span>
+<span class="font-headline-md text-headline-md font-bold text-primary tracking-tight">ewVLM-Core</span>
+</div>
+<div class="flex items-center space-x-4 px-container-padding">
+<!-- Trailing actions from JSON -->
+<button aria-label="Settings" class="text-on-surface-variant hover:bg-surface-container-highest transition-colors duration-150 p-2 rounded-full">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<button aria-label="Help" class="text-on-surface-variant hover:bg-surface-container-highest transition-colors duration-150 p-2 rounded-full">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex items-center justify-center relative z-10 p-container-padding">
+<!-- Login Card -->
+<div class="bg-surface rounded-xl border border-border-subtle w-full max-w-md shadow-[0_4px_12px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col">
+<!-- Card Header -->
+<div class="p-6 pb-2 text-center flex flex-col items-center border-b border-border-subtle/50">
+<div class="w-12 h-12 rounded-full bg-surface-container-highest border border-border-subtle flex items-center justify-center mb-4">
+<span class="material-symbols-outlined text-primary-container text-2xl" style="font-variation-settings: 'FILL' 1;">shield_person</span>
+</div>
+<h1 class="font-display-lg text-display-lg text-text-primary mb-2">시스템 로그인</h1>
+<p class="font-body-sm text-body-sm text-text-muted">보안 접근을 위한 계정 정보를 입력하십시오.</p>
+</div>
+<!-- Login Form -->
+<form class="p-6 space-y-5 flex flex-col">
+<!-- Email/ID Input Group -->
+<div class="space-y-1 relative">
+<label class="font-label-caps text-label-caps text-on-surface-variant block uppercase" for="username">사용자 계정</label>
+<div class="relative flex items-center bg-surface-container-lowest border border-border-subtle rounded glow-input transition-all duration-200">
+<span class="material-symbols-outlined absolute left-3 text-text-muted">person</span>
+<input class="w-full bg-transparent border-none py-2.5 pl-10 pr-3 font-mono-data text-mono-data text-on-surface focus:ring-0 placeholder-text-muted/50" id="username" placeholder="이메일 또는 아이디를 입력하세요" type="text"/>
+</div>
+</div>
+<!-- Password Input Group -->
+<div class="space-y-1 relative">
+<label class="font-label-caps text-label-caps text-on-surface-variant block uppercase" for="password">비밀번호</label>
+<div class="relative flex items-center bg-surface-container-lowest border border-border-subtle rounded glow-input transition-all duration-200">
+<span class="material-symbols-outlined absolute left-3 text-text-muted">lock</span>
+<input class="w-full bg-transparent border-none py-2.5 pl-10 pr-10 font-mono-data text-mono-data text-on-surface focus:ring-0 placeholder-text-muted/50" id="password" placeholder="비밀번호를 입력하세요" type="password"/>
+<button aria-label="Toggle password visibility" class="absolute right-3 text-text-muted hover:text-on-surface focus:outline-none" type="button">
+<span class="material-symbols-outlined text-sm">visibility</span>
+</button>
+</div>
+</div>
+<!-- Checkbox & Forgot Password -->
+<div class="flex items-center justify-between pt-1">
+<label class="flex items-center space-x-2 cursor-pointer group">
+<div class="relative flex items-center justify-center w-4 h-4 bg-surface-container-lowest border border-border-subtle rounded group-hover:border-primary-container transition-colors">
+<input class="opacity-0 absolute inset-0 cursor-pointer w-full h-full" id="rememberMe" type="checkbox"/>
+<!-- Visual checkmark logic handled by standard browser behavior for minimal implementation here, visually indicated via CSS normally -->
+</div>
+<span class="font-body-sm text-body-sm text-text-muted group-hover:text-on-surface transition-colors">로그인 상태 유지</span>
+</label>
+<a class="font-body-sm text-body-sm text-primary-container hover:text-primary-fixed-dim transition-colors border-b border-transparent hover:border-primary-fixed-dim" href="#">
+                        비밀번호를 잊으셨나요?
+                    </a>
+</div>
+<!-- Actions -->
+<div class="pt-4 flex flex-col space-y-3">
+<button class="w-full bg-primary-container text-text-primary py-2.5 rounded font-title-sm text-title-sm hover:bg-inverse-primary active:scale-[0.98] transition-all duration-150 flex justify-center items-center" type="submit">
+                        로그인
+                        <span class="material-symbols-outlined ml-2 text-sm" style="font-variation-settings: 'FILL' 1;">login</span>
+</button>
+<button class="w-full bg-transparent border border-border-subtle text-on-surface py-2.5 rounded font-title-sm text-title-sm hover:bg-surface-container-highest active:scale-[0.98] transition-all duration-150" type="button">
+                        회원가입
+                    </button>
+</div>
+</form>
+<!-- Security Banner -->
+<div class="bg-surface-container-lowest py-3 px-6 border-t border-border-subtle flex items-center justify-center space-x-2">
+<span class="w-2 h-2 rounded-full bg-primary-container shadow-[0_0_4px_#7c3aed]"></span>
+<span class="font-mono-data text-mono-data text-text-muted uppercase tracking-wider">Secure Connection Established</span>
+</div>
+</div>
+</main>
+<script>
+        // Micro-interaction for password visibility
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleBtn = document.querySelector('button[aria-label="Toggle password visibility"]');
+            const passInput = document.getElementById('password');
+            const toggleIcon = toggleBtn.querySelector('span');
+            
+            toggleBtn.addEventListener('click', () => {
+                const type = passInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passInput.setAttribute('type', type);
+                toggleIcon.textContent = type === 'password' ? 'visibility' : 'visibility_off';
+            });
+        });
+    </script>
+</body></html>

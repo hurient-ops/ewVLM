@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ewVLM - Smart Map Coverage</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "border-subtle": "#232C3F",
+                        "surface-dim": "#10131c",
+                        "on-tertiary-container": "#76ffc2",
+                        "text-muted": "#7D8D9F",
+                        "surface-bright": "#363943",
+                        "secondary-fixed": "#d8e2ff",
+                        "on-tertiary": "#003824",
+                        "on-background": "#e0e2ef",
+                        "background": "#10131c",
+                        "tertiary-container": "#007650",
+                        "surface-container": "#1c1f29",
+                        "surface-variant": "#31343f",
+                        "on-primary-fixed-variant": "#5a00c6",
+                        "text-primary": "#E2E8F0",
+                        "on-error": "#690005",
+                        "outline-variant": "#4a4455",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "surface-tint": "#d2bbff",
+                        "surface-container-highest": "#31343f",
+                        "on-primary-fixed": "#25005a",
+                        "warning": "#F59E0B",
+                        "primary-fixed": "#eaddff",
+                        "surface-container-high": "#272a34",
+                        "on-secondary-container": "#e6ecff",
+                        "on-secondary-fixed": "#001a42",
+                        "neon-gold": "#F59E0B",
+                        "on-surface": "#e0e2ef",
+                        "on-primary": "#3f008e",
+                        "on-tertiary-fixed": "#002113",
+                        "primary": "#d2bbff",
+                        "tertiary": "#4edea3",
+                        "inverse-surface": "#e0e2ef",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "surface": "#121724",
+                        "on-secondary": "#002e6a",
+                        "primary-fixed-dim": "#d2bbff",
+                        "danger": "#EF4444",
+                        "primary-container": "#7c3aed",
+                        "error-container": "#93000a",
+                        "on-error-container": "#ffdad6",
+                        "on-surface-variant": "#ccc3d8",
+                        "outline": "#958da1",
+                        "inverse-on-surface": "#2d303a",
+                        "surface-container-low": "#181b25",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "tertiary-fixed": "#6ffbbe",
+                        "on-secondary-fixed-variant": "#004395",
+                        "on-primary-container": "#ede0ff",
+                        "secondary": "#adc6ff",
+                        "error": "#ffb4ab",
+                        "secondary-container": "#0566d9",
+                        "inverse-primary": "#732ee4",
+                        "surface-container-lowest": "#0b0e17"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "sidebar-width": "280px",
+                        "osd-margin": "8px",
+                        "container-padding": "16px",
+                        "gutter": "2px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Inter"],
+                        "osd-label": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "label-caps": ["JetBrains Mono"],
+                        "title-sm": ["Inter"],
+                        "mono-data": ["JetBrains Mono"],
+                        "body-base": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "osd-label": ["12px", { "lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "700" }],
+                        "display-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-sm": ["13px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "title-sm": ["16px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "mono-data": ["12px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "body-base": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Custom scrollbar for a more industrial feel */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #10131c; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #31343f; 
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4a4455; 
+        }
+        
+        /* Map UI specific styles */
+        .map-bg {
+            background-color: #0b0e17;
+            background-image: radial-gradient(#1c1f29 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .fov-arc {
+            background: conic-gradient(from -45deg at 50% 100%, rgba(124, 58, 237, 0.2) 0deg, rgba(124, 58, 237, 0.2) 90deg, transparent 90deg);
+            clip-path: polygon(50% 100%, 0 0, 100% 0);
+            transform-origin: bottom center;
+            transition: transform 0.3s ease-out, width 0.3s ease, height 0.3s ease;
+        }
+        
+        .fov-arc-alert {
+            background: conic-gradient(from -45deg at 50% 100%, rgba(239, 68, 68, 0.3) 0deg, rgba(239, 68, 68, 0.3) 90deg, transparent 90deg);
+        }
+
+        .cam-node {
+            box-shadow: 0 0 10px rgba(124, 58, 237, 0.5);
+        }
+        
+        .cam-node-alert {
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.8);
+            animation: pulse-alert 2s infinite;
+        }
+        
+        @keyframes pulse-alert {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen font-body-base overflow-hidden flex flex-col">
+<!-- TopNavBar (Shared Component) -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-padding h-14 border-b border-border-subtle bg-surface-dim">
+<div class="flex items-center gap-6">
+<div class="text-headline-md font-headline-md font-extrabold text-primary tracking-tighter">ewVLM</div>
+<nav class="hidden md:flex gap-4">
+<a class="text-on-surface-variant font-medium hover:bg-surface-container-highest transition-colors px-3 py-2 rounded" href="#">Monitor A</a>
+<a class="text-on-surface-variant font-medium hover:bg-surface-container-highest transition-colors px-3 py-2 rounded" href="#">Monitor B</a>
+<a class="text-on-surface-variant font-medium hover:bg-surface-container-highest transition-colors px-3 py-2 rounded" href="#">Playback</a>
+<a class="text-primary border-b-2 border-primary pb-1 font-bold" href="#">Dashboard</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center bg-surface-container-low border border-border-subtle rounded px-3 py-1.5 h-9">
+<span class="material-symbols-outlined text-text-muted mr-2" style="font-variation-settings: 'FILL' 0;">search</span>
+<input class="bg-transparent border-none text-body-sm font-body-sm text-on-surface focus:outline-none w-48 placeholder-text-muted" placeholder="Search..." type="text"/>
+</div>
+<button class="text-on-surface-variant hover:bg-surface-container-highest p-1.5 rounded transition-colors"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">memory</span></button>
+<button class="text-on-surface-variant hover:bg-surface-container-highest p-1.5 rounded transition-colors"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">lan</span></button>
+<button class="text-on-surface-variant hover:bg-surface-container-highest p-1.5 rounded transition-colors relative">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full"></span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-high border border-border-subtle overflow-hidden ml-2">
+<img alt="Security Operator Profile" class="w-full h-full object-cover" data-alt="A small, high-contrast avatar image suitable for a security operator profile in a dark UI, featuring a stylized geometric icon in deep violet and white, emphasizing professionalism and tech-savviness." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCC0a47Ni0lJttnNAhhRkP6tGQ2YSqCtEnUy9mb9EAAQFUPzOMlvFij7PFC6F0U0ShfCb4j61FcordMYF4OjTGj3d5SqdolVR5avrYE1LDeNYg1sX9sA-P4xh2KiNU6KkIkG-l7XJXLEMVB5rP1IAD4jP76gAGfTp2SFYbQWDzf8-bdX0OdnuK2ohWhndMjm8eCUUTQtnbPVzETawjYY4AUUG-3OfW57OUu5V8SUaDwnJ3bEZ_E1eJQWQ"/>
+</div>
+</div>
+</header>
+<!-- Main Workspace -->
+<div class="flex-1 flex mt-14 overflow-hidden relative">
+<!-- SideNavBar (Shared Component) -->
+<aside class="fixed left-0 top-14 bottom-0 w-sidebar-width flex flex-col z-40 bg-surface-container border-r border-border-subtle shadow-sm">
+<div class="p-4 border-b border-border-subtle">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-10 h-10 rounded bg-surface-variant flex items-center justify-center border border-border-subtle">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">dataset</span>
+</div>
+<div>
+<h2 class="text-title-sm font-title-sm text-on-surface">ASSET EXPLORER</h2>
+<p class="text-body-sm font-body-sm text-text-muted">32 Active Channels</p>
+</div>
+</div>
+<button class="w-full mt-4 bg-primary-container text-on-primary-container text-body-sm font-body-sm font-bold py-2 rounded flex items-center justify-center gap-2 hover:bg-primary-fixed transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">add</span>
+                    Add New Camera
+                </button>
+</div>
+<nav class="flex-1 p-2 overflow-y-auto flex flex-col gap-1">
+<a class="flex items-center gap-3 p-3 rounded-lg text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all text-label-caps font-label-caps" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">videocam</span>
+                    Cameras
+                </a>
+<a class="flex items-center gap-3 p-3 rounded-lg text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all text-label-caps font-label-caps" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">sensors</span>
+                    Sensors
+                </a>
+<a class="flex items-center gap-3 p-3 rounded-lg bg-primary-container text-on-primary-container font-bold text-label-caps font-label-caps transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">map</span>
+                    Map
+                </a>
+<a class="flex items-center gap-3 p-3 rounded-lg text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all text-label-caps font-label-caps" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">psychology</span>
+                    AI Rules
+                </a>
+</nav>
+<div class="p-2 border-t border-border-subtle flex flex-col gap-1">
+<a class="flex items-center gap-3 p-3 rounded-lg text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all text-label-caps font-label-caps" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+                    Settings
+                </a>
+<a class="flex items-center gap-3 p-3 rounded-lg text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high transition-all text-label-caps font-label-caps" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">help</span>
+                    Support
+                </a>
+</div>
+</aside>
+<!-- Canvas Area (Map) -->
+<main class="ml-[280px] flex-1 relative map-bg">
+<!-- Simulated Map Image Layer -->
+<div class="absolute inset-0 opacity-40 mix-blend-screen pointer-events-none" data-alt="A highly detailed, dark-mode satellite map of an industrial complex or city grid. The aesthetic is extremely high-contrast, using deep navy blues and blacks for the terrain, with subtle cyan and violet grids overlaying the structures. It looks like a military-grade tactical display interface, devoid of text labels but rich in geometric structure." data-location="Industrial District Alpha" style="background-image: url('https://www.gstatic.com/labs-code/stitch/stitch-placeholder-300x300.svg')"></div>
+<!-- GIS Grid Overlay -->
+<div class="absolute inset-0 pointer-events-none border border-border-subtle m-container-padding opacity-20">
+<div class="w-full h-full flex flex-col justify-between">
+<div class="w-full border-b border-border-subtle h-1/4"></div>
+<div class="w-full border-b border-border-subtle h-1/4"></div>
+<div class="w-full border-b border-border-subtle h-1/4"></div>
+</div>
+<div class="absolute inset-0 flex justify-between">
+<div class="h-full border-r border-border-subtle w-1/4"></div>
+<div class="h-full border-r border-border-subtle w-1/4"></div>
+<div class="h-full border-r border-border-subtle w-1/4"></div>
+</div>
+</div>
+<!-- Camera Nodes on Map -->
+<!-- Node 1: PTZ Active -->
+<div class="absolute top-[30%] left-[40%] transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-20 group">
+<!-- FoV Arc -->
+<div class="absolute bottom-1/2 left-1/2 transform -translate-x-1/2 mb-2 w-48 h-48 fov-arc z-10" id="ptz-arc-1" style="transform: translateX(-50%) rotate(45deg);">
+<div class="absolute top-0 left-0 w-full border-t border-primary opacity-50"></div>
+</div>
+<div class="w-6 h-6 rounded-full bg-surface border-2 border-primary flex items-center justify-center relative z-20 cam-node">
+<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: 'FILL' 1;">videocam</span>
+</div>
+<div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 whitespace-nowrap bg-surface-dim border border-border-subtle px-2 py-0.5 rounded text-osd-label font-osd-label text-primary shadow-sm hidden group-hover:block">
+                    CAM-01 (PTZ)
+                </div>
+</div>
+<!-- Node 2: Fixed Alert -->
+<div class="absolute top-[60%] left-[65%] transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-20 group">
+<!-- FoV Arc -->
+<div class="absolute bottom-1/2 left-1/2 transform -translate-x-1/2 mb-2 w-32 h-32 fov-arc-alert z-10" style="transform: translateX(-50%) rotate(180deg);"></div>
+<div class="w-6 h-6 rounded-full bg-surface border-2 border-danger flex items-center justify-center relative z-20 cam-node-alert">
+<span class="material-symbols-outlined text-[14px] text-danger" style="font-variation-settings: 'FILL' 1;">videocam</span>
+</div>
+<div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 whitespace-nowrap bg-surface-dim border border-danger px-2 py-0.5 rounded text-osd-label font-osd-label text-danger shadow-sm">
+                    CAM-04 (ALERT)
+                </div>
+<!-- Alert pulsing ring -->
+<div class="absolute inset-0 rounded-full border border-danger animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite] z-10"></div>
+</div>
+<!-- Floating PTZ Control Panel -->
+<div class="absolute bottom-container-padding right-container-padding w-72 bg-surface/90 backdrop-blur-md border border-border-subtle rounded-xl shadow-lg z-30 flex flex-col overflow-hidden">
+<div class="bg-surface-variant px-4 py-2 border-b border-border-subtle flex justify-between items-center">
+<h3 class="text-title-sm font-title-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-primary" style="font-variation-settings: 'FILL' 1;">control_camera</span>
+                        PTZ Control (CAM-01)
+                    </h3>
+<div class="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_8px_#4edea3]"></div>
+</div>
+<div class="p-4 flex flex-col gap-4">
+<!-- Live Mini Feed -->
+<div class="w-full h-32 bg-surface-container-lowest border border-border-subtle rounded-lg relative overflow-hidden group">
+<img alt="Live Feed Mini" class="w-full h-full object-cover opacity-80" data-alt="A dark, high-contrast security camera feed showing an industrial alleyway at night. The image is gritty, illuminated by sparse harsh artificial lights. There are faint digital overlays indicating object tracking bounding boxes in glowing violet, emphasizing the AI analytics aspect of the surveillance system." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDY0fPIy4Ou080oe0jSfLAERGfrhSHdG7otJ4IRTmXX5MaYOc9DBZD6x--ugir_t_n04eAADvgCjalKMXImzCg4ng8DDVGcaJWxTtYVsEzcpBETIE8K8IycjN5x0hhtaOFyNhS2yRa1GSatduCYOvMTa_Lqs45yWK7gr1IzWdRVfRL_DP0LBL6Varhj9Zk98B-44AZPgoCBfJP1RKVCtyohlxnK3HKJ9zgLNh2OsGk33BD0jn2LdlyZwA"/>
+<div class="absolute inset-0 border-2 border-transparent group-hover:border-primary/50 transition-colors pointer-events-none rounded-lg"></div>
+<div class="absolute bottom-1 right-2 text-mono-data font-mono-data text-primary shadow-sm bg-surface/80 px-1 rounded text-[10px]">LIVE • 1080p</div>
+</div>
+<!-- Jog Shuttle Controls -->
+<div class="flex justify-center items-center py-2 relative">
+<!-- Compass Background -->
+<div class="absolute w-24 h-24 rounded-full border border-border-subtle/50 flex items-center justify-center pointer-events-none">
+<div class="w-full h-[1px] bg-border-subtle/30 absolute"></div>
+<div class="w-[1px] h-full bg-border-subtle/30 absolute"></div>
+</div>
+<div class="grid grid-cols-3 gap-2 z-10 relative">
+<!-- Top Left -->
+<button class="w-8 h-8 rounded bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:bg-surface-container-high hover:text-primary transition-colors hover:border-primary/50" onmousedown="rotateArc(-15)" onmouseup="stopRotate()">
+<span class="material-symbols-outlined text-[16px] transform -rotate-45">arrow_upward</span>
+</button>
+<!-- Top -->
+<button class="w-8 h-8 rounded bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:bg-surface-container-high hover:text-primary transition-colors hover:border-primary/50" onmousedown="rotateArc(0, true)" onmouseup="stopRotate()">
+<span class="material-symbols-outlined text-[16px]">arrow_upward</span>
+</button>
+<!-- Top Right -->
+<button class="w-8 h-8 rounded bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:bg-surface-container-high hover:text-primary transition-colors hover:border-primary/50" onmousedown="rotateArc(15)" onmouseup="stopRotate()">
+<span class="material-symbols-outlined text-[16px] transform rotate-45">arrow_upward</span>
+</button>
+<!-- Left -->
+<button class="w-8 h-8 rounded bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:bg-surface-container-high hover:text-primary transition-colors hover:border-primary/50" onmousedown="rotateArc(-15)" onmouseup="stopRotate()">
+<span class="material-symbols-outlined text-[16px]">arrow_back</span>
+</button>
+<!-- Center (Home) -->
+<button class="w-8 h-8 rounded-full bg-primary-container border border-primary flex items-center justify-center text-on-primary-container hover:bg-primary-fixed transition-colors shadow-[0_0_10px_rgba(124,58,237,0.3)]">
+<span class="material-symbols-outlined text-[16px] text-on-primary-container" style="font-variation-settings: 'FILL' 1;">my_location</span>
+</button>
+<!-- Right -->
+<button class="w-8 h-8 rounded bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:bg-surface-container-high hover:text-primary transition-colors hover:border-primary/50" onmousedown="rotateArc(15)" onmouseup="stopRotate()">
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+<!-- Bottom Left -->
+<button class="w-8 h-8 rounded bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:bg-surface-container-high hover:text-primary transition-colors hover:border-primary/50" onmousedown="rotateArc(-15)" onmouseup="stopRotate()">
+<span class="material-symbols-outlined text-[16px] transform -rotate-45">arrow_downward</span>
+</button>
+<!-- Bottom -->
+<button class="w-8 h-8 rounded bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:bg-surface-container-high hover:text-primary transition-colors hover:border-primary/50" onmousedown="rotateArc(0, false, true)" onmouseup="stopRotate()">
+<span class="material-symbols-outlined text-[16px]">arrow_downward</span>
+</button>
+<!-- Bottom Right -->
+<button class="w-8 h-8 rounded bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:bg-surface-container-high hover:text-primary transition-colors hover:border-primary/50" onmousedown="rotateArc(15)" onmouseup="stopRotate()">
+<span class="material-symbols-outlined text-[16px] transform rotate-45">arrow_downward</span>
+</button>
+</div>
+</div>
+<!-- Zoom Controls -->
+<div class="flex items-center gap-2 mt-2">
+<span class="text-osd-label font-osd-label text-text-muted w-8">ZOOM</span>
+<button class="flex-1 bg-surface-container-lowest border border-border-subtle rounded py-1 flex justify-center items-center hover:border-primary/50 hover:text-primary transition-colors" onclick="adjustZoom(-10)">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<button class="flex-1 bg-surface-container-lowest border border-border-subtle rounded py-1 flex justify-center items-center hover:border-primary/50 hover:text-primary transition-colors" onclick="adjustZoom(10)">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Map View Controls (Top Right Overlay) -->
+<div class="absolute top-container-padding right-container-padding flex gap-2 z-30">
+<div class="bg-surface/80 backdrop-blur-md border border-border-subtle rounded-lg flex overflow-hidden shadow-md p-1 gap-1">
+<button class="px-3 py-1.5 rounded bg-primary-container text-on-primary-container text-label-caps font-label-caps font-bold transition-colors">
+                        GIS VIEW
+                    </button>
+<button class="px-3 py-1.5 rounded text-text-muted hover:bg-surface-container-highest hover:text-on-surface-variant text-label-caps font-label-caps transition-colors">
+                        SATELLITE
+                    </button>
+</div>
+<button class="w-9 h-9 rounded-lg bg-surface/80 backdrop-blur-md border border-border-subtle flex items-center justify-center text-text-muted hover:bg-surface-container-highest hover:text-primary shadow-md transition-colors">
+<span class="material-symbols-outlined text-[20px]">layers</span>
+</button>
+</div>
+</main>
+</div>
+<script>
+        // Simple script to simulate PTZ FoV changes based on button clicks
+        let currentRotation = 45;
+        let currentZoom = 48; // w-48 equivalent in tailwind approx (12rem)
+        let rotationInterval;
+
+        function rotateArc(degChange, isUp = false, isDown = false) {
+            const arc = document.getElementById('ptz-arc-1');
+            
+            // Continuous rotation while holding
+            rotationInterval = setInterval(() => {
+                if (degChange !== 0) {
+                     currentRotation += (degChange > 0 ? 5 : -5);
+                }
+                updateArcTransform(arc);
+            }, 50);
+        }
+
+        function stopRotate() {
+            clearInterval(rotationInterval);
+        }
+
+        function adjustZoom(amount) {
+            const arc = document.getElementById('ptz-arc-1');
+            // Basic simulation of zoom affecting the width/height of the cone
+            let newSize = currentZoom + (amount / 2);
+            if(newSize > 24 && newSize < 96) { // min/max constraints
+                 currentZoom = newSize;
+                 // Update classes or inline styles for size. For simplicity, using inline width/height based on rem
+                 arc.style.width = `${currentZoom/4}rem`;
+                 arc.style.height = `${currentZoom/4}rem`;
+            }
+        }
+
+        function updateArcTransform(arcElement) {
+            arcElement.style.transform = `translateX(-50%) rotate(${currentRotation}deg)`;
+        }
+    </script>
+</body></html>

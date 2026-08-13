@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>지능형 PTZ 타겟 락온 및 다중 카메라 궤적 인계(Handover) 컨트롤러 - ewVLM</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#eaddff",
+                        "on-surface-variant": "#ccc3d8",
+                        "on-secondary-fixed-variant": "#004395",
+                        "primary": "#d2bbff",
+                        "primary-container": "#7c3aed",
+                        "on-primary-fixed": "#25005a",
+                        "inverse-primary": "#732ee4",
+                        "tertiary-container": "#007650",
+                        "border-subtle": "#232C3F",
+                        "inverse-surface": "#e0e2ef",
+                        "text-muted": "#7D8D9F",
+                        "error-container": "#93000a",
+                        "secondary": "#adc6ff",
+                        "on-secondary": "#002e6a",
+                        "warning": "#F59E0B",
+                        "danger": "#EF4444",
+                        "surface-container-highest": "#31343f",
+                        "inverse-on-surface": "#2d303a",
+                        "surface-container-lowest": "#0b0e17",
+                        "tertiary-fixed": "#6ffbbe",
+                        "secondary-fixed": "#d8e2ff",
+                        "on-tertiary": "#003824",
+                        "surface-dim": "#10131c",
+                        "on-error": "#690005",
+                        "on-primary-fixed-variant": "#5a00c6",
+                        "on-primary": "#3f008e",
+                        "surface": "#121724",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "on-surface": "#e0e2ef",
+                        "on-primary-container": "#ede0ff",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "surface-bright": "#363943",
+                        "outline": "#958da1",
+                        "background": "#10131c",
+                        "text-primary": "#E2E8F0",
+                        "surface-container": "#1c1f29",
+                        "surface-tint": "#d2bbff",
+                        "on-tertiary-container": "#76ffc2",
+                        "primary-fixed-dim": "#d2bbff",
+                        "neon-gold": "#F59E0B",
+                        "on-secondary-fixed": "#001a42",
+                        "surface-container-high": "#272a34",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "outline-variant": "#4a4455",
+                        "surface-container-low": "#181b25",
+                        "surface-variant": "#31343f",
+                        "on-tertiary-fixed": "#002113",
+                        "on-background": "#e0e2ef",
+                        "error": "#ffb4ab",
+                        "secondary-container": "#0566d9",
+                        "on-secondary-container": "#e6ecff",
+                        "tertiary": "#4edea3",
+                        "on-error-container": "#ffdad6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "2px",
+                        "sidebar-width": "280px",
+                        "container-padding": "16px",
+                        "osd-margin": "8px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "osd-label": ["Inter"],
+                        "body-base": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "mono-data": ["JetBrains Mono"],
+                        "headline-md": ["Inter"],
+                        "label-caps": ["JetBrains Mono"],
+                        "body-sm": ["Inter"],
+                        "title-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "osd-label": ["12px", { "lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "700" }],
+                        "body-base": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "display-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "mono-data": ["12px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "body-sm": ["13px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "title-sm": ["16px", { "lineHeight": "1.4", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .ptz-grid {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 2px;
+            height: calc(100vh - 56px); /* Subtract topnav */
+            background-color: #070A13; /* Deep Canvas */
+        }
+        .video-feed {
+            border: 2px solid theme('colors.border-subtle');
+            position: relative;
+            background-color: theme('colors.surface-container-lowest');
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .video-feed.active {
+            border-color: theme('colors.primary-container');
+            box-shadow: 0 0 15px rgba(124, 58, 237, 0.3);
+        }
+        .osd-overlay {
+            position: absolute;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .bounding-box {
+            border: 1.5px solid theme('colors.primary-container');
+            position: absolute;
+            background-color: rgba(124, 58, 237, 0.1);
+        }
+        .led-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .led-live {
+            background-color: theme('colors.tertiary');
+            box-shadow: 0 0 4px theme('colors.tertiary');
+        }
+        .led-alert {
+            background-color: theme('colors.danger');
+            box-shadow: 0 0 4px theme('colors.danger');
+        }
+        .jog-shuttle {
+            background: radial-gradient(circle, theme('colors.surface-container-highest') 0%, theme('colors.surface') 100%);
+            border: 1px solid theme('colors.border-subtle');
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            position: relative;
+        }
+        .jog-btn {
+            position: absolute;
+            background: transparent;
+            color: theme('colors.on-surface-variant');
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .jog-btn:hover {
+            color: theme('colors.primary-container');
+        }
+        /* Hide scrollbar for clean industrial look */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: theme('colors.surface-container-lowest');
+        }
+        ::-webkit-scrollbar-thumb {
+            background: theme('colors.surface-variant');
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-base antialiased overflow-hidden">
+<!-- TopNavBar -->
+<nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-padding h-14 bg-surface dark:bg-surface border-b border-border-subtle dark:border-border-subtle bg-surface-dim">
+<div class="flex items-center gap-6 h-full">
+<span class="text-headline-md font-headline-md font-extrabold text-primary dark:text-primary tracking-tighter">ewVLM</span>
+<div class="hidden md:flex gap-4 h-full items-center">
+<a class="text-on-surface-variant dark:text-on-surface-variant font-medium hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors px-3 py-2 rounded" href="#">Monitor A</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant font-medium hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors px-3 py-2 rounded" href="#">Monitor B</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant font-medium hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors px-3 py-2 rounded" href="#">Playback</a>
+<a class="text-primary dark:text-primary border-b-2 border-primary pb-1 font-bold active-nav hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors" href="#">Dashboard</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" data-icon="memory">memory</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" data-icon="lan">lan</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" data-icon="notifications">notifications</span>
+<img alt="Security Operator Profile" class="w-8 h-8 rounded-full border border-border-subtle object-cover" data-alt="A detailed headshot portrait of a professional security operator in a dimly lit control room setting. The operator is wearing a dark, utilitarian uniform with a subtle earpiece. The background features blurred, glowing screens emitting cool blue and violet hues, reflecting the industrial, mission-critical aesthetic of a high-tech surveillance center. High contrast, sharp focus." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCLWXCG-fNPvQe_tfhANtCUMUbof4y5A0uVoZMzbcdDF23cKlX8R3Dp8vlP5sYegB7iEouUjwp9cmMKH4IEJirBk7wxkKmHMMb-ofOiP_ZOZn6bgiwvdI2acEamBAT0UwbDuSgObrKzg2gyXTRWm-e-hXXwnfijWE9PRPLnC9jplkDQ4_p9klEcCS6IYnUoeQnHk8hbPPVfApgujvkgpNvx5AnqQOvoN7N8nxZhHhJJF2up-bzRG7GUaQ"/>
+</div>
+</nav>
+<!-- Main Layout -->
+<div class="mt-14 w-full h-full">
+<!-- Content Area: Suppressed SideNav for focused task -->
+<main class="w-full h-full">
+<div class="ptz-grid">
+<!-- Left: Video Canvas & Lock-on View -->
+<div class="flex flex-col gap-gutter bg-[#070A13] p-gutter">
+<!-- Primary Target View -->
+<div class="video-feed active flex-1 relative">
+<img alt="Primary Feed" class="absolute inset-0 w-full h-full object-cover opacity-80" data-alt="A highly detailed, real-time surveillance camera feed showing an urban intersection at night. The scene is illuminated by harsh streetlights and neon signs, creating a gritty, industrial atmosphere. In the center, a dark-colored SUV is sharply in focus, highlighted as a tracking target. The overall color palette is dominated by deep navies, shadows, and cool technical blues, emphasizing the mission-critical, low-glare dark mode aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHAoccqrfyKzednbh-zXeN4cG13XK9dO5H3IM2DrprCnOxrU0motnRNLqSEn5scAHk2rKT1OlkkHCdtApnagz-gWDWarnSRGRRjwdfcsag6lFOfd52OqJsZvqRnTQS78fs9WWz6kRYtAKHaYpMJ-m4EnH2ZzMPsuro7Hg-L_8vyJ8qBoaGEa1M2nEk8stlo1ahErMahOFO3-SL6DANrJ96bznTqr4mH-jSo3mmE1-hWmtXaxi0A37TBQ"/>
+<!-- OSD Overlays -->
+<div class="osd-overlay inset-0">
+<!-- Bounding Box -->
+<div class="bounding-box" style="top: 30%; left: 40%; width: 25%; height: 20%;">
+<div class="absolute -top-6 left-0 bg-surface-container px-2 py-1 border border-primary-container text-primary font-osd-label text-osd-label uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">lock</span>
+                                    TARGET_ID: VLM-892
+                                </div>
+<!-- Crosshair corners -->
+<div class="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-primary"></div>
+<div class="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-primary"></div>
+<div class="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-primary"></div>
+<div class="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-primary"></div>
+</div>
+<!-- OSD HUD Info -->
+<div class="absolute top-osd-margin left-osd-margin flex flex-col gap-1">
+<span class="bg-surface/80 text-on-surface font-mono-data text-mono-data px-2 py-0.5 rounded backdrop-blur">CAM_04_PTZ_NORTH</span>
+<span class="bg-surface/80 text-tertiary font-mono-data text-mono-data px-2 py-0.5 rounded backdrop-blur flex items-center gap-1"><span class="led-indicator led-live"></span> AUTO-TRACKING ACTIVE</span>
+</div>
+<div class="absolute bottom-osd-margin right-osd-margin flex flex-col gap-1 text-right">
+<span class="bg-surface/80 text-on-surface font-mono-data text-mono-data px-2 py-0.5 rounded backdrop-blur">PAN: +45.2° | TILT: -12.5° | ZOOM: 18x</span>
+<span class="bg-surface/80 text-danger font-mono-data text-mono-data px-2 py-0.5 rounded backdrop-blur">속도: 45km/h</span>
+</div>
+</div>
+</div>
+<!-- Handover Sequence Flow / Secondary Feeds -->
+<div class="h-1/3 flex gap-gutter">
+<div class="video-feed w-1/3 relative">
+<div class="absolute inset-0 bg-surface-container-lowest flex items-center justify-center">
+<img alt="Previous Camera" class="absolute inset-0 w-full h-full object-cover opacity-40 grayscale" data-alt="A grayscale, low-resolution surveillance camera feed showing a vehicle exiting the frame to the left. The scene is an empty industrial alleyway at night. The lighting is sparse and dim, fitting a mission-critical, low-glare dark mode aesthetic. A subtle, faded red bounding box hints at a lost track." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpvVvVm1m08B4_CRnCE5hyDdk5U3OGiptERAi15tL79lJtPLWM9dyrLOlptS1Sfc3LyxJhZzXTKQla_51QRyLiqcLVdMaqf2V-bwqaMIrR9Mv67gdJo4f-AQ43Qnn5dkS1A0xA6UNNOn7OgBc7PUfT42rt65W2epdm9WVk4Voagx0uEXfZ1yMNqQU4F71HWqjmZ78bXMZ0Wiyj4_VA0wN0EXZWl2yThfHH_jvFWjolMlH5mSgwN7yCxw"/>
+<div class="absolute top-osd-margin left-osd-margin bg-surface/80 text-text-muted font-mono-data text-mono-data px-2 py-0.5 rounded">CAM_03 (LOST)</div>
+</div>
+</div>
+<div class="video-feed w-1/3 relative active">
+<div class="absolute inset-0 bg-surface-container-lowest flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container text-[48px] animate-pulse">sync_alt</span>
+</div>
+<div class="absolute top-osd-margin left-osd-margin bg-surface/80 text-primary font-mono-data text-mono-data px-2 py-0.5 rounded">HANDOVER IN PROGRESS</div>
+</div>
+<div class="video-feed w-1/3 relative">
+<img alt="Next Camera" class="absolute inset-0 w-full h-full object-cover opacity-60" data-alt="A wide-angle surveillance camera feed showing an empty highway stretch at night. The scene is illuminated by distant streetlights, maintaining a dark, high-contrast industrial aesthetic. A faint green vector graphic overlays the road, indicating a predicted trajectory path for an incoming vehicle. Low glare, mission-critical vibe." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_alObZfxJcMXeX8FUCpyGSutiXsBqzP8qkonphBxeCHv8VRybOq0HESbmbdmkBJiaNIEK9dKOZdXZpyeAy9Qg_4YRSo_tG_cQZJkrRld6xZCsswp5xnQ4LyxLSbgwv76v5EZsHjcufaorSEg2ZPWBBulMDr_FQ3oIHgJwis3tVLt-BIYbmAxkdrhQUsymOH5QLjSDBxKhJYNZo7SygcuaSJ77HIgYd4hiado6tVa50GhoDpHDiP0zGg"/>
+<div class="absolute top-osd-margin left-osd-margin bg-surface/80 text-warning font-mono-data text-mono-data px-2 py-0.5 rounded">CAM_05 (PREDICTED)</div>
+<!-- Predicted Path Overlay -->
+<div class="absolute inset-0 border-2 border-dashed border-warning/50 m-4 rounded pointer-events-none"></div>
+</div>
+</div>
+</div>
+<!-- Right: Control Panel (Layer 1 Surface) -->
+<div class="bg-surface flex flex-col border-l border-border-subtle h-full overflow-y-auto">
+<!-- Header -->
+<div class="p-container-padding border-b border-border-subtle bg-surface-container">
+<h2 class="text-title-sm font-title-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container">psychology</span>
+                            지능형 추적 제어
+                        </h2>
+</div>
+<!-- Target Info Card -->
+<div class="p-container-padding border-b border-border-subtle">
+<div class="bg-surface-container p-3 rounded-lg border border-border-subtle flex flex-col gap-2">
+<div class="flex justify-between items-center">
+<span class="font-label-caps text-label-caps text-text-muted">활성 타겟</span>
+<span class="bg-primary-container text-white text-[10px] px-1.5 py-0.5 rounded font-bold">타겟 잠김</span>
+</div>
+<div class="font-mono-data text-mono-data text-primary">ID: VLM-892-SUV-BLK</div>
+<div class="text-body-sm font-body-sm text-on-surface-variant mt-1">
+                                신뢰도: 98%<br/>
+                                추적 시간: 04:12s
+                            </div>
+</div>
+</div>
+<!-- PTZ Controls (Jog Shuttle) -->
+<div class="p-container-padding flex flex-col items-center gap-4 border-b border-border-subtle">
+<span class="font-label-caps text-label-caps text-text-muted self-start w-full">수동 제어 (PTZ)</span>
+<div class="jog-shuttle my-4 shadow-lg flex items-center justify-center">
+<div class="w-16 h-16 rounded-full bg-surface-container-lowest border border-border-subtle shadow-inner flex items-center justify-center relative z-10">
+<span class="material-symbols-outlined text-primary-container">gamepad</span>
+</div>
+<!-- Directional Arrows -->
+<button class="jog-btn top-2 left-1/2 -translate-x-1/2"><span class="material-symbols-outlined">expand_less</span></button>
+<button class="jog-btn bottom-2 left-1/2 -translate-x-1/2"><span class="material-symbols-outlined">expand_more</span></button>
+<button class="jog-btn left-2 top-1/2 -translate-y-1/2"><span class="material-symbols-outlined">chevron_left</span></button>
+<button class="jog-btn right-2 top-1/2 -translate-y-1/2"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+<div class="flex gap-2 w-full">
+<button class="flex-1 bg-surface-container hover:bg-surface-container-high border border-border-subtle text-on-surface font-label-caps text-label-caps py-2 rounded transition-colors flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[16px]">zoom_out</span> OUT
+                            </button>
+<button class="flex-1 bg-surface-container hover:bg-surface-container-high border border-border-subtle text-on-surface font-label-caps text-label-caps py-2 rounded transition-colors flex items-center justify-center gap-1">
+                                IN <span class="material-symbols-outlined text-[16px]">zoom_in</span>
+</button>
+</div>
+</div>
+<!-- Handover Rules List -->
+<div class="p-container-padding flex flex-col gap-3">
+<div class="flex justify-between items-center">
+<span class="font-label-caps text-label-caps text-text-muted">인계 시퀀스</span>
+<span class="material-symbols-outlined text-text-muted text-[16px] cursor-pointer hover:text-on-surface">settings</span>
+</div>
+<!-- List Items -->
+<div class="flex flex-col gap-1">
+<div class="bg-surface-container-lowest border border-border-subtle p-2 flex items-center gap-3 rounded opacity-50">
+<span class="material-symbols-outlined text-text-muted">check_circle</span>
+<div class="flex-1 font-mono-data text-mono-data text-text-muted">CAM_03 (ZONE A)</div>
+<span class="text-[10px] text-text-muted">PASSED</span>
+</div>
+<div class="bg-primary-container/10 border border-primary-container p-2 flex items-center gap-3 rounded relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary-container"></div>
+<span class="material-symbols-outlined text-primary-container animate-spin" style="animation-duration: 3s;">settings</span>
+<div class="flex-1 font-mono-data text-mono-data text-primary pl-1">CAM_04 (ZONE B)</div>
+<span class="text-[10px] text-primary font-bold">ACTIVE</span>
+</div>
+<div class="bg-surface-container border border-border-subtle p-2 flex items-center gap-3 rounded">
+<span class="material-symbols-outlined text-warning">schedule</span>
+<div class="flex-1 font-mono-data text-mono-data text-on-surface-variant">CAM_05 (ZONE C)</div>
+<span class="text-[10px] text-warning">NEXT 5s</span>
+</div>
+</div>
+<button class="w-full mt-4 bg-primary-container hover:bg-inverse-primary text-white font-label-caps text-label-caps py-3 rounded-lg transition-colors flex justify-center items-center gap-2 shadow-lg">
+<span class="material-symbols-outlined text-[18px]">stop_circle</span> 자동 추적 중단
+                        </button>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
