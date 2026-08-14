@@ -28,6 +28,8 @@ const generateInitialSlots = (): CameraSlot[] => {
   }
   slots[0] = { ...slots[0], cameraId: 'CAM-01', cameraName: '외곽 1구역 펜스 북부', status: 'active', fps: 30.0, rtspUrl: 'rtsp://192.168.1.101/live' };
   slots[1] = { ...slots[1], cameraId: 'CAM-02', cameraName: '자재 창고 출입구', status: 'active', fps: 29.8, rtspUrl: 'rtsp://192.168.1.102/live' };
+  slots[2] = { ...slots[2], cameraId: 'CAM-03', cameraName: '중앙 변전실 내부', status: 'active', fps: 30.0, rtspUrl: 'rtsp://192.168.1.103/live' };
+  slots[3] = { ...slots[3], cameraId: 'CAM-04', cameraName: '본관 메인 로비', status: 'active', fps: 30.0, rtspUrl: 'rtsp://192.168.1.104/live' };
   return slots;
 };
 

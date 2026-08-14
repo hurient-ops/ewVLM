@@ -46,6 +46,8 @@ async def create_user(db: AsyncSession, user_data: dict) -> models.User:
     new_user = models.User(
         username=user_data["username"],
         hashed_password=user_data["hashed_password"],
+        name=user_data.get("name"),
+        phone=user_data.get("phone"),
         role=user_data.get("role", "user")
     )
     db.add(new_user)
@@ -56,6 +58,22 @@ async def create_user(db: AsyncSession, user_data: dict) -> models.User:
 async def get_user_by_username(db: AsyncSession, username: str) -> models.User | None:
     result = await db.execute(select(models.User).where(models.User.username == username))
     return result.scalars().first()
+
+async def get_user_by_id(db: AsyncSession, user_id: int) -> models.User | None:
+    result = await db.execute(select(models.User).where(models.User.id == user_id))
+    return result.scalars().first()
+
+async def get_all_users(db: AsyncSession):
+    result = await db.execute(select(models.User).order_by(models.User.created_at.desc()))
+    return result.scalars().all()
+
+async def update_user_role(db: AsyncSession, user_id: int, new_role: str):
+    user = await get_user_by_id(db, user_id)
+    if user:
+        user.role = new_role
+        await db.commit()
+        await db.refresh(user)
+    return user
 
 # VSS Semantic Search (Mock)
 async def search_events_semantic(db: AsyncSession, query: str, limit: int = 5) -> list[models.EventLog]:

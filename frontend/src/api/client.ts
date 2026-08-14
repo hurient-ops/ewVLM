@@ -56,6 +56,14 @@ export const API = {
   getEventReport: async (eventId: string) => {
     const response = await apiClient.get(`/api/v1/events/${eventId}/report`);
     return response.data;
+  },
+  getUsers: async () => {
+    const response = await apiClient.get('/api/v1/users');
+    return response.data;
+  },
+  updateUserRole: async (userId: number, role: string) => {
+    const response = await apiClient.put(`/api/v1/users/${userId}/role`, { role });
+    return response.data;
   }
 };
 

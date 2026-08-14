@@ -1,0 +1,6 @@
+offline_packages/
+mediamtx_v1.20.0_windows_amd64/
+mock_videos/
+ffmpeg.exe
+ffplay.exe
+ffprobe.exe

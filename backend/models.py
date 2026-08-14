@@ -30,6 +30,8 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    name = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
     role = Column(String, default="user", nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.UTC))
 

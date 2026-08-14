@@ -4,6 +4,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 export const MonitorBLayout: React.FC = () => {
   const location = useLocation();
   const isDetachedWindow = window.name === 'VLM_Detached';
+  
   const [isDetachedMode, setIsDetachedMode] = useState(() => {
     return sessionStorage.getItem('vlm_is_detached') === 'true';
   });
@@ -75,8 +76,12 @@ export const MonitorBLayout: React.FC = () => {
         <p className="text-gray-400 mb-6">다중 모니터 관제를 위해 분리된 창을 사용 중입니다.</p>
         <button 
           onClick={() => {
-            if (channel) channel.postMessage('force_close_detached');
+            if (channel) {
+              channel.postMessage('force_close_detached');
+              channel.postMessage('detach_closed');
+            }
             setIsDetachedMode(false);
+            sessionStorage.removeItem('vlm_is_detached');
           }}
           className="px-6 py-2 bg-[#7c3aed] text-white font-semibold rounded hover:brightness-110 transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(124,58,237,0.4)]"
         >

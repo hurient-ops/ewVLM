@@ -42,24 +42,30 @@ class OllamaVLMBridge:
             return self._generate_mock_base64_image(), 640, 480
 
         try:
-            cap = cv2.VideoCapture(video_path)
-            if not cap.isOpened():
-                raise ValueError("비디오 코덱 스트림을 열 수 없습니다.")
+            if video_path.lower().endswith(('.jpg', '.jpeg', '.png')):
+                frame = cv2.imread(video_path)
+                if frame is None:
+                    raise ValueError(f"이미지 프레임을 읽을 수 없습니다: {video_path}")
+                height, width = frame.shape[:2]
+            else:
+                cap = cv2.VideoCapture(video_path)
+                if not cap.isOpened():
+                    raise ValueError("비디오 코덱 스트림을 열 수 없습니다.")
 
-            # 밀리초 단위로 탐색 위치 지정
-            cap.set(cv2.CAP_PROP_POS_MSEC, timestamp_sec * 1000)
-            success, frame = cap.read()
-            
-            if not success:
-                # 프레임 획득 실패 시 첫 프레임으로 리바인딩 시도
-                cap.set(cv2.CAP_PROP_POS_MSEC, 0)
+                # 밀리초 단위로 탐색 위치 지정
+                cap.set(cv2.CAP_PROP_POS_MSEC, timestamp_sec * 1000)
                 success, frame = cap.read()
+                
                 if not success:
-                    raise ValueError("비디오 프레임 버퍼가 비어있습니다.")
+                    # 프레임 획득 실패 시 첫 프레임으로 리바인딩 시도
+                    cap.set(cv2.CAP_PROP_POS_MSEC, 0)
+                    success, frame = cap.read()
+                    if not success:
+                        raise ValueError("비디오 프레임 버퍼가 비어있습니다.")
 
-            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            cap.release()
+                width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                cap.release()
 
             # JPEG 이미지 압축 진행 (WiseStream ROI 효율 극대화)
             _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
@@ -83,7 +89,7 @@ class OllamaVLMBridge:
         """
         url = f"{self.ollama_url}/api/chat"
         payload = {
-            "model": model_name,
+            "model": "llava",  # Changed from llama3.2-vision to llava due to old Ollama engine
             "messages": [
                 {
                     "role": "user",
@@ -111,7 +117,7 @@ class OllamaVLMBridge:
             return mock_caption, latency * 1000
 
         try:
-            response = requests.post(url, json=payload, timeout=15)
+            response = requests.post(url, json=payload, timeout=300)
             latency_ms = (time.time() - start_time) * 1000
             
             if response.status_code == 200:

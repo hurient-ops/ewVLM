@@ -9,6 +9,8 @@ import Signup from './components/Signup';
 // Layouts
 import { BaseLayout } from './layouts/BaseLayout';
 import { MonitorBLayout } from './layouts/MonitorBLayout';
+import { GuestLayout } from './layouts/GuestLayout';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 // Monitor A Group
 import { MonitorALiveControl } from './components/MonitorALiveControl';
@@ -53,20 +55,23 @@ export default function App() {
     initWebSocket();
   }, []);
 
-  // 15초 단위로 랜덤 VLM 이벤트 자동 발생 시뮬레이터 시작 (주석 처리하여 중지)
-  // useEventSimulator(15000);
+  // 15초 단위로 랜덤 VLM 이벤트 자동 발생 시뮬레이터 시작
+  useEventSimulator(15000);
 
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Login onLoginSuccess={() => { window.location.href='/monitor-a' }} onNavigateSignup={() => { window.location.href='/signup' }} />} />
-        <Route path="/signup" element={<Signup onSignupSuccess={() => { window.location.href='/monitor-a' }} onBackToLogin={() => { window.location.href='/login' }} />} />
+        {/* Guest Routes */}
+        <Route element={<GuestLayout />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+        </Route>
         
-        {/* Detached window routes are now handled via window.name in layouts */}
-        
-        {/* Base Layout containing the Top Nav Header */}
-        <Route path="/" element={<BaseLayout />}>
-          <Route index element={<Navigate to="/monitor-a" replace />} />
+        {/* Protected Routes */}
+        <Route element={<ProtectedRoute />}>
+          {/* Base Layout containing the Top Nav Header */}
+          <Route path="/" element={<BaseLayout />}>
+            <Route index element={<Navigate to="/monitor-a" replace />} />
           
           {/* ----- Monitor A Domain ----- */}
           <Route path="/monitor-a" element={<MonitorALiveControl />} />
@@ -105,6 +110,7 @@ export default function App() {
           <Route path="/multi-site-auth" element={<MultiSiteAuthMatrix />} />
           <Route path="/system-audit" element={<SystemAuditLogPortal />} />
 
+        </Route>
         </Route>
       </Routes>
     </BrowserRouter>

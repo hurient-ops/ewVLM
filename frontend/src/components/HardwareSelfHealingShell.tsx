@@ -9,9 +9,9 @@ export const HardwareSelfHealingShell: React.FC = () => {
   };
 
   return ( <>
-<main className="h-[calc(100vh-3.5rem)] p-container-padding flex gap-unit overflow-hidden">
+<main className="h-[calc(100vh-3.5rem)] w-full p-container-padding flex flex-col lg:flex-row gap-unit overflow-hidden">
 {/* Left Column: Camera Feed & Primary Controls */}
-<div className="w-2/3 flex flex-col gap-unit h-full">
+<div className="lg:w-2/3 flex-1 flex flex-col gap-unit h-full min-h-0">
 {/* Video Feed Area */}
 <div className="relative bg-surface rounded flex-grow border-2 border-border-subtle overflow-hidden flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
 {/* Using placeholder for camera feed */}
@@ -109,7 +109,7 @@ export const HardwareSelfHealingShell: React.FC = () => {
 </div>
 </div>
 {/* Right Column: Diagnostics & Controls */}
-<div className="w-1/3 flex flex-col gap-unit h-full">
+<div className="lg:w-1/3 flex-1 flex flex-col gap-unit h-full overflow-y-auto">
 {/* Lens Calibration */}
 <div className="data-card p-4 rounded flex flex-col gap-4">
 <h3 className="text-label-caps font-label-caps text-text-muted border-b border-border-subtle pb-2 flex justify-between items-center"> 광학 캘리브레이션 <span className="material-symbols-outlined text-[16px]" data-icon="camera">camera</span>

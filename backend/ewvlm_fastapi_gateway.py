@@ -51,6 +51,8 @@ class CalibrationRequest(BaseModel):
 class SignupRequest(BaseModel):
     username: str
     password: str
+    name: Optional[str] = None
+    phone: Optional[str] = None
     role: str = "user"
 
 class VSSRequest(BaseModel):
@@ -163,6 +165,7 @@ class EscalationRequest(BaseModel):
     confidence: float = Field(..., ge=0.0, le=1.0, example=0.941)
     crop_box_coordinates: List[int] = Field(..., min_items=4, max_items=4, example=[120, 240, 320, 480])
     video_segment_chunk_path: str = Field(..., example="/var/ewvlm/nvr/CCTV-0024-WEST/20260810_175800.mp4")
+    operator_id: Optional[str] = Field("OP-ADMIN", example="OP-2041")
 
 # ==============================================================================
 # 3. Asynchronous Kafka Manager (Aiokafka)
@@ -528,6 +531,9 @@ async def login(req: LoginRequest, db = Depends(get_db)):
     if not crud.verify_password(req.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     
+    if user.role == "pending":
+        raise HTTPException(status_code=403, detail="Account is pending admin approval")
+    
     access_token = jwt.encode({"sub": user.username, "role": user.role}, SECRET_KEY, algorithm=ALGORITHM)
     
     # Audit log for login
@@ -549,7 +555,9 @@ async def signup(req: SignupRequest, db = Depends(get_db)):
     user_data = {
         "username": req.username,
         "hashed_password": hashed_pwd,
-        "role": req.role
+        "name": req.name,
+        "phone": req.phone,
+        "role": "pending" # Force pending for new signups
     }
     
     new_user = await crud.create_user(db, user_data)
@@ -560,7 +568,40 @@ async def signup(req: SignupRequest, db = Depends(get_db)):
         "resource_query": f"New user signup: {req.username}"
     })
     
-    return {"message": "User created successfully", "username": new_user.username}
+    return {"message": "User created successfully. Pending admin approval.", "username": new_user.username}
+
+class RoleUpdateRequest(BaseModel):
+    role: str
+
+@app.get("/api/v1/users", status_code=status.HTTP_200_OK)
+async def get_users(db = Depends(get_db)):
+    users = await crud.get_all_users(db)
+    return {
+        "status": "SUCCESS",
+        "users": [
+            {
+                "id": u.id,
+                "username": u.username,
+                "role": u.role,
+                "created_at": u.created_at.isoformat() + "Z" if u.created_at else None
+            } for u in users
+        ]
+    }
+
+@app.put("/api/v1/users/{user_id}/role", status_code=status.HTTP_200_OK)
+async def update_user_role_endpoint(user_id: int, req: RoleUpdateRequest, db = Depends(get_db)):
+    user = await crud.update_user_role(db, user_id, req.role)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Audit log
+    await crud.create_audit_log(db, {
+        "username": "admin", # In real app, extract from jwt
+        "action_type": "ROLE_UPDATE",
+        "resource_query": f"Updated user {user_id} role to {req.role}"
+    })
+    
+    return {"status": "SUCCESS", "message": f"User role updated to {req.role}"}
 
 @app.post("/api/v1/vss/search", status_code=status.HTTP_200_OK)
 async def semantic_search(req: VSSRequest, db = Depends(get_db)):
@@ -695,6 +736,29 @@ async def save_camera_calibration(camera_id: str, request: CalibrationRequest, d
     })
     
     return {"status": "SUCCESS", "message": "Calibration saved", "data": request.dict()}
+
+@app.get("/api/v1/cameras", status_code=status.HTTP_200_OK)
+async def get_cameras():
+    """API Gateway 5: Fetch active cameras for GIS Map integration."""
+    # Mocking some active cameras in the DB for the map
+    mock_cameras = [
+        {"camera_id": "CAM-01", "name": "외곽 1구역 펜스 북부", "latitude": 37.5665, "longitude": 126.9780, "is_active": True},
+        {"camera_id": "CAM-02", "name": "자재 창고 출입구", "latitude": 37.5670, "longitude": 126.9770, "is_active": True},
+        {"camera_id": "CAM-03", "name": "중앙 변전실 내부", "latitude": 37.5660, "longitude": 126.9790, "is_active": True},
+        {"camera_id": "CAM-04", "name": "본관 메인 로비", "latitude": 37.5655, "longitude": 126.9785, "is_active": True}
+    ]
+    # Check if DATABASE_MOCK has cameras (it does from startup_event)
+    db_cams = DATABASE_MOCK.get("cameras", [])
+    if db_cams:
+        for dc in db_cams:
+            mock_cameras.append({
+                "camera_id": dc.get("camera_id"),
+                "name": dc.get("camera_id"),
+                "latitude": 37.5680,
+                "longitude": 126.9795,
+                "is_active": dc.get("is_active", True)
+            })
+    return {"status": "SUCCESS", "cameras": mock_cameras}
 
 # ==============================================================================
 # 6. Main Executable Entry Point
