@@ -1,4 +1,14 @@
-import React from 'react'; export const HardwareSelfHealingShell: React.FC = () => { return ( <>
+import React, { useState } from 'react';
+
+export const HardwareSelfHealingShell: React.FC = () => {
+  const [isHealing, setIsHealing] = useState(false);
+
+  const handleHealing = () => {
+    setIsHealing(true);
+    setTimeout(() => setIsHealing(false), 3000);
+  };
+
+  return ( <>
 <main className="h-[calc(100vh-3.5rem)] p-container-padding flex gap-unit overflow-hidden">
 {/* Left Column: Camera Feed & Primary Controls */}
 <div className="w-2/3 flex flex-col gap-unit h-full">
@@ -32,8 +42,12 @@ import React from 'react'; export const HardwareSelfHealingShell: React.FC = () 
 </div>
 </div>
 {/* Self-Healing Trigger */}
-<button className="bg-primary-container hover:bg-inverse-primary text-white px-4 py-2 rounded text-label-caps font-label-caps flex items-center gap-2 shadow-lg transition-colors border border-primary">
-<span className="material-symbols-outlined text-[18px]" data-icon="auto_fix">auto_fix</span> 자율 복구 시작 </button>
+<button 
+  className={`px-4 py-2 rounded text-label-caps font-label-caps flex items-center gap-2 shadow-lg transition-colors border ${isHealing ? 'bg-inverse-primary border-primary text-white' : 'bg-primary-container hover:bg-inverse-primary text-white border-primary'}`}
+  onClick={handleHealing}
+  disabled={isHealing}
+>
+<span className={`material-symbols-outlined text-[18px] ${isHealing ? 'animate-spin' : ''}`} data-icon="auto_fix">auto_fix</span> {isHealing ? '자율 복구 진행 중...' : '자율 복구 시작'} </button>
 </div>
 </div>
 {/* Lower Diagnostics Panel */}

@@ -62,6 +62,8 @@ export default function App() {
         <Route path="/login" element={<Login onLoginSuccess={() => { window.location.href='/monitor-a' }} onNavigateSignup={() => { window.location.href='/signup' }} />} />
         <Route path="/signup" element={<Signup onSignupSuccess={() => { window.location.href='/monitor-a' }} onBackToLogin={() => { window.location.href='/login' }} />} />
         
+        {/* Detached window routes are now handled via window.name in layouts */}
+        
         {/* Base Layout containing the Top Nav Header */}
         <Route path="/" element={<BaseLayout />}>
           <Route index element={<Navigate to="/monitor-a" replace />} />

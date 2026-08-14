@@ -1,4 +1,20 @@
-import React from 'react'; export const NaturalLanguageRuleCopilot: React.FC = () => { return ( <>
+import React, { useState } from 'react'; 
+export const NaturalLanguageRuleCopilot: React.FC = () => { 
+  const [prompt, setPrompt] = useState('주 진입로에서 차량 흐름을 역행하는 차량을 식별하십시오. 특히 트럭과 밴을 대상으로 합니다.');
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulationComplete, setSimulationComplete] = useState(false);
+
+  const handleSimulate = () => {
+    if (!prompt.trim()) return;
+    setIsSimulating(true);
+    setSimulationComplete(false);
+    setTimeout(() => {
+      setIsSimulating(false);
+      setSimulationComplete(true);
+    }, 2500);
+  };
+
+  return ( <>
 <main className="flex-1 min-w-0 p-container-padding h-[calc(100vh-3.5rem)] flex gap-gutter bg-background overflow-hidden">
 {/* Left: Target Camera List */}
 <section className="w-[320px] bg-surface flex flex-col border border-border-subtle shadow-sm flex-shrink-0">
@@ -53,17 +69,34 @@ import React from 'react'; export const NaturalLanguageRuleCopilot: React.FC = (
 <div className="p-4 flex flex-col gap-3">
 <div className="flex gap-3">
 <span className="material-symbols-outlined text-text-muted mt-1">account_circle</span>
-<textarea className="w-full bg-background border border-border-subtle rounded p-3 text-body-base font-body-base text-text-primary focus:outline-none focus:border-primary resize-none h-24" placeholder="감지하려는 동작이나 이상 징후를 설명하세요 (예: '사람이 울타리 근처에 30초 이상 머무르면 알림')...">주 진입로에서 차량 흐름을 역행하는 차량을 식별하십시오. 특히 트럭과 밴을 대상으로 합니다.</textarea>
+<textarea 
+  value={prompt}
+  onChange={(e) => setPrompt(e.target.value)}
+  className="w-full bg-background border border-border-subtle rounded p-3 text-body-base font-body-base text-text-primary focus:outline-none focus:border-primary resize-none h-24" 
+  placeholder="감지하려는 동작이나 이상 징후를 설명하세요 (예: '사람이 울타리 근처에 30초 이상 머무르면 알림')..."
+/>
+</div>
+<div className="flex justify-end ml-9">
+  <button 
+    onClick={handleSimulate}
+    disabled={isSimulating || !prompt.trim()}
+    className="bg-primary/20 text-primary border border-primary px-4 py-1.5 rounded text-sm font-bold flex items-center gap-2 hover:bg-primary/30 transition-colors disabled:opacity-50"
+  >
+    {isSimulating ? <span className="material-symbols-outlined animate-spin text-[16px]">sync</span> : <span className="material-symbols-outlined text-[16px]">science</span>}
+    {isSimulating ? '검증 모델 구동 중...' : '제로샷 시뮬레이션 시작'}
+  </button>
 </div>
 {/* AI Chat Bubble */}
-<div className="ml-9 p-3 rounded bg-background border-l-2 border-primary-container text-body-base font-body-base text-text-primary relative shadow-sm">
-<div className="absolute -left-3 top-3 w-0 h-0 border-t-[6px] border-t-transparent border-r-[8px] border-r-primary-container border-b-[6px] border-b-transparent"></div>
-<p>알겠습니다. 대상 구역에서 클래스: <code>[truck, van]</code>을 필터링하여 <strong>역주행 감지</strong>를 위한 시공간 룰셋을 구성합니다. 검증을 위해 과거 데이터에서 제로샷 시뮬레이션을 준비 중입니다.</p>
-<div className="mt-2 flex gap-2">
-<span className="px-2 py-1 bg-surface-variant border border-border-subtle rounded text-mono-data text-text-muted">신뢰도: 높음</span>
-<span className="px-2 py-1 bg-surface-variant border border-border-subtle rounded text-mono-data text-text-muted">파라미터: 2개 자동 추출</span>
-</div>
-</div>
+{simulationComplete && (
+  <div className="ml-9 p-3 rounded bg-background border-l-2 border-primary-container text-body-base font-body-base text-text-primary relative shadow-sm">
+  <div className="absolute -left-3 top-3 w-0 h-0 border-t-[6px] border-t-transparent border-r-[8px] border-r-primary-container border-b-[6px] border-b-transparent"></div>
+  <p>알겠습니다. 대상 구역에서 클래스 및 동작 패턴을 필터링하여 <strong>사용자 지정 감지</strong>를 위한 룰셋을 구성했습니다. 과거 데이터 기반의 제로샷 시뮬레이션 결과를 우측 뷰포트에 렌더링합니다.</p>
+  <div className="mt-2 flex gap-2">
+  <span className="px-2 py-1 bg-surface-variant border border-border-subtle rounded text-mono-data text-text-muted">신뢰도: {Math.floor(Math.random() * 15 + 85)}%</span>
+  <span className="px-2 py-1 bg-surface-variant border border-border-subtle rounded text-mono-data text-text-muted">파라미터: 자동 추출됨</span>
+  </div>
+  </div>
+)}
 </div>
 </div>
 {/* Zero-shot Validation Viewport */}
@@ -74,8 +107,22 @@ import React from 'react'; export const NaturalLanguageRuleCopilot: React.FC = (
 <h3 className="text-title-sm font-title-sm text-text-primary">제로샷 검증 뷰포트</h3>
 </div>
 <div className="flex items-center gap-2">
-<span className="w-2 h-2 rounded-full bg-warning shadow-[0_0_4px_#F59E0B] animate-pulse"></span>
-<span className="text-mono-data font-mono-data text-warning">시뮬레이션 중 (과거 데이터: 24시간)</span>
+{isSimulating ? (
+  <>
+  <span className="w-2 h-2 rounded-full bg-warning shadow-[0_0_4px_#F59E0B] animate-pulse"></span>
+  <span className="text-mono-data font-mono-data text-warning">시뮬레이션 중...</span>
+  </>
+) : simulationComplete ? (
+  <>
+  <span className="w-2 h-2 rounded-full bg-primary shadow-[0_0_4px_#7c3aed]"></span>
+  <span className="text-mono-data font-mono-data text-primary">시뮬레이션 완료</span>
+  </>
+) : (
+  <>
+  <span className="w-2 h-2 rounded-full bg-text-muted"></span>
+  <span className="text-mono-data font-mono-data text-text-muted">대기 중</span>
+  </>
+)}
 </div>
 </div>
 {/* Video Cell */}
@@ -84,18 +131,27 @@ import React from 'react'; export const NaturalLanguageRuleCopilot: React.FC = (
 {/* Simulated Video Feed */}
 <div className="w-full h-full bg-cover bg-center absolute inset-0 opacity-80" data-alt="A simulated security camera view of an industrial access road at dusk. The scene is slightly desaturated, emphasizing the stark lighting from overhead streetlamps. Several large trucks are visible on the road, with one appearing to face the wrong direction. The aesthetic is gritty and highly technical." style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAud5shVbwuCqlsry2nHOGgr30rRVLcPfBZqFsQ_Avo4q2N3z7J251TTZxoPh9r2lejkT-nvFNYjpFm_cb8LnPUSyFSrMxrpUJdEbLZUv7OUJBVgAs2W6Z_ADHWyJkjSmFaqCQfpeRpS1VLBHxgcPPeIDt1CtKflW6i7bBKUCkAxHlltbSIkDvZlW_DL5mZCG40KVpiKE2yHAIEspT2aU5U8Z5HJhRhb-hwdfVXYtWcquIUHP9fZ9K9eg')" }}></div>
 {/* OSD Overlays */}
+{isSimulating ? (
+<div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-20">
+  <div className="flex flex-col items-center gap-4">
+    <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+    <div className="text-white font-mono-data animate-pulse">Vision-Ops 모델 가중치 적용 중...</div>
+  </div>
+</div>
+) : simulationComplete ? (
 <div className="absolute inset-0 pointer-events-none">
 {/* ROI Box */}
 <div className="absolute top-[20%] left-[10%] w-[80%] h-[60%] border border-dashed border-text-muted opacity-50"></div>
-<span className="absolute top-[20%] left-[10%] bg-surface-dim/80 text-text-muted text-osd-label font-osd-label px-1 border border-text-muted">대상 구역: 진입로</span>
+<span className="absolute top-[20%] left-[10%] bg-surface-dim/80 text-text-muted text-osd-label font-osd-label px-1 border border-text-muted">대상 구역: {prompt.includes('진입로') ? '진입로' : '전체 화면'}</span>
 {/* AI Detection Box */}
-<div className="absolute top-[45%] left-[60%] w-[15%] h-[20%] border-[1.5px] border-primary shadow-[0_0_8px_rgba(124,58,237,0.5)] flex flex-col justify-end">
+<div className="absolute top-[45%] left-[60%] w-[15%] h-[20%] border-[1.5px] border-primary shadow-[0_0_8px_rgba(124,58,237,0.5)] flex flex-col justify-end animate-pulse">
 <div className="bg-primary/20 backdrop-blur-sm p-1 border-t border-primary mt-auto">
-<div className="text-osd-label font-osd-label text-primary">VLM: 역주행 차량</div>
-<div className="text-mono-data font-mono-data text-white">클래스: 밴 | 신뢰도: 94%</div>
+<div className="text-osd-label font-osd-label text-primary">VLM: 사용자 정의 감지</div>
+<div className="text-mono-data font-mono-data text-white">매칭 스코어: 94%</div>
 </div>
 </div>
 </div>
+) : null}
 {/* Video Controls Overlay */}
 <div className="absolute bottom-0 left-0 w-full p-2 bg-gradient-to-t from-black/80 to-transparent flex items-center gap-4 text-text-muted">
 <span className="material-symbols-outlined hover:text-white cursor-pointer">play_arrow</span>

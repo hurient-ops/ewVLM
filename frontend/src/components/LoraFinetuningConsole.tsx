@@ -1,4 +1,9 @@
-import React from 'react'; export const LoraFinetuningConsole: React.FC = () => { return ( <>
+import React, { useState } from 'react';
+
+export const LoraFinetuningConsole: React.FC = () => {
+  const [isTraining, setIsTraining] = useState(false);
+
+  return ( <>
 <main className="flex-1 min-w-0 flex-1 h-[calc(100vh-3.5rem)] overflow-hidden bg-background relative p-container-padding flex flex-col gap-4">
 {/* Header Section */}
 <div className="flex justify-between items-end shrink-0">
@@ -9,8 +14,11 @@ import React from 'react'; export const LoraFinetuningConsole: React.FC = () => 
 <div className="flex gap-2">
 <button className="px-4 py-2 bg-surface-container-high border border-border-subtle text-on-surface text-body-sm font-body-sm rounded hover:bg-surface-variant transition-colors flex items-center gap-2">
 <span className="material-symbols-outlined text-[18px]">download</span> 데이터셋 내보내기 </button>
-<button className="px-4 py-2 bg-primary-container text-white text-body-sm font-body-sm rounded hover:bg-inverse-primary transition-colors flex items-center gap-2 font-semibold">
-<span className="material-symbols-outlined text-[18px]">play_arrow</span> 훈련 강제 시작 </button>
+<button 
+  className={`px-4 py-2 rounded text-body-sm font-body-sm flex items-center gap-2 font-semibold transition-colors ${isTraining ? 'bg-danger text-white hover:bg-danger/80' : 'bg-primary-container text-white hover:bg-inverse-primary'}`}
+  onClick={() => setIsTraining(!isTraining)}
+>
+<span className="material-symbols-outlined text-[18px]">{isTraining ? 'stop' : 'play_arrow'}</span> {isTraining ? '훈련 강제 중단' : '훈련 강제 시작'} </button>
 </div>
 </div>
 {/* Bento Grid Layout */}
@@ -75,12 +83,14 @@ import React from 'react'; export const LoraFinetuningConsole: React.FC = () => 
 <div className="flex items-center gap-3">
 <h3 className="text-title-sm font-title-sm text-text-primary flex items-center gap-2">
 <span className="material-symbols-outlined text-neon-gold text-[18px]">model_training</span> 활성 훈련 사이클 (LoRA v4.2) </h3>
+{isTraining && (
 <span className="flex items-center gap-1 text-mono-data font-mono-data text-neon-gold bg-surface-container px-2 py-1 rounded-full border border-border-subtle">
 <span className="status-dot training"></span> Training in progress </span>
+)}
 </div>
 <div className="text-right">
-<span className="text-mono-data font-mono-data text-text-muted block">Epoch: 14/50</span>
-<span className="text-mono-data font-mono-data text-text-muted block">Loss: 0.2314 <span className="text-tertiary">↓</span></span>
+<span className="text-mono-data font-mono-data text-text-muted block">Epoch: {isTraining ? '14/50' : '0/50'}</span>
+<span className="text-mono-data font-mono-data text-text-muted block">Loss: {isTraining ? '0.2314' : 'N/A'} {isTraining && <span className="text-tertiary">↓</span>}</span>
 </div>
 </div>
 <div className="flex-1 p-4 relative bg-surface-container-lowest">

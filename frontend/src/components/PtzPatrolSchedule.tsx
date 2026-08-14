@@ -1,4 +1,16 @@
-import React from 'react'; export const PtzPatrolSchedule: React.FC = () => { return ( <>
+import React, { useState } from 'react'; 
+import { usePtzStore } from '../store/usePtzStore';
+import { API } from '../api/client';
+
+export const PtzPatrolSchedule: React.FC = () => { 
+  const { isPatrolling, togglePatrol, presets } = usePtzStore();
+  const [activePresetIndex, setActivePresetIndex] = useState(0);
+
+  const handleSave = () => {
+    console.log('Saved Patrol Schedule');
+  };
+
+return ( <>
 <main className="p-container-padding flex-1 overflow-hidden flex flex-col gap-4 bg-background">
 {/* Header */}
 <header className="flex justify-between items-end pb-2 border-b border-border-subtle">
@@ -8,7 +20,14 @@ import React from 'react'; export const PtzPatrolSchedule: React.FC = () => { re
 </div>
 <div className="flex gap-2">
 <button className="px-4 py-1.5 border border-border-subtle rounded-DEFAULT text-title-sm font-title-sm text-on-surface hover:bg-surface-container transition-colors">취소</button>
-<button className="px-4 py-1.5 bg-primary-container text-white rounded-DEFAULT text-title-sm font-title-sm hover:bg-inverse-primary transition-colors flex items-center gap-2">
+<button 
+  className={`px-4 py-1.5 rounded-DEFAULT text-title-sm font-title-sm transition-colors flex items-center gap-2 ${isPatrolling ? 'bg-danger text-white hover:bg-danger/80' : 'bg-primary-container text-white hover:bg-inverse-primary'}`}
+  onClick={togglePatrol}
+>
+  <span className="material-symbols-outlined text-sm">{isPatrolling ? 'stop' : 'play_arrow'}</span>
+  {isPatrolling ? '순찰 중지' : '순찰 시작'}
+</button>
+<button className="px-4 py-1.5 bg-surface-container-highest text-on-surface rounded-DEFAULT text-title-sm font-title-sm hover:bg-surface-variant transition-colors flex items-center gap-2" onClick={handleSave}>
 <span className="material-symbols-outlined text-sm">save</span> 설정 저장 </button>
 </div>
 </header>

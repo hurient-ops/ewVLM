@@ -1,4 +1,14 @@
-import React from 'react'; export const NvrStorageDashboard: React.FC = () => { return ( <>
+import React from 'react';
+import { useSystemHealthStore } from '../store/useSystemHealthStore';
+
+export const NvrStorageDashboard: React.FC = () => { 
+  const { metrics } = useSystemHealthStore();
+  const cpuMetric = metrics.find(m => m.id === 'cpu');
+  const ramMetric = metrics.find(m => m.id === 'ram');
+  const diskMetric = metrics.find(m => m.id === 'disk');
+  const netMetric = metrics.find(m => m.id === 'net');
+  
+  return ( <>
 <main className="flex-1 p-container-padding flex flex-col gap-4 overflow-hidden relative">
 {/* Header Section */}
 <div className="flex justify-between items-end pb-2 border-b border-border-subtle">
@@ -44,19 +54,19 @@ import React from 'react'; export const NvrStorageDashboard: React.FC = () => { 
 <div>
 <div className="text-text-muted mb-1 flex justify-between">
 <span>CPU</span>
-<span className="text-on-surface">42%</span>
+<span className="text-on-surface">{cpuMetric?.value || 42}%</span>
 </div>
 <div className="w-full h-1 bg-surface-variant rounded overflow-hidden">
-<div className="h-full bg-primary" style={{ width: "42%" }}></div>
+<div className="h-full bg-primary" style={{ width: `${cpuMetric?.value || 42}%` }}></div>
 </div>
 </div>
 <div>
 <div className="text-text-muted mb-1 flex justify-between">
 <span>RAM</span>
-<span className="text-on-surface">64%</span>
+<span className="text-on-surface">{ramMetric?.value || 64}%</span>
 </div>
 <div className="w-full h-1 bg-surface-variant rounded overflow-hidden">
-<div className="h-full bg-primary" style={{ width: "64%" }}></div>
+<div className="h-full bg-primary" style={{ width: `${ramMetric?.value || 64}%` }}></div>
 </div>
 </div>
 </div>
@@ -163,10 +173,10 @@ import React from 'react'; export const NvrStorageDashboard: React.FC = () => { 
 <div className="flex flex-col gap-1 text-mono-data font-mono-data">
 <div className="flex justify-between text-text-muted">
 <span>용량</span>
-<span>12.4 TB / 16.0 TB</span>
+<span>{((diskMetric?.value || 77) / 100 * 16).toFixed(1)} TB / 16.0 TB</span>
 </div>
 <div className="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden">
-<div className="h-full bg-primary" style={{ width: "77%" }}></div>
+<div className={`h-full ${diskMetric?.status === 'warning' ? 'bg-warning' : 'bg-primary'}`} style={{ width: `${diskMetric?.value || 77}%` }}></div>
 </div>
 </div>
 </div>
@@ -215,7 +225,7 @@ import React from 'react'; export const NvrStorageDashboard: React.FC = () => { 
 <div className="flex justify-between items-center border-b border-border-subtle pb-2 mb-3">
 <h3 className="text-title-sm font-title-sm flex items-center gap-2">
 <span className="material-symbols-outlined text-primary">router</span> 수신 대역폭 </h3>
-<span className="text-display-lg font-display-lg text-primary">845<span className="text-body-base text-text-muted"> Mbps</span></span>
+<span className="text-display-lg font-display-lg text-primary">{netMetric?.value || 1.2}<span className="text-body-base text-text-muted"> Gbps</span></span>
 </div>
 <div className="flex-1 relative flex flex-col justify-end min-h-[100px] border-b border-l border-border-subtle pl-2 pb-2">
 {/* Abstract Chart Representation */}

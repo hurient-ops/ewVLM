@@ -1,4 +1,20 @@
-import React from 'react'; export const RealtimeBiDashboard: React.FC = () => { return ( <>
+import React from 'react';
+import { useEventLogStore } from '../store/useEventLogStore';
+
+export const RealtimeBiDashboard: React.FC = () => { 
+  const { logs } = useEventLogStore();
+
+  // Basic analytics based on logs
+  const totalAlerts = logs.length;
+  const criticalCount = logs.filter(l => l.level === 'critical').length;
+  const warningCount = logs.filter(l => l.level === 'warning').length;
+  
+  // Faux counting based on event levels for the UI
+  const personCount = 45820 + criticalCount * 12;
+  const vehicleCount = 12430 + warningCount * 5;
+  const highRiskCount = 145 + criticalCount;
+
+  return ( <>
 <main className="p-container-padding h-[calc(100vh-56px)] overflow-y-auto">
 <div className="grid grid-cols-2 gap-4 h-full">
 {/* Row 1 Left: Area Crowd Density Heatmap */}
@@ -36,9 +52,9 @@ import React from 'react'; export const RealtimeBiDashboard: React.FC = () => { 
 <div className="w-full bg-warning/30 border border-warning/50 h-[60%] relative group cursor-pointer hover:bg-warning/50 transition-colors rounded-t-sm"></div>
 <div className="w-full bg-danger/40 border border-danger/60 h-[85%] relative group cursor-pointer hover:bg-danger/60 transition-colors rounded-t-sm">
 {/* Alert Marker */}
-<div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-danger text-white text-[10px] px-2 py-1 rounded whitespace-nowrap hidden group-hover:block z-10 after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-danger"> 추락 감지 (15:00) </div>
+<div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-danger text-white text-[10px] px-2 py-1 rounded whitespace-nowrap hidden group-hover:block z-10 after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-danger"> 최근 경보 ({criticalCount}건) </div>
 </div>
-<div className="w-full bg-tertiary/20 border border-tertiary/50 h-[50%] relative group cursor-pointer hover:bg-tertiary/40 transition-colors rounded-t-sm"></div>
+<div className={`w-full ${criticalCount > 5 ? 'bg-danger/40 border border-danger/60' : 'bg-tertiary/20 border border-tertiary/50'} h-[${Math.min(100, 30 + criticalCount * 10)}%] relative group cursor-pointer hover:bg-tertiary/40 transition-colors rounded-t-sm`}></div>
 <div className="w-full bg-tertiary/20 border border-tertiary/50 h-[35%] relative group cursor-pointer hover:bg-tertiary/40 transition-colors rounded-t-sm"></div>
 </div>
 <div className="flex justify-between mt-2 text-[11px] font-mono-data text-text-muted px-4">
@@ -65,7 +81,7 @@ import React from 'react'; export const RealtimeBiDashboard: React.FC = () => { 
 <div className="bg-surface-container-high border border-border-subtle rounded-lg p-6 flex justify-between items-center hover:border-primary/50 transition-colors">
 <div>
 <div className="text-text-muted text-[11px] font-label-caps mb-1 whitespace-nowrap truncate">사람</div>
-<div className="text-display-lg font-display-lg text-on-surface">45,820</div>
+<div className="text-display-lg font-display-lg text-on-surface">{personCount.toLocaleString()}</div>
 </div>
 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
 <span className="material-symbols-outlined text-primary text-3xl">directions_walk</span>
@@ -74,7 +90,7 @@ import React from 'react'; export const RealtimeBiDashboard: React.FC = () => { 
 <div className="bg-surface-container-high border border-border-subtle rounded-lg p-6 flex justify-between items-center hover:border-secondary/50 transition-colors">
 <div>
 <div className="text-text-muted text-[11px] font-label-caps mb-1 whitespace-nowrap truncate">차량</div>
-<div className="text-display-lg font-display-lg text-on-surface">12,430</div>
+<div className="text-display-lg font-display-lg text-on-surface">{vehicleCount.toLocaleString()}</div>
 </div>
 <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center border border-secondary/20">
 <span className="material-symbols-outlined text-secondary text-3xl">directions_car</span>
@@ -84,7 +100,7 @@ import React from 'react'; export const RealtimeBiDashboard: React.FC = () => { 
 <div className="absolute left-0 top-0 bottom-0 w-1 bg-danger"></div>
 <div>
 <div className="text-danger text-[11px] font-label-caps mb-1 whitespace-nowrap truncate">고위험 오토바이</div>
-<div className="text-display-lg font-display-lg text-danger">145</div>
+<div className="text-display-lg font-display-lg text-danger">{highRiskCount.toLocaleString()}</div>
 </div>
 <div className="w-12 h-12 rounded-full bg-danger/10 flex items-center justify-center border border-danger/20">
 <span className="material-symbols-outlined text-danger text-3xl">two_wheeler</span>

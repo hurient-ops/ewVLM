@@ -1,4 +1,14 @@
-import React from 'react'; export const EdgeAiOrchestration: React.FC = () => { return ( <>
+import React, { useState } from 'react';
+
+export const EdgeAiOrchestration: React.FC = () => {
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSync = () => {
+    setIsSyncing(true);
+    setTimeout(() => setIsSyncing(false), 2000);
+  };
+
+  return ( <>
 <main className="flex-1 p-container-padding overflow-y-auto h-full flex flex-col gap-4">
 {/* Header Section */}
 <div className="flex justify-between items-end mb-2">
@@ -7,7 +17,12 @@ import React from 'react'; export const EdgeAiOrchestration: React.FC = () => { 
 <p className="text-body-base font-body-base text-text-muted mt-1">NIM 컨테이너 플릿 관리 및 프로파일링</p>
 </div>
 <div className="flex gap-2">
-<button className="px-4 py-2 border border-border-subtle rounded text-body-sm font-body-sm hover:bg-surface-container-high transition-colors text-on-surface">플릿 동기화</button>
+<button 
+  className="px-4 py-2 border border-border-subtle rounded text-body-sm font-body-sm hover:bg-surface-container-high transition-colors text-on-surface flex items-center gap-2"
+  onClick={handleSync}
+>
+  <span className={`material-symbols-outlined text-[16px] ${isSyncing ? 'animate-spin' : ''}`}>sync</span> {isSyncing ? '동기화 중...' : '플릿 동기화'}
+</button>
 <button className="px-4 py-2 bg-primary-container text-on-primary-container rounded text-body-sm font-body-sm font-semibold hover:bg-inverse-primary transition-colors flex items-center gap-2">
 <span className="material-symbols-outlined text-[16px]">rocket_launch</span> NIM 배포 </button>
 </div>

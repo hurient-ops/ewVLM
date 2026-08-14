@@ -1,4 +1,15 @@
-import React from 'react'; export const IpAudioBroadcastConsole: React.FC = () => { return ( <>
+import React, { useState } from 'react';
+
+export const IpAudioBroadcastConsole: React.FC = () => {
+  const [isPttActive, setIsPttActive] = useState(false);
+  const [ttsMessage, setTtsMessage] = useState('');
+
+  const handleBroadcast = () => {
+    console.log('Broadcasting message:', ttsMessage);
+    setTtsMessage('');
+  };
+
+  return ( <>
 <main className="flex-1 min-w-0 p-container-padding flex-1 flex gap-gutter bg-surface-container-lowest overflow-hidden">
 {/* Left Column: Zone Tree */}
 <section className="w-1/4 glass-panel rounded-lg flex flex-col h-full border border-border-subtle">
@@ -71,9 +82,15 @@ import React from 'react'; export const IpAudioBroadcastConsole: React.FC = () =
 <div className="absolute inset-0 opacity-20 pointer-events-none">
 <div className="w-full h-full bg-cover bg-center" data-alt="A dark, abstract digital visualization of soundwaves in an industrial setting. Glowing violet lines undulate against a deep black-blue background, representing audio frequencies. The style is modern, technical, and data-driven." style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDLH-4kJeCx1BSIlwKKZaysB9eowJHlTof-AjdZMo0roJ16FmK6YBJh3BuA2KyL4_nJTCZMv5zJ5zrZlFMbAhR0AFfqddC8USXZZ3KT2ciEsFPECKln7wXHM3oCM-Q1_0CGTEiv9qHNOwGnELXTJpTOIGL6FGbqX6DOxxmjIhVx9itWU_cu7ekhQfVwGqZf138XzQsHr4w8zVJYItvXMS6G_wJ__WhmEkUv8av5YgTyDSyaYP4pz7Cwnw')" }}></div>
 </div>
-<button className="w-32 h-32 rounded-full bg-surface-container-highest border-4 border-surface-variant flex flex-col items-center justify-center gap-2 hover:border-primary transition-all shadow-[0_4px_12px_rgba(0,0,0,0.5)] z-10" id="pttBtn">
-<span className="material-symbols-outlined text-4xl text-text-muted" id="pttIcon">mic_none</span>
-<span className="text-label-caps font-label-caps text-text-muted" id="pttLabel">누르고 말하기</span>
+<button 
+  className={`w-32 h-32 rounded-full border-4 flex flex-col items-center justify-center gap-2 transition-all shadow-[0_4px_12px_rgba(0,0,0,0.5)] z-10 ${isPttActive ? 'bg-danger/20 border-danger' : 'bg-surface-container-highest border-surface-variant hover:border-primary'}`} 
+  id="pttBtn"
+  onMouseDown={() => setIsPttActive(true)}
+  onMouseUp={() => setIsPttActive(false)}
+  onMouseLeave={() => setIsPttActive(false)}
+>
+<span className={`material-symbols-outlined text-4xl ${isPttActive ? 'text-danger' : 'text-text-muted'}`} id="pttIcon">mic_none</span>
+<span className={`text-label-caps font-label-caps ${isPttActive ? 'text-danger' : 'text-text-muted'}`} id="pttLabel">{isPttActive ? '송출 중...' : '누르고 말하기'}</span>
 </button>
 <div className="mt-8 w-full px-8 z-10">
 <div className="flex justify-between text-mono-data font-mono-data text-text-muted mb-2">
@@ -153,10 +170,18 @@ import React from 'react'; export const IpAudioBroadcastConsole: React.FC = () =
 </div>
 {/* TTS Input */}
 <div className="flex-1 p-3 flex flex-col">
-<textarea className="flex-1 w-full bg-surface-container border border-border-subtle rounded p-3 text-body-base font-body-base text-text-primary focus:ring-1 focus:ring-primary focus:border-primary resize-none placeholder-text-muted" placeholder="선택한 구역에 방송할 메시지를 입력하세요..."></textarea>
+<textarea 
+  className="flex-1 w-full bg-surface-container border border-border-subtle rounded p-3 text-body-base font-body-base text-text-primary focus:ring-1 focus:ring-primary focus:border-primary resize-none placeholder-text-muted" 
+  placeholder="선택한 구역에 방송할 메시지를 입력하세요..."
+  value={ttsMessage}
+  onChange={e => setTtsMessage(e.target.value)}
+></textarea>
 <div className="flex justify-between items-center mt-3">
 <span className="text-mono-data font-mono-data text-text-muted">대상: 섹터 알파 (북쪽) • 2개 구역</span>
-<button className="py-2 px-6 bg-primary-container text-white text-body-sm font-bold rounded flex items-center gap-2 hover:bg-inverse-primary transition-colors shadow-[0_4px_12px_rgba(124,58,237,0.3)]">
+<button 
+  className="py-2 px-6 bg-primary-container text-white text-body-sm font-bold rounded flex items-center gap-2 hover:bg-inverse-primary transition-colors shadow-[0_4px_12px_rgba(124,58,237,0.3)]"
+  onClick={handleBroadcast}
+>
 <span className="material-symbols-outlined text-sm">send</span> 방송 송출 </button>
 </div>
 </div>

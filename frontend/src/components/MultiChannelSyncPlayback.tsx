@@ -4,7 +4,16 @@ import { useEventLogStore } from '../store/useEventLogStore';
 export const MultiChannelSyncPlayback: React.FC = () => { 
   const [progress, setProgress] = useState(65);
   const [isScrubbing, setIsScrubbing] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
   const { logs } = useEventLogStore();
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    setZoomLevel(prev => {
+      const newZoom = e.deltaY < 0 ? prev * 1.5 : prev / 1.5;
+      return Math.min(Math.max(newZoom, 1), 60);
+    });
+  };
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setProgress(Number(e.target.value));
@@ -13,13 +22,14 @@ export const MultiChannelSyncPlayback: React.FC = () => {
   const handleScrubStart = () => setIsScrubbing(true);
   const handleScrubEnd = () => setIsScrubbing(false);
 
-  // 시뮬레이션용 시간 문자열 포맷팅
-  const formatTime = (percent: number) => {
+  // 시뮬레이션용 시간 문자열 포맷팅 (줌 레벨에 따라 초 단위까지 표시)
+  const formatTime = (percent: number, showSeconds = false) => {
     const totalMinutes = 24 * 60;
-    const currentMinutes = Math.floor((percent / 100) * totalMinutes);
-    const h = Math.floor(currentMinutes / 60).toString().padStart(2, '0');
-    const m = (currentMinutes % 60).toString().padStart(2, '0');
-    return `${h}:${m}`;
+    const currentSeconds = Math.floor((percent / 100) * totalMinutes * 60);
+    const h = Math.floor(currentSeconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((currentSeconds % 3600) / 60).toString().padStart(2, '0');
+    const s = (currentSeconds % 60).toString().padStart(2, '0');
+    return showSeconds || zoomLevel > 10 ? `${h}:${m}:${s}` : `${h}:${m}`;
   };
 
   return ( <>
@@ -144,7 +154,14 @@ export const MultiChannelSyncPlayback: React.FC = () => {
         </div>
 
         {/* Progressive Timeline */}
-        <div className="relative h-20 bg-[#0b0e17] border border-[#232C3F] rounded overflow-hidden flex flex-col justify-end">
+        <div 
+          className="relative h-20 bg-[#0b0e17] border border-[#232C3F] rounded overflow-hidden flex flex-col justify-end"
+          onWheel={handleWheel}
+        >
+          {/* Zoom Indicator */}
+          <div className="absolute top-1 right-2 z-30 text-[10px] text-gray-500 font-mono bg-black/50 px-1 rounded">
+            줌: {zoomLevel.toFixed(1)}x
+          </div>
           
           {/* Event Tracks with dynamic bookmarks */}
           <div className="absolute top-2 left-0 right-0 h-10 flex flex-col gap-1 px-4">
@@ -190,13 +207,13 @@ export const MultiChannelSyncPlayback: React.FC = () => {
 
           {/* Time Ruler */}
           <div className="w-full flex justify-between text-[11px] font-mono text-gray-500 px-[40px] border-t border-[#232C3F] pt-1 pb-1">
-            <span>00:00</span>
-            <span>04:00</span>
-            <span>08:00</span>
-            <span>12:00</span>
-            <span className="text-[#d2bbff] font-bold">{formatTime(progress)}</span>
-            <span>20:00</span>
-            <span>24:00</span>
+            <span>{zoomLevel > 10 ? formatTime(Math.max(0, progress - 100/zoomLevel)) : '00:00'}</span>
+            <span>{zoomLevel > 10 ? '' : '04:00'}</span>
+            <span>{zoomLevel > 10 ? '' : '08:00'}</span>
+            <span>{zoomLevel > 10 ? '' : '12:00'}</span>
+            <span className="text-[#d2bbff] font-bold">{formatTime(progress, true)}</span>
+            <span>{zoomLevel > 10 ? '' : '20:00'}</span>
+            <span>{zoomLevel > 10 ? formatTime(Math.min(100, progress + 100/zoomLevel)) : '24:00'}</span>
           </div>
 
           {/* Progressive Scrubber / Slider */}

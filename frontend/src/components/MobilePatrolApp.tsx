@@ -1,4 +1,9 @@
-import React from 'react'; export const MobilePatrolApp: React.FC = () => { return ( <>
+import React, { useState } from 'react';
+
+export const MobilePatrolApp: React.FC = () => {
+  const [isPttActive, setIsPttActive] = useState(false);
+
+  return ( <>
 <main className="flex-1 flex flex-col gap-4 p-container-padding overflow-y-auto pb-24">
 {/* Emergency Alert Banner (Global Alert Level 4) */}
 <div className="bg-surface-container border-2 border-danger rounded-lg p-3 alert-glow relative overflow-hidden flex flex-col gap-2 cursor-pointer active:scale-95 transition-transform duration-100">
@@ -70,9 +75,15 @@ import React from 'react'; export const MobilePatrolApp: React.FC = () => { retu
 <h3 className="text-label-caps font-label-caps text-text-muted">통신 및 제어</h3>
 <div className="grid grid-cols-2 gap-2">
 {/* PTT Button (Very Large) */}
-<button className="col-span-2 py-4 bg-primary-container text-white rounded-lg font-title-sm flex flex-col items-center justify-center gap-1 active:scale-[0.98] transition-transform shadow-[0_0_10px_rgba(124,58,237,0.3)]">
+<button 
+  className={`col-span-2 py-4 text-white rounded-lg font-title-sm flex flex-col items-center justify-center gap-1 active:scale-[0.98] transition-transform shadow-[0_0_10px_rgba(124,58,237,0.3)] ${isPttActive ? 'bg-danger' : 'bg-primary-container'}`}
+  onMouseDown={() => setIsPttActive(true)}
+  onMouseUp={() => setIsPttActive(false)}
+  onTouchStart={() => setIsPttActive(true)}
+  onTouchEnd={() => setIsPttActive(false)}
+>
 <span className="material-symbols-outlined text-3xl mb-1" data-icon="mic" data-weight="fill">mic</span>
-<span>무전 전송 (PTT)</span>
+<span>{isPttActive ? '전송 중...' : '무전 전송 (PTT)'}</span>
 <span className="text-osd-label opacity-70 font-normal">길게 누르고 말하세요</span>
 </button>
 {/* Macro TTS Buttons */}

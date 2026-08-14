@@ -1,4 +1,14 @@
-import React from 'react'; export const PrivacyExportWorkshop: React.FC = () => { return ( <>
+import React, { useState } from 'react';
+
+export const PrivacyExportWorkshop: React.FC = () => {
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = () => {
+    setIsExporting(true);
+    setTimeout(() => setIsExporting(false), 2500);
+  };
+
+  return ( <>
 <main className="flex-1 flex overflow-hidden">
 {/* Left/Center: Canvas & Timeline */}
 <div className="flex-1 flex flex-col min-w-0 border-r border-border-subtle">
@@ -220,8 +230,12 @@ import React from 'react'; export const PrivacyExportWorkshop: React.FC = () => 
 <span>예상 파일 크기:</span>
 <span className="text-primary">~45.2 MB</span>
 </div>
-<button className="w-full bg-primary-container hover:bg-primary-container/90 text-on-primary-container font-label-caps text-label-caps py-3 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm">
-<span className="material-symbols-outlined" style={{ fontSize: "18px" }}>output</span> 반출 실행 </button>
+<button 
+  className={`w-full font-label-caps text-label-caps py-3 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm ${isExporting ? 'bg-surface-variant text-text-muted cursor-not-allowed' : 'bg-primary-container hover:bg-primary-container/90 text-on-primary-container'}`}
+  onClick={handleExport}
+  disabled={isExporting}
+>
+<span className={`material-symbols-outlined ${isExporting ? 'animate-spin' : ''}`} style={{ fontSize: "18px" }}>{isExporting ? 'sync' : 'output'}</span> {isExporting ? '반출 진행 중...' : '반출 실행'} </button>
 </div>
 </aside>
 </main> </> );

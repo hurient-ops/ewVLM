@@ -1,6 +1,8 @@
 import React from 'react';
 import { useCameraStore } from '../store/useCameraStore';
 import { useEventLogStore } from '../store/useEventLogStore';
+import { WebRTCPlayer } from './WebRTCPlayer';
+import { API } from '../api/client';
 
 const MOCK_CAMERAS = [
   { id: 'CAM-01', name: '외곽 1구역 펜스 북부', status: 'online' },
@@ -92,8 +94,8 @@ export const MonitorALiveControl: React.FC = () => {
             >
               {slot.cameraId ? (
                 <>
-                  <div className="absolute inset-0 bg-black opacity-90 flex items-center justify-center overflow-hidden">
-                    <img src={slot.cameraId === 'CAM-02' ? "http://localhost:8002/video_feed" : "http://localhost:8001/video_feed"} alt="Live Feed" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black flex items-center justify-center overflow-hidden">
+                    <WebRTCPlayer streamUrl={`http://localhost:8889/${slot.cameraId.toLowerCase()}`} />
                   </div>
                   <div className="absolute top-2 left-2 bg-[rgba(18,23,36,0.8)] px-2 py-1 rounded text-[12px] text-white z-10 flex flex-col gap-1">
                     <div className="flex items-center gap-2">
@@ -135,17 +137,60 @@ export const MonitorALiveControl: React.FC = () => {
             
             <div className="bg-[#121724] border border-[#232C3F] rounded-xl p-5 flex flex-col items-center gap-6 shadow-lg">
               <div className="grid grid-cols-3 grid-rows-3 gap-[3px]">
-                <button className="w-12 h-12 flex items-center justify-center bg-[#1c1f29] rounded-tl-xl hover:bg-[#31343f] text-gray-400 hover:text-[#d2bbff] transition-colors"><span className="material-symbols-outlined text-[22px] rotate-[-45deg]">arrow_upward</span></button>
-                <button className="w-12 h-12 flex items-center justify-center bg-[#1c1f29] hover:bg-[#31343f] text-gray-400 hover:text-[#d2bbff] transition-colors"><span className="material-symbols-outlined text-[22px]">arrow_upward</span></button>
-                <button className="w-12 h-12 flex items-center justify-center bg-[#1c1f29] rounded-tr-xl hover:bg-[#31343f] text-gray-400 hover:text-[#d2bbff] transition-colors"><span className="material-symbols-outlined text-[22px] rotate-[45deg]">arrow_upward</span></button>
+                {/* UP-LEFT */}
+                <button 
+                  onMouseDown={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'up-left')}
+                  onMouseUp={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                  onMouseLeave={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                  className="w-12 h-12 flex items-center justify-center bg-[#1c1f29] rounded-tl-xl hover:bg-[#31343f] text-gray-400 hover:text-[#d2bbff] transition-colors"><span className="material-symbols-outlined text-[22px] rotate-[-45deg]">arrow_upward</span></button>
+                {/* UP */}
+                <button 
+                  onMouseDown={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'up')}
+                  onMouseUp={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                  onMouseLeave={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                  className="w-12 h-12 flex items-center justify-center bg-[#1c1f29] hover:bg-[#31343f] text-gray-400 hover:text-[#d2bbff] transition-colors"><span className="material-symbols-outlined text-[22px]">arrow_upward</span></button>
+                {/* UP-RIGHT */}
+                <button 
+                  onMouseDown={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'up-right')}
+                  onMouseUp={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                  onMouseLeave={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                  className="w-12 h-12 flex items-center justify-center bg-[#1c1f29] rounded-tr-xl hover:bg-[#31343f] text-gray-400 hover:text-[#d2bbff] transition-colors"><span className="material-symbols-outlined text-[22px] rotate-[45deg]">arrow_upward</span></button>
                 
-                <button className="w-12 h-12 flex items-center justify-center bg-[#1c1f29] hover:bg-[#31343f] text-gray-400 hover:text-[#d2bbff] transition-colors"><span className="material-symbols-outlined text-[22px]">arrow_back</span></button>
-                <button className="w-12 h-12 flex items-center justify-center bg-[#7c3aed] text-white rounded-full shadow-[0_0_15px_rgba(124,58,237,0.5)] hover:bg-[#6d28d9] transition-colors transform scale-110"><span className="material-symbols-outlined text-[22px]">my_location</span></button>
-                <button className="w-12 h-12 flex items-center justify-center bg-[#1c1f29] hover:bg-[#31343f] text-gray-400 hover:text-[#d2bbff] transition-colors"><span className="material-symbols-outlined text-[22px]">arrow_forward</span></button>
+                {/* LEFT */}
+                <button 
+                  onMouseDown={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'left')}
+                  onMouseUp={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                  onMouseLeave={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                  className="w-12 h-12 flex items-center justify-center bg-[#1c1f29] hover:bg-[#31343f] text-gray-400 hover:text-[#d2bbff] transition-colors"><span className="material-symbols-outlined text-[22px]">arrow_back</span></button>
+                {/* HOME */}
+                <button 
+                  onClick={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'home')}
+                  className="w-12 h-12 flex items-center justify-center bg-[#7c3aed] text-white rounded-full shadow-[0_0_15px_rgba(124,58,237,0.5)] hover:bg-[#6d28d9] transition-colors transform scale-110"><span className="material-symbols-outlined text-[22px]">my_location</span></button>
+                {/* RIGHT */}
+                <button 
+                  onMouseDown={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'right')}
+                  onMouseUp={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                  onMouseLeave={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                  className="w-12 h-12 flex items-center justify-center bg-[#1c1f29] hover:bg-[#31343f] text-gray-400 hover:text-[#d2bbff] transition-colors"><span className="material-symbols-outlined text-[22px]">arrow_forward</span></button>
                 
-                <button className="w-12 h-12 flex items-center justify-center bg-[#1c1f29] rounded-bl-xl hover:bg-[#31343f] text-gray-400 hover:text-[#d2bbff] transition-colors"><span className="material-symbols-outlined text-[22px] rotate-[-135deg]">arrow_upward</span></button>
-                <button className="w-12 h-12 flex items-center justify-center bg-[#1c1f29] hover:bg-[#31343f] text-gray-400 hover:text-[#d2bbff] transition-colors"><span className="material-symbols-outlined text-[22px]">arrow_downward</span></button>
-                <button className="w-12 h-12 flex items-center justify-center bg-[#1c1f29] rounded-br-xl hover:bg-[#31343f] text-gray-400 hover:text-[#d2bbff] transition-colors"><span className="material-symbols-outlined text-[22px] rotate-[135deg]">arrow_upward</span></button>
+                {/* DOWN-LEFT */}
+                <button 
+                  onMouseDown={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'down-left')}
+                  onMouseUp={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                  onMouseLeave={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                  className="w-12 h-12 flex items-center justify-center bg-[#1c1f29] rounded-bl-xl hover:bg-[#31343f] text-gray-400 hover:text-[#d2bbff] transition-colors"><span className="material-symbols-outlined text-[22px] rotate-[-135deg]">arrow_upward</span></button>
+                {/* DOWN */}
+                <button 
+                  onMouseDown={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'down')}
+                  onMouseUp={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                  onMouseLeave={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                  className="w-12 h-12 flex items-center justify-center bg-[#1c1f29] hover:bg-[#31343f] text-gray-400 hover:text-[#d2bbff] transition-colors"><span className="material-symbols-outlined text-[22px]">arrow_downward</span></button>
+                {/* DOWN-RIGHT */}
+                <button 
+                  onMouseDown={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'down-right')}
+                  onMouseUp={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                  onMouseLeave={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                  className="w-12 h-12 flex items-center justify-center bg-[#1c1f29] rounded-br-xl hover:bg-[#31343f] text-gray-400 hover:text-[#d2bbff] transition-colors"><span className="material-symbols-outlined text-[22px] rotate-[135deg]">arrow_upward</span></button>
               </div>
 
               <div className="w-full h-[1px] bg-[#232C3F]"></div>
@@ -153,8 +198,16 @@ export const MonitorALiveControl: React.FC = () => {
               <div className="flex flex-col gap-4 w-full px-2">
                 <div className="flex items-center gap-4">
                   <span className="text-[12px] text-gray-500 font-bold w-6">줌</span>
-                  <button className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-[#d2bbff] bg-[#1c1f29] hover:bg-[#31343f] border border-[#232C3F] rounded-lg transition-colors"><span className="material-symbols-outlined text-[20px]">remove</span></button>
-                  <button className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-[#d2bbff] bg-[#1c1f29] hover:bg-[#31343f] border border-[#232C3F] rounded-lg transition-colors flex-1"><span className="material-symbols-outlined text-[20px]">add</span></button>
+                  <button 
+                    onMouseDown={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'zoom-out')}
+                    onMouseUp={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                    onMouseLeave={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                    className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-[#d2bbff] bg-[#1c1f29] hover:bg-[#31343f] border border-[#232C3F] rounded-lg transition-colors"><span className="material-symbols-outlined text-[20px]">remove</span></button>
+                  <button 
+                    onMouseDown={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'zoom-in')}
+                    onMouseUp={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                    onMouseLeave={() => API.controlPtz(slots.find(s => s.status === 'active')?.cameraId || 'CAM-01', 'stop')}
+                    className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-[#d2bbff] bg-[#1c1f29] hover:bg-[#31343f] border border-[#232C3F] rounded-lg transition-colors flex-1"><span className="material-symbols-outlined text-[20px]">add</span></button>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-[12px] text-gray-500 font-bold w-6">초점</span>

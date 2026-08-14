@@ -1,4 +1,24 @@
-import React from 'react'; export const GeometryCalibrationConsole: React.FC = () => { return ( <>
+import React, { useState } from 'react';
+import { API } from '../api/client';
+
+export const GeometryCalibrationConsole: React.FC = () => {
+  const [altitude, setAltitude] = useState<number>(4.25);
+  const [tilt, setTilt] = useState<number>(-15.2);
+  const [focalLength, setFocalLength] = useState<number>(4.0);
+
+  const handleSave = () => {
+    API.saveCalibration('CH-04', altitude, tilt, focalLength)
+      .then(res => {
+        alert('보정값이 성공적으로 저장되었습니다.');
+        console.log(res);
+      })
+      .catch(err => {
+        alert('저장 실패');
+        console.error(err);
+      });
+  };
+
+  return ( <>
 <main className="flex-1 p-container-padding flex flex-col gap-4 overflow-y-auto bg-background">
 <header className="flex justify-between items-end pb-4 border-b border-border-subtle">
 <div>
@@ -7,7 +27,7 @@ import React from 'react'; export const GeometryCalibrationConsole: React.FC = (
 </div>
 <div className="flex gap-2">
 <button className="px-4 py-2 border border-border-subtle text-on-surface hover:bg-surface-container-highest transition-colors rounded text-body-sm font-body-sm font-semibold">매트릭스 초기화</button>
-<button className="px-4 py-2 bg-primary-container text-on-primary-container hover:bg-inverse-primary transition-colors rounded text-body-sm font-body-sm font-semibold flex items-center gap-2">
+<button className="px-4 py-2 bg-primary-container text-on-primary-container hover:bg-inverse-primary transition-colors rounded text-body-sm font-body-sm font-semibold flex items-center gap-2" onClick={handleSave}>
 <span className="material-symbols-outlined text-sm">save</span> 보정 적용 </button>
 </div>
 </header>
@@ -64,21 +84,21 @@ import React from 'react'; export const GeometryCalibrationConsole: React.FC = (
 <div>
 <label className="block text-osd-label font-osd-label text-text-muted mb-1">설치 고도 (Z축)</label>
 <div className="flex items-center bg-surface-container rounded border border-border-subtle focus-within:border-primary transition-colors px-2">
-<input className="w-full bg-transparent border-none text-on-surface text-mono-data font-mono-data focus:ring-0 px-1 py-1.5 h-8" step="0.01" type="number" value="4.25"/>
+<input className="w-full bg-transparent border-none text-on-surface text-mono-data font-mono-data focus:ring-0 px-1 py-1.5 h-8" step="0.01" type="number" value={altitude} onChange={(e) => setAltitude(parseFloat(e.target.value))}/>
 <span className="text-text-muted text-mono-data font-mono-data pr-1">m</span>
 </div>
 </div>
 <div>
 <label className="block text-osd-label font-osd-label text-text-muted mb-1">틸트 각도 (Pitch)</label>
 <div className="flex items-center bg-surface-container rounded border border-border-subtle focus-within:border-primary transition-colors px-2">
-<input className="w-full bg-transparent border-none text-on-surface text-mono-data font-mono-data focus:ring-0 px-1 py-1.5 h-8" step="0.1" type="number" value="-15.2"/>
+<input className="w-full bg-transparent border-none text-on-surface text-mono-data font-mono-data focus:ring-0 px-1 py-1.5 h-8" step="0.1" type="number" value={tilt} onChange={(e) => setTilt(parseFloat(e.target.value))}/>
 <span className="text-text-muted text-mono-data font-mono-data pr-1">°</span>
 </div>
 </div>
 <div>
 <label className="block text-osd-label font-osd-label text-text-muted mb-1">초점 거리</label>
 <div className="flex items-center bg-surface-container rounded border border-border-subtle focus-within:border-primary transition-colors px-2">
-<input className="w-full bg-transparent border-none text-on-surface text-mono-data font-mono-data focus:ring-0 px-1 py-1.5 h-8" step="0.1" type="number" value="4.0"/>
+<input className="w-full bg-transparent border-none text-on-surface text-mono-data font-mono-data focus:ring-0 px-1 py-1.5 h-8" step="0.1" type="number" value={focalLength} onChange={(e) => setFocalLength(parseFloat(e.target.value))}/>
 <span className="text-text-muted text-mono-data font-mono-data pr-1">mm</span>
 </div>
 </div>

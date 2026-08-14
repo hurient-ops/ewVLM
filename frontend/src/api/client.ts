@@ -16,6 +16,46 @@ export const API = {
   fetchEvents: async (limit: number = 50) => {
     const response = await apiClient.get(`/api/v1/events?limit=${limit}`);
     return response.data;
+  },
+  login: async (username: string, password: string) => {
+    const response = await apiClient.post('/api/v1/auth/login', { username, password });
+    return response.data;
+  },
+  fetchAuditLogs: async (limit: number = 100) => {
+    const response = await apiClient.get(`/api/v1/audit/logs?limit=${limit}`);
+    return response.data;
+  },
+  createAuditLog: async (actionType: string, resourceQuery: string = "", username: string = "system") => {
+    const response = await apiClient.post('/api/v1/audit/logs', {
+      action_type: actionType,
+      resource_query: resourceQuery,
+      username: username
+    });
+    return response.data;
+  },
+  controlPtz: async (cameraId: string, action: string) => {
+    const response = await apiClient.post(`/api/v1/cameras/${cameraId}/ptz`, { action });
+    return response.data;
+  },
+  saveCalibration: async (cameraId: string, altitude: number, tilt: number, focalLength: number) => {
+    const response = await apiClient.post(`/api/v1/cameras/${cameraId}/calibration`, { 
+      altitude, 
+      tilt, 
+      focal_length: focalLength 
+    });
+    return response.data;
+  },
+  signup: async (username: string, password: string, role: string = 'user') => {
+    const response = await apiClient.post('/api/v1/auth/signup', { username, password, role });
+    return response.data;
+  },
+  searchVss: async (query: string, limit: number = 5) => {
+    const response = await apiClient.post('/api/v1/vss/search', { query, limit });
+    return response.data;
+  },
+  getEventReport: async (eventId: string) => {
+    const response = await apiClient.get(`/api/v1/events/${eventId}/report`);
+    return response.data;
   }
 };
 

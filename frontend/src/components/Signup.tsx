@@ -6,6 +6,8 @@ interface SignupProps {
   onBackToLogin: () => void;
 }
 
+import { API } from '../api/client';
+
 export default function Signup({ onSignupSuccess, onBackToLogin }: SignupProps) {
   const [formData, setFormData] = useState({
     name: '',
@@ -18,15 +20,20 @@ export default function Signup({ onSignupSuccess, onBackToLogin }: SignupProps) 
     role: 'operator'
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password !== formData.passwordConfirm) {
       alert('비밀번호가 일치하지 않습니다.');
       return;
     }
-    // 가상의 회원가입 처리 (FastAPI 백엔드 연동 전)
-    console.log("Signup Request:", formData);
-    onSignupSuccess();
+    
+    try {
+      await API.signup(formData.name, formData.password, formData.role);
+      alert('회원가입이 완료되었습니다. 승인 대기 상태로 전환됩니다.');
+      onSignupSuccess();
+    } catch (err: any) {
+      alert(`회원가입 실패: ${err.response?.data?.detail || err.message}`);
+    }
   };
 
   return (

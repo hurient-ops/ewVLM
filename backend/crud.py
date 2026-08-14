@@ -36,3 +36,150 @@ async def get_recent_events(db: AsyncSession, limit: int = 50):
         select(models.EventLog).order_by(desc(models.EventLog.timestamp)).limit(limit)
     )
     return result.scalars().all()
+
+async def get_cameras(db: AsyncSession):
+    result = await db.execute(select(models.Camera))
+    return result.scalars().all()
+
+# User Operations
+async def create_user(db: AsyncSession, user_data: dict) -> models.User:
+    new_user = models.User(
+        username=user_data["username"],
+        hashed_password=user_data["hashed_password"],
+        role=user_data.get("role", "user")
+    )
+    db.add(new_user)
+    await db.commit()
+    await db.refresh(new_user)
+    return new_user
+
+async def get_user_by_username(db: AsyncSession, username: str) -> models.User | None:
+    result = await db.execute(select(models.User).where(models.User.username == username))
+    return result.scalars().first()
+
+# VSS Semantic Search (Mock)
+async def search_events_semantic(db: AsyncSession, query: str, limit: int = 5) -> list[models.EventLog]:
+    """
+    Mock semantic search using simple substring matching against semantic_caption.
+    In a real production environment with PostgreSQL, this would use pgvector cosine distance.
+    """
+    import difflib
+    
+    # Get all events to calculate similarity locally
+    result = await db.execute(select(models.EventLog).order_by(models.EventLog.timestamp.desc()))
+    all_events = result.scalars().all()
+    
+    # Calculate similarity scores
+    scored_events = []
+    for evt in all_events:
+        caption = evt.semantic_caption or ""
+        # Simple similarity ratio using difflib
+        score = difflib.SequenceMatcher(None, query.lower(), caption.lower()).ratio()
+        
+        # Boost score if words from query are directly in caption
+        query_words = query.lower().split()
+        if query_words and any(w in caption.lower() for w in query_words):
+            score += 0.3
+            
+        scored_events.append((score, evt))
+        
+    # Sort by score descending and take top N
+    scored_events.sort(key=lambda x: x[0], reverse=True)
+    return [e[1] for e in scored_events[:limit]]
+
+async def create_audit_log(db: AsyncSession, log_data: dict):
+    # Create fake hash for realism
+    import hashlib
+    import time
+    raw_str = f"{log_data.get('username')}_{log_data.get('action_type')}_{time.time()}"
+    tx_hash = hashlib.sha256(raw_str.encode()).hexdigest()
+
+    db_log = models.AuditLog(
+        username=log_data.get("username", "system"),
+        action_type=log_data.get("action_type", "UNKNOWN"),
+        resource_query=log_data.get("resource_query", ""),
+        tx_hash=tx_hash,
+        status="sealed"
+    )
+    db.add(db_log)
+    await db.commit()
+    await db.refresh(db_log)
+    return db_log
+
+async def get_audit_logs(db: AsyncSession, limit: int = 100):
+    result = await db.execute(
+        select(models.AuditLog).order_by(desc(models.AuditLog.timestamp)).limit(limit)
+    )
+    return result.scalars().all()
+
+async def create_ptz_log(db: AsyncSession, ptz_data: dict):
+    db_log = models.PTZLog(
+        camera_id=ptz_data.get("camera_id"),
+        action=ptz_data.get("action"),
+        user_id=ptz_data.get("user_id", "system")
+    )
+    db.add(db_log)
+    await db.commit()
+    await db.refresh(db_log)
+    return db_log
+
+async def save_calibration(db: AsyncSession, cal_data: dict):
+    # Check if exists
+    result = await db.execute(select(models.CameraCalibration).where(models.CameraCalibration.camera_id == cal_data.get("camera_id")))
+    existing = result.scalars().first()
+    
+    if existing:
+        existing.altitude = cal_data.get("altitude")
+        existing.tilt = cal_data.get("tilt")
+        existing.focal_length = cal_data.get("focal_length")
+        db_cal = existing
+    else:
+        db_cal = models.CameraCalibration(
+            camera_id=cal_data.get("camera_id"),
+            altitude=cal_data.get("altitude"),
+            tilt=cal_data.get("tilt"),
+            focal_length=cal_data.get("focal_length")
+        )
+        db.add(db_cal)
+        
+    await db.commit()
+    await db.refresh(db_cal)
+    return db_cal
+
+import bcrypt
+
+def get_password_hash(password: str) -> str:
+    # encode string to bytes, hash, and decode back to string for db storage
+    pwd_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed_pwd = bcrypt.hashpw(pwd_bytes, salt)
+    return hashed_pwd.decode('utf-8')
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    pwd_bytes = plain_password.encode('utf-8')
+    hashed_bytes = hashed_password.encode('utf-8')
+    return bcrypt.checkpw(pwd_bytes, hashed_bytes)
+
+async def seed_db_if_empty(db: AsyncSession):
+    # Seed cameras
+    cameras = await get_cameras(db)
+    if not cameras:
+        dummy_cams = [
+            models.Camera(camera_id="CCTV-0024", name="서측 외곽 울타리", ip_address="192.168.10.124", latitude=37.3949, longitude=127.1110),
+            models.Camera(camera_id="CCTV-0025", name="동측 정문", ip_address="192.168.10.125", latitude=37.3952, longitude=127.1120),
+            models.Camera(camera_id="CCTV-0026", name="북측 자재창고", ip_address="192.168.10.126", latitude=37.3960, longitude=127.1115)
+        ]
+        db.add_all(dummy_cams)
+    
+    # Seed admin user
+    admin_user = await get_user_by_username(db, "admin")
+    if not admin_user:
+        hashed_pw = get_password_hash("admin123!")
+        new_admin = models.User(
+            username="admin",
+            hashed_password=hashed_pw,
+            role="admin"
+        )
+        db.add(new_admin)
+        
+    await db.commit()

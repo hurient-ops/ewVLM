@@ -1,4 +1,29 @@
-import React from 'react'; export const SystemAuditLogPortal: React.FC = () => { return ( <>
+import React, { useEffect, useState } from 'react';
+import { API } from '../api/client';
+
+interface AuditLog {
+  id: number;
+  timestamp: string;
+  username: string;
+  action_type: string;
+  resource_query: string;
+  tx_hash: string;
+  status: string;
+}
+
+export const SystemAuditLogPortal: React.FC = () => { 
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+
+  useEffect(() => {
+    API.fetchAuditLogs().then(data => {
+      if (data.status === 'SUCCESS') {
+        setLogs(data.logs);
+      }
+    }).catch(err => console.error("Failed to fetch audit logs", err));
+  }, []);
+
+  return ( 
+  <>
 <main className="flex-1 flex flex-col overflow-hidden bg-background p-container-padding gap-4">
 {/* Page Header */}
 <div className="flex justify-between items-end border-b border-border-subtle pb-4">
@@ -26,7 +51,7 @@ import React from 'react'; export const SystemAuditLogPortal: React.FC = () => {
 <div className="space-y-4">
 <div>
 <p className="text-label-caps font-label-caps text-text-muted mb-1">최신 블록</p>
-<p className="text-mono-data font-mono-data text-on-surface text-lg">#8,942,105</p>
+<p className="text-mono-data font-mono-data text-on-surface text-lg">#{8942105 + logs.length}</p>
 </div>
 <div>
 <p className="text-label-caps font-label-caps text-text-muted mb-1">네트워크 해시 레이트</p>
@@ -34,7 +59,7 @@ import React from 'react'; export const SystemAuditLogPortal: React.FC = () => {
 </div>
 <div>
 <p className="text-label-caps font-label-caps text-text-muted mb-1">최종 실링</p>
-<p className="text-mono-data font-mono-data text-on-surface">12초 전</p>
+<p className="text-mono-data font-mono-data text-on-surface">{logs.length > 0 ? new Date(logs[0].timestamp).toLocaleTimeString() : '대기중'}</p>
 </div>
 </div>
 </div>
@@ -62,7 +87,9 @@ import React from 'react'; export const SystemAuditLogPortal: React.FC = () => {
 <div className="absolute left-0 top-0 w-1 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 <span className="text-label-caps font-label-caps text-primary flex items-center gap-2"> 해시 서명 <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>lock</span>
 </span>
-<code className="text-mono-data font-mono-data text-on-surface break-all text-xs opacity-80">e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>
+<code className="text-mono-data font-mono-data text-on-surface break-all text-xs opacity-80">
+{logs.length > 0 ? logs[0].tx_hash : 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}
+</code>
 </div>
 </div>
 </div>
@@ -90,66 +117,20 @@ import React from 'react'; export const SystemAuditLogPortal: React.FC = () => {
 </tr>
 </thead>
 <tbody className="text-mono-data font-mono-data text-on-surface">
-{/* Row 1 */}
-<tr className="border-b border-border-subtle hover:bg-surface-container-highest transition-colors">
-<td className="p-2 whitespace-nowrap text-text-muted">2023-10-27 14:32:01</td>
-<td className="p-2">OP-892 (Admin)</td>
-<td className="p-2"><span className="bg-surface-container px-1.5 py-0.5 rounded-DEFAULT border border-border-subtle text-primary">VSS_SEARCH</span></td>
-<td className="p-2 truncate max-w-[200px]" title="Find anomalies in Zone B">"Find anomalies in Zone B"</td>
-<td className="p-2 truncate max-w-[150px] text-text-muted font-mono" title="0x7a2...f9e1">0x7a2...f9e1</td>
-<td className="p-2">
-<div className="flex items-center gap-1 text-tertiary">
-<span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span> 실링됨 </div>
-</td>
-</tr>
-{/* Row 2 */}
-<tr className="border-b border-border-subtle hover:bg-surface-container-highest transition-colors">
-<td className="p-2 whitespace-nowrap text-text-muted">2023-10-27 14:28:45</td>
-<td className="p-2">SYS-AUTO</td>
-<td className="p-2"><span className="bg-surface-container px-1.5 py-0.5 rounded-DEFAULT border border-border-subtle text-warning">EXPORT_DATA</span></td>
-<td className="p-2 truncate max-w-[200px]" title="Daily Log Archive [S4]">Daily Log Archive [S4]</td>
-<td className="p-2 truncate max-w-[150px] text-text-muted font-mono" title="0x3b1...a4c2">0x3b1...a4c2</td>
-<td className="p-2">
-<div className="flex items-center gap-1 text-tertiary">
-<span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span> 실링됨 </div>
-</td>
-</tr>
-{/* Row 3 */}
-<tr className="border-b border-border-subtle hover:bg-surface-container-highest transition-colors">
-<td className="p-2 whitespace-nowrap text-text-muted">2023-10-27 14:15:10</td>
-<td className="p-2">OP-411 (User)</td>
-<td className="p-2"><span className="bg-surface-container px-1.5 py-0.5 rounded-DEFAULT border border-border-subtle text-on-surface">LOGIN</span></td>
-<td className="p-2 truncate max-w-[200px] text-text-muted">Session Auth</td>
-<td className="p-2 truncate max-w-[150px] text-text-muted font-mono" title="0x9f4...d2e8">0x9f4...d2e8</td>
-<td className="p-2">
-<div className="flex items-center gap-1 text-tertiary">
-<span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span> 실링됨 </div>
-</td>
-</tr>
-{/* Row 4 (Pending/Error example for realism) */}
-<tr className="border-b border-border-subtle hover:bg-surface-container-highest transition-colors bg-surface-container-lowest">
-<td className="p-2 whitespace-nowrap text-text-muted">2023-10-27 14:35:22</td>
-<td className="p-2">OP-892 (Admin)</td>
-<td className="p-2"><span className="bg-surface-container px-1.5 py-0.5 rounded-DEFAULT border border-danger/50 text-danger">CONFIG_MOD</span></td>
-<td className="p-2 truncate max-w-[200px]">Update AI Thresholds</td>
-<td className="p-2 truncate max-w-[150px] text-text-muted font-mono">Pending...</td>
-<td className="p-2">
-<div className="flex items-center gap-1 text-warning animate-pulse">
-<span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>sync</span> 메모리풀 </div>
-</td>
-</tr>
-{/* Fill remaining rows to demonstrate density */}
-<tr className="border-b border-border-subtle hover:bg-surface-container-highest transition-colors">
-<td className="p-2 whitespace-nowrap text-text-muted">2023-10-27 13:50:05</td>
-<td className="p-2">OP-205 (User)</td>
-<td className="p-2"><span className="bg-surface-container px-1.5 py-0.5 rounded-DEFAULT border border-border-subtle text-primary">VSS_SEARCH</span></td>
-<td className="p-2 truncate max-w-[200px]">"Track person in blue jacket"</td>
-<td className="p-2 truncate max-w-[150px] text-text-muted font-mono">0xc82...1a5f</td>
-<td className="p-2">
-<div className="flex items-center gap-1 text-tertiary">
-<span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span> 실링됨 </div>
-</td>
-</tr>
+{logs.map((log) => (
+  <tr key={log.id} className="border-b border-border-subtle hover:bg-surface-container-highest transition-colors">
+    <td className="p-2 whitespace-nowrap text-text-muted">{new Date(log.timestamp).toLocaleString()}</td>
+    <td className="p-2">{log.username}</td>
+    <td className="p-2"><span className="bg-surface-container px-1.5 py-0.5 rounded-DEFAULT border border-border-subtle text-primary">{log.action_type}</span></td>
+    <td className="p-2 truncate max-w-[200px]" title={log.resource_query}>{log.resource_query}</td>
+    <td className="p-2 truncate max-w-[150px] text-text-muted font-mono" title={log.tx_hash}>{log.tx_hash.substring(0, 10)}...</td>
+    <td className="p-2">
+      <div className="flex items-center gap-1 text-tertiary">
+        <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span> {log.status} 
+      </div>
+    </td>
+  </tr>
+))}
 </tbody>
 </table>
 </div>

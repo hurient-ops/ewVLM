@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Shield, User, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
+import { API } from '../api/client';
 
 interface LoginProps {
   onLoginSuccess: () => void;
@@ -14,10 +15,19 @@ export default function Login({ onLoginSuccess, onNavigateSignup }: LoginProps) 
     rememberMe: false
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login Attempt:", formData);
-    onLoginSuccess();
+    setErrorMsg('');
+    try {
+      const data = await API.login(formData.username, formData.password);
+      localStorage.setItem('token', data.access_token);
+      localStorage.setItem('username', data.user.username);
+      onLoginSuccess();
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.detail || '로그인에 실패했습니다.');
+    }
   };
 
   return (
@@ -54,6 +64,11 @@ export default function Login({ onLoginSuccess, onNavigateSignup }: LoginProps) 
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="p-6 space-y-5 flex flex-col">
+            {errorMsg && (
+              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-3 rounded">
+                {errorMsg}
+              </div>
+            )}
             {/* Email/ID Input Group */}
             <div className="space-y-1 relative">
               <label className="text-xs font-bold text-[#ccc3d8] block uppercase">사용자 계정</label>

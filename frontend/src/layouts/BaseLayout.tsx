@@ -1,10 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 export const BaseLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+  const [isDetachedMode, setIsDetachedMode] = useState(() => {
+    return sessionStorage.getItem('vlm_is_detached') === 'true';
+  });
+  
+  const isDetachedWindow = window.name === 'VLM_Detached';
+
+  useEffect(() => {
+    if (isDetachedWindow) return;
+
+    const bc = new BroadcastChannel('vlm_monitor_b_sync');
+    
+    // Check local storage or similar if we want persistent state, but for now just listen
+    bc.onmessage = (event) => {
+      if (event.data === 'detach_opened') {
+        setIsDetachedMode(true);
+        sessionStorage.setItem('vlm_is_detached', 'true');
+      }
+      if (event.data === 'detach_closed') {
+        setIsDetachedMode(false);
+        sessionStorage.removeItem('vlm_is_detached');
+      }
+      if (event.data === 'ping_detach_status') {
+        // We only care about receiving detach_opened/closed. 
+        // We don't reply here because BaseLayout is never the detached popup (since it doesn't render header in detached mode, but wait, it does run the effect!).
+        // The MonitorBLayout in the popup will reply.
+      }
+    };
+
+    // Query if detached window is already alive
+    bc.postMessage('ping_detach_status');
+
+    return () => {
+      bc.close();
+    };
+  }, [isDetachedWindow]);
 
   // Helper to determine active top tab
   const getActiveTab = () => {
@@ -25,6 +60,16 @@ export const BaseLayout: React.FC = () => {
   };
 
   const activeTab = getActiveTab();
+
+  if (isDetachedWindow) {
+    return (
+      <div className="flex flex-col h-screen bg-[#0b0e17] text-gray-100 font-sans selection:bg-blue-600 selection:text-white overflow-hidden">
+        <div className="flex-1 flex overflow-hidden">
+          <Outlet />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-[#0b0e17] text-gray-100 font-sans selection:bg-blue-600 selection:text-white overflow-hidden">
@@ -67,6 +112,9 @@ export const BaseLayout: React.FC = () => {
               className={`h-full px-6 flex items-center justify-center font-bold text-[15px] border-b-2 transition-colors ${activeTab === 'B' ? 'border-[#d2bbff] text-[#d2bbff]' : 'border-transparent text-gray-400 hover:text-white hover:bg-[#31343f]/50'}`}
             >
               VLM 분석
+              {isDetachedMode && (
+                <span className="material-symbols-outlined text-[16px] ml-1 text-[#d2bbff]" title="새 창에서 실행 중">open_in_new</span>
+              )}
             </button>
           </div>
         </div>
@@ -86,8 +134,26 @@ export const BaseLayout: React.FC = () => {
             </button>
             
             {showSettingsDropdown && (
-              <div className="absolute right-0 mt-2 w-56 bg-[#1c1f29] border border-[#232C3F] rounded-lg shadow-xl py-2 z-50">
+              <div className="absolute right-0 mt-2 w-56 bg-[#1c1f29] border border-[#232C3F] rounded-lg shadow-xl py-2 z-50 max-h-[80vh] overflow-y-auto custom-scrollbar">
                 <div className="px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-[#232C3F] mb-1">
+                  운영 및 제어
+                </div>
+                <button onMouseDown={() => navigate('/ptz-patrol')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#31343f] hover:text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">camera_outdoor</span> PTZ 순찰 스케줄
+                </button>
+                <button onMouseDown={() => navigate('/ptz-target-handover')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#31343f] hover:text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">transfer_within_a_station</span> 타겟 핸드오버
+                </button>
+                <button onMouseDown={() => navigate('/mobile-patrol')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#31343f] hover:text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">smartphone</span> 모바일 순찰 뷰
+                </button>
+                <button onMouseDown={() => navigate('/ip-audio')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#31343f] hover:text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">record_voice_over</span> IP 오디오 방송
+                </button>
+                <button onMouseDown={() => navigate('/privacy-export')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#31343f] hover:text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">privacy_tip</span> 프라이버시 반출
+                </button>
+                <div className="px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-[#232C3F] mb-1 mt-2">
                   시스템 설정
                 </div>
                 <button onMouseDown={() => navigate('/camera-setup')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#31343f] hover:text-white flex items-center gap-2">
@@ -104,6 +170,18 @@ export const BaseLayout: React.FC = () => {
                 </button>
                 <button onMouseDown={() => navigate('/system-audit')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#31343f] hover:text-white flex items-center gap-2">
                   <span className="material-symbols-outlined text-[18px]">policy</span> 시스템 감사 이력
+                </button>
+                <button onMouseDown={() => navigate('/hw-self-healing')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#31343f] hover:text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">healing</span> 자동 복구 시스템
+                </button>
+                <button onMouseDown={() => navigate('/mass-device-config')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#31343f] hover:text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">device_hub</span> 다중 기기 설정
+                </button>
+                <button onMouseDown={() => navigate('/edge-ai')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#31343f] hover:text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">router</span> Edge AI 오케스트레이터
+                </button>
+                <button onMouseDown={() => navigate('/multi-site-auth')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#31343f] hover:text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">lock_person</span> 다중 사이트 인증
                 </button>
               </div>
             )}

@@ -1,4 +1,9 @@
-import React from 'react'; export const DisasterVirtualWarRoom: React.FC = () => { return ( <>
+import React, { useState } from 'react';
+
+export const DisasterVirtualWarRoom: React.FC = () => {
+  const [isEscalated, setIsEscalated] = useState(false);
+
+  return ( <>
 <main className="flex-1 flex flex-col p-container-padding gap-container-padding h-full overflow-hidden bg-background">
 {/* Alert Header */}
 <div className="bg-surface border border-danger p-4 flex items-center justify-between rounded shadow-[0_0_15px_rgba(239,68,68,0.2)]">
@@ -15,7 +20,13 @@ import React from 'react'; export const DisasterVirtualWarRoom: React.FC = () =>
 <div className="flex gap-2">
 <button className="bg-surface-container border border-border-subtle text-on-surface px-4 py-2 rounded text-body-sm font-body-sm hover:bg-surface-container-high transition-colors flex items-center gap-2">
 <span className="material-symbols-outlined text-sm">download</span> 로그 내보내기 </button>
-<button className="bg-danger text-white px-6 py-2 rounded text-body-sm font-body-sm font-bold shadow-[0_0_10px_rgba(239,68,68,0.5)] hover:bg-red-600 transition-colors"> 지역 본부 에스컬레이션 </button>
+<button 
+  className={`px-6 py-2 rounded text-body-sm font-body-sm font-bold shadow-[0_0_10px_rgba(239,68,68,0.5)] transition-colors ${isEscalated ? 'bg-error-container text-danger cursor-not-allowed' : 'bg-danger text-white hover:bg-red-600'}`}
+  onClick={() => setIsEscalated(true)}
+  disabled={isEscalated}
+>
+  {isEscalated ? '에스컬레이션 완료' : '지역 본부 에스컬레이션'}
+</button>
 </div>
 </div>
 {/* Multi-Agency Video Fusion Grid */}

@@ -1,0 +1,33 @@
+###############################################
+# MediaMTX configuration file for ewVLM Project
+
+# ----------------
+# API settings
+api: yes
+apiAddress: :9997
+
+# ----------------
+# WebRTC settings
+webrtc: yes
+webrtcAddress: :8889
+webrtcServerAddress: :8189
+
+# ----------------
+# HLS settings
+hls: yes
+hlsAddress: :8888
+hlsAlwaysRemux: no
+
+# ----------------
+# RTSP settings
+rtsp: yes
+rtspAddress: :8554
+
+# ----------------
+# Paths
+paths:
+  # Catch-all path for incoming RTMP/RTSP streams
+  all:
+    # Allow anyone to read and publish
+    readUser: any
+    publishUser: any

@@ -7,12 +7,16 @@ import uuid
 import os
 import time
 from datetime import datetime
+from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Dict, Any, Optional
 
 import crud
 import models
 from database import engine, get_db, AsyncSessionLocal
 from ewvlm_ollama_bridge import OllamaVLMBridge
+from onvif_controller import get_controller
+from playback_service import playback_router
 
 vlm_bridge = OllamaVLMBridge()
 
@@ -26,6 +30,33 @@ except ImportError:
     import sys
     print("Error: FastAPI, uvicorn, and Pydantic are required to run this script.")
     sys.exit(1)
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class AuditLogRequest(BaseModel):
+    action_type: str
+    resource_query: Optional[str] = None
+    username: Optional[str] = "system"
+
+class PTZRequest(BaseModel):
+    action: str
+
+class CalibrationRequest(BaseModel):
+    altitude: float
+    tilt: float
+    focal_length: float
+
+class SignupRequest(BaseModel):
+    username: str
+    password: str
+    role: str = "user"
+
+class VSSRequest(BaseModel):
+    query: str
+    limit: int = 5
+
 
 # Configure logging to match ewVLM enterprise console styling
 logging.basicConfig(
@@ -51,6 +82,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(playback_router)
 
 # In-memory database simulation for prototype self-containment
 ACTIVE_PIPELINES: Dict[str, Dict[str, Any]] = {}
@@ -217,6 +250,8 @@ kafka_manager = KafkaManager()
 async def startup_event():
     async with engine.begin() as conn:
         await conn.run_sync(models.Base.metadata.create_all)
+    async with AsyncSessionLocal() as db:
+        await crud.seed_db_if_empty(db)
     await kafka_manager.connect()
     # Populate mock assets
     DATABASE_MOCK["cameras"].append({
@@ -269,7 +304,12 @@ async def simulate_slow_loop_inference(escalation_data: EscalationRequest):
             "evidence_recall_applied": True
         },
         "detected_dangerous_actions": [escalation_data.trigger_class, "safety_violation"],
-        "recommended_sop_id": "SOP-REACTION-04" if escalation_data.trigger_class == "person_collapsed" else "SOP-REACTION-01"
+        "recommended_sop_id": "SOP-REACTION-04" if escalation_data.trigger_class == "person_collapsed" else "SOP-REACTION-01",
+        "bounding_box": [
+            random.randint(10, 100), random.randint(10, 100), 
+            random.randint(150, 300), random.randint(150, 300)
+        ],
+        "attention_score": round(random.uniform(0.8, 1.0), 3)
     }
     
     # Push Slow-Loop event to Kafka and WebSocket
@@ -473,6 +513,188 @@ async def get_events(limit: int = 50, db = Depends(get_db)):
         ]
     }
 
+
+from jose import jwt
+
+SECRET_KEY = "ewvlm_super_secret_key_for_demo"
+ALGORITHM = "HS256"
+
+@app.post("/api/v1/auth/login", status_code=status.HTTP_200_OK)
+async def login(req: LoginRequest, db = Depends(get_db)):
+    user = await crud.get_user_by_username(db, req.username)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    if not crud.verify_password(req.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    access_token = jwt.encode({"sub": user.username, "role": user.role}, SECRET_KEY, algorithm=ALGORITHM)
+    
+    # Audit log for login
+    await crud.create_audit_log(db, {
+        "username": user.username,
+        "action_type": "LOGIN",
+        "resource_query": "Session Auth"
+    })
+    
+    return {"access_token": access_token, "token_type": "bearer", "user": {"username": user.username, "role": user.role}}
+
+@app.post("/api/v1/auth/signup", status_code=status.HTTP_201_CREATED)
+async def signup(req: SignupRequest, db = Depends(get_db)):
+    existing = await crud.get_user_by_username(db, req.username)
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already exists")
+    
+    hashed_pwd = crud.get_password_hash(req.password)
+    user_data = {
+        "username": req.username,
+        "hashed_password": hashed_pwd,
+        "role": req.role
+    }
+    
+    new_user = await crud.create_user(db, user_data)
+    
+    await crud.create_audit_log(db, {
+        "username": req.username,
+        "action_type": "USER_CREATED",
+        "resource_query": f"New user signup: {req.username}"
+    })
+    
+    return {"message": "User created successfully", "username": new_user.username}
+
+@app.post("/api/v1/vss/search", status_code=status.HTTP_200_OK)
+async def semantic_search(req: VSSRequest, db = Depends(get_db)):
+    events = await crud.search_events_semantic(db, req.query, req.limit)
+    return {
+        "status": "success",
+        "query": req.query,
+        "results": [
+            {
+                "id": ev.id,
+                "escalation_id": ev.escalation_id,
+                "camera_id": ev.camera_id,
+                "timestamp": ev.timestamp.isoformat() + "Z" if ev.timestamp else None,
+                "trigger_class": ev.trigger_class,
+                "confidence": ev.confidence,
+                "semantic_caption": ev.semantic_caption,
+                "crop_box_coordinates": ev.crop_box_coordinates,
+                "video_segment_chunk_path": ev.video_segment_chunk_path
+            } for ev in events
+        ]
+    }
+
+@app.get("/api/v1/events/{id}/report", status_code=status.HTTP_200_OK)
+async def get_event_report(id: str, db = Depends(get_db)):
+    # In a real scenario, this would call VLM API to generate text based on the event.
+    # Here we mock the response.
+    return {
+        "event_id": id,
+        "report_text": f"🚨 [VLM 종합 보고서 - 사건 {id}]\n\n"
+                       f"해당 사건은 지능형 영상 관제(VLM)에 의해 자동으로 식별된 정황입니다. "
+                       f"화면 내에서 특정 인물/객체의 이상 행동이 {id}번 에스컬레이션 코드와 함께 포착되었습니다. "
+                       f"이 인물은 주변을 살피며 조심스럽게 이동하는 패턴을 보였으며, 현재 관련 행동 지침(SOP)에 따라 "
+                       f"관제사에게 경고 알림이 전송된 상태입니다. "
+                       f"\n\n[권장 조치사항]\n"
+                       f"1. 현장 순찰팀 즉시 파견 요망.\n"
+                       f"2. 인접 카메라 PTZ 핸드오버를 통한 연속 추적 실시.\n"
+                       f"3. 필요 시 IP 오디오 방송을 통해 경고 방송 송출."
+    }
+
+@app.post("/api/v1/audit/logs", status_code=status.HTTP_201_CREATED)
+async def create_audit_log_endpoint(req: AuditLogRequest, db = Depends(get_db)):
+    log = await crud.create_audit_log(db, req.dict())
+    return {"status": "SUCCESS", "tx_hash": log.tx_hash}
+
+@app.get("/api/v1/audit/logs", status_code=status.HTTP_200_OK)
+async def get_audit_logs_endpoint(limit: int = 100, db = Depends(get_db)):
+    logs = await crud.get_audit_logs(db, limit)
+    return {
+        "status": "SUCCESS",
+        "logs": [
+            {
+                "id": log.id,
+                "timestamp": log.timestamp.isoformat() + "Z",
+                "username": log.username,
+                "action_type": log.action_type,
+                "resource_query": log.resource_query,
+                "tx_hash": log.tx_hash,
+                "status": log.status
+            } for log in logs
+        ]
+    }
+
+@app.post("/api/v1/cameras/{camera_id}/ptz")
+async def control_ptz(camera_id: str, request: PTZRequest, db: AsyncSession = Depends(get_db)):
+    """Mock endpoint to record a PTZ action, now connected to ONVIF."""
+    logger.info(f"Received PTZ command for {camera_id}: {request.action}")
+    
+    # Send ONVIF commands
+    controller = await get_controller(camera_id, "192.168.10.124")
+    
+    action = request.action.lower()
+    if action == "stop":
+        await controller.stop()
+    elif action == "up":
+        await controller.continuous_move(0.0, 1.0, 0.0)
+    elif action == "down":
+        await controller.continuous_move(0.0, -1.0, 0.0)
+    elif action == "left":
+        await controller.continuous_move(-1.0, 0.0, 0.0)
+    elif action == "right":
+        await controller.continuous_move(1.0, 0.0, 0.0)
+    elif action == "up-left":
+        await controller.continuous_move(-1.0, 1.0, 0.0)
+    elif action == "up-right":
+        await controller.continuous_move(1.0, 1.0, 0.0)
+    elif action == "down-left":
+        await controller.continuous_move(-1.0, -1.0, 0.0)
+    elif action == "down-right":
+        await controller.continuous_move(1.0, -1.0, 0.0)
+    elif action == "zoom-in":
+        await controller.continuous_move(0.0, 0.0, 1.0)
+    elif action == "zoom-out":
+        await controller.continuous_move(0.0, 0.0, -1.0)
+
+    ptz_data = {
+        "camera_id": camera_id,
+        "action": request.action,
+        "user_id": "api_user"
+    }
+    await crud.create_ptz_log(db, ptz_data)
+    
+    # Also log it in the audit log
+    tx_hash = hashlib.sha256(f"{camera_id}{request.action}{datetime.datetime.now().isoformat()}".encode()).hexdigest()
+    await crud.create_audit_log(db, {
+        "username": "api_user",
+        "action_type": "PTZ_CONTROL",
+        "resource_query": f"{camera_id}: {request.action}",
+        "tx_hash": tx_hash
+    })
+    
+    return {"status": "SUCCESS", "message": f"PTZ action {request.action} applied to {camera_id}"}
+
+@app.post("/api/v1/cameras/{camera_id}/calibration")
+async def save_camera_calibration(camera_id: str, request: CalibrationRequest, db: AsyncSession = Depends(get_db)):
+    """Mock endpoint to save camera calibration."""
+    logger.info(f"Received Calibration for {camera_id}: {request.dict()}")
+    cal_data = {
+        "camera_id": camera_id,
+        "altitude": request.altitude,
+        "tilt": request.tilt,
+        "focal_length": request.focal_length
+    }
+    cal = await crud.save_calibration(db, cal_data)
+    
+    # Audit log
+    tx_hash = hashlib.sha256(f"{camera_id}CALIB{datetime.datetime.now().isoformat()}".encode()).hexdigest()
+    await crud.create_audit_log(db, {
+        "username": "api_user",
+        "action_type": "CALIBRATION_UPDATE",
+        "resource_query": f"{camera_id}: Alt={request.altitude}, Tilt={request.tilt}",
+        "tx_hash": tx_hash
+    })
+    
+    return {"status": "SUCCESS", "message": "Calibration saved", "data": request.dict()}
 
 # ==============================================================================
 # 6. Main Executable Entry Point

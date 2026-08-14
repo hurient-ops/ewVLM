@@ -1,4 +1,28 @@
-import React from 'react'; export const PtzTargetHandover: React.FC = () => { return ( <>
+import React, { useEffect, useState } from 'react';
+import { API } from '../api/client';
+import { usePtzStore } from '../store/usePtzStore';
+
+export const PtzTargetHandover: React.FC = () => {
+  const activeCameraId = usePtzStore(state => state.activeCameraId) || 'CAM_04_PTZ_NORTH';
+  const [handoverStage, setHandoverStage] = useState<'tracking' | 'handover' | 'lost'>('handover');
+
+  useEffect(() => {
+    // Simulate handover sequence
+    const timer1 = setTimeout(() => setHandoverStage('tracking'), 3000);
+    return () => clearTimeout(timer1);
+  }, []);
+
+  const handlePtz = (action: string) => {
+    API.controlPtz(activeCameraId, action)
+      .then(res => {
+        console.log(`PTZ action ${action} successful on ${activeCameraId}:`, res);
+      })
+      .catch(err => {
+        console.error(`PTZ action ${action} failed:`, err);
+      });
+  };
+
+  return ( <>
 <main className="w-full h-full">
 <div className="ptz-grid">
 {/* Left: Video Canvas & Lock-on View */}
@@ -20,8 +44,11 @@ import React from 'react'; export const PtzTargetHandover: React.FC = () => { re
 </div>
 {/* OSD HUD Info */}
 <div className="absolute top-osd-margin left-osd-margin flex flex-col gap-1">
-<span className="bg-surface/80 text-on-surface font-mono-data text-mono-data px-2 py-0.5 rounded backdrop-blur">CAM_04_PTZ_NORTH</span>
-<span className="bg-surface/80 text-tertiary font-mono-data text-mono-data px-2 py-0.5 rounded backdrop-blur flex items-center gap-1"><span className="led-indicator led-live"></span> AUTO-TRACKING ACTIVE</span>
+<span className="bg-surface/80 text-on-surface font-mono-data text-mono-data px-2 py-0.5 rounded backdrop-blur">{activeCameraId}</span>
+<span className={`bg-surface/80 font-mono-data text-mono-data px-2 py-0.5 rounded backdrop-blur flex items-center gap-1 ${handoverStage === 'tracking' ? 'text-tertiary' : 'text-warning'}`}>
+  <span className={`led-indicator ${handoverStage === 'tracking' ? 'led-live' : 'bg-warning'}`}></span> 
+  {handoverStage === 'tracking' ? 'AUTO-TRACKING ACTIVE' : 'HANDOVER IN PROGRESS'}
+</span>
 </div>
 <div className="absolute bottom-osd-margin right-osd-margin flex flex-col gap-1 text-right">
 <span className="bg-surface/80 text-on-surface font-mono-data text-mono-data px-2 py-0.5 rounded backdrop-blur">PAN: +45.2° | TILT: -12.5° | ZOOM: 18x</span>
@@ -77,15 +104,15 @@ import React from 'react'; export const PtzTargetHandover: React.FC = () => { re
 <span className="material-symbols-outlined text-primary-container">gamepad</span>
 </div>
 {/* Directional Arrows */}
-<button className="jog-btn top-2 left-1/2 -translate-x-1/2"><span className="material-symbols-outlined">expand_less</span></button>
-<button className="jog-btn bottom-2 left-1/2 -translate-x-1/2"><span className="material-symbols-outlined">expand_more</span></button>
-<button className="jog-btn left-2 top-1/2 -translate-y-1/2"><span className="material-symbols-outlined">chevron_left</span></button>
-<button className="jog-btn right-2 top-1/2 -translate-y-1/2"><span className="material-symbols-outlined">chevron_right</span></button>
+<button className="jog-btn top-2 left-1/2 -translate-x-1/2" onClick={() => handlePtz('TILT_UP')}><span className="material-symbols-outlined">expand_less</span></button>
+<button className="jog-btn bottom-2 left-1/2 -translate-x-1/2" onClick={() => handlePtz('TILT_DOWN')}><span className="material-symbols-outlined">expand_more</span></button>
+<button className="jog-btn left-2 top-1/2 -translate-y-1/2" onClick={() => handlePtz('PAN_LEFT')}><span className="material-symbols-outlined">chevron_left</span></button>
+<button className="jog-btn right-2 top-1/2 -translate-y-1/2" onClick={() => handlePtz('PAN_RIGHT')}><span className="material-symbols-outlined">chevron_right</span></button>
 </div>
 <div className="flex gap-2 w-full">
-<button className="flex-1 bg-surface-container hover:bg-surface-container-high border border-border-subtle text-on-surface font-label-caps text-label-caps py-2 rounded transition-colors flex items-center justify-center gap-1">
+<button className="flex-1 bg-surface-container hover:bg-surface-container-high border border-border-subtle text-on-surface font-label-caps text-label-caps py-2 rounded transition-colors flex items-center justify-center gap-1" onClick={() => handlePtz('ZOOM_OUT')}>
 <span className="material-symbols-outlined text-[16px]">zoom_out</span> OUT </button>
-<button className="flex-1 bg-surface-container hover:bg-surface-container-high border border-border-subtle text-on-surface font-label-caps text-label-caps py-2 rounded transition-colors flex items-center justify-center gap-1"> IN <span className="material-symbols-outlined text-[16px]">zoom_in</span>
+<button className="flex-1 bg-surface-container hover:bg-surface-container-high border border-border-subtle text-on-surface font-label-caps text-label-caps py-2 rounded transition-colors flex items-center justify-center gap-1" onClick={() => handlePtz('ZOOM_IN')}> IN <span className="material-symbols-outlined text-[16px]">zoom_in</span>
 </button>
 </div>
 </div>

@@ -1,4 +1,9 @@
-import React from 'react'; export const NetworkTopologyMonitor: React.FC = () => { return ( <>
+import React, { useState } from 'react';
+
+export const NetworkTopologyMonitor: React.FC = () => {
+  const [inspectorVisible, setInspectorVisible] = useState(true);
+
+  return ( <>
 <main className="flex-1 md:bg-background relative overflow-hidden flex">
 {/* Topology Canvas (Left 70%) */}
 <div className="flex-1 relative h-full bg-[#070A13] border-r border-border-subtle flex flex-col">
@@ -40,20 +45,20 @@ import React from 'react'; export const NetworkTopologyMonitor: React.FC = () =>
 <line className="topology-link error" stroke="#EF4444" x1="550" x2="650" y1="250" y2="400"></line>
 {/* Nodes */}
 {/* Core NVR */}
-<g className="topology-node" onClick="selectNode('NVR-CORE-01', 'Core NVR System', 'Online', '1.2Gbps')" transform="translate(400, 100)">
+<g className="topology-node cursor-pointer hover:opacity-80" onClick={() => setInspectorVisible(true)} transform="translate(400, 100)">
 <rect fill="#121724" filter="url(#glow)" height="60" rx="4" stroke="#7c3aed" strokeWidth="2" width="80" x="-40" y="-30"></rect>
 <text fill="#E2E8F0" font-family="Inter" font-size="12" font-weight="bold" text-anchor="middle" x="0" y="-5">NVR-CORE</text>
 <text fill="#4edea3" font-family="JetBrains Mono" font-size="10" text-anchor="middle" x="0" y="15">UP</text>
 </g>
 {/* Switch 1 */}
-<g className="topology-node active" onClick="selectNode('SW-POE-01', 'PoE Edge Switch L2', 'Online', '450Mbps', true)" transform="translate(250, 250)">
+<g className="topology-node active cursor-pointer hover:opacity-80" onClick={() => setInspectorVisible(true)} transform="translate(250, 250)">
 <rect fill="#121724" height="50" rx="4" stroke="#232C3F" strokeWidth="2" width="70" x="-35" y="-25"></rect>
 <text fill="#E2E8F0" font-family="Inter" font-size="10" font-weight="bold" text-anchor="middle" x="0" y="-2">SW-01</text>
 <circle cx="-15" cy="12" fill="#4edea3" filter="url(#glow)" r="3"></circle>
 <text fill="#ccc3d8" font-family="JetBrains Mono" font-size="9" x="-5" y="15">PoE</text>
 </g>
 {/* Switch 2 */}
-<g className="topology-node" onClick="selectNode('SW-POE-02', 'PoE Edge Switch L2', 'Online', '620Mbps')" transform="translate(550, 250)">
+<g className="topology-node cursor-pointer hover:opacity-80" onClick={() => setInspectorVisible(true)} transform="translate(550, 250)">
 <rect fill="#121724" height="50" rx="4" stroke="#232C3F" strokeWidth="2" width="70" x="-35" y="-25"></rect>
 <text fill="#E2E8F0" font-family="Inter" font-size="10" font-weight="bold" text-anchor="middle" x="0" y="-2">SW-02</text>
 <circle cx="-15" cy="12" fill="#F59E0B" filter="url(#glow)" r="3"></circle>
@@ -88,11 +93,12 @@ import React from 'react'; export const NetworkTopologyMonitor: React.FC = () =>
 </svg>
 </div>
 {/* Inspector Panel (Right 30%) */}
+{inspectorVisible && (
 <aside className="w-80 bg-surface flex flex-col h-full border-l border-border-subtle shadow-lg z-20">
 <div className="p-4 border-b border-border-subtle bg-surface-container-lowest">
 <div className="flex items-center justify-between mb-1">
 <h2 className="text-title-sm font-title-sm text-on-surface">노드 인스펙터</h2>
-<span className="material-symbols-outlined text-text-muted text-sm cursor-pointer hover:text-on-surface">close</span>
+<span className="material-symbols-outlined text-text-muted text-sm cursor-pointer hover:text-on-surface" onClick={() => setInspectorVisible(false)}>close</span>
 </div>
 <div className="text-mono-data font-mono-data text-primary">SW-POE-01</div>
 </div>
@@ -185,5 +191,6 @@ import React from 'react'; export const NetworkTopologyMonitor: React.FC = () =>
 </div>
 </div>
 </aside>
+)}
 </main> </> );
 };
