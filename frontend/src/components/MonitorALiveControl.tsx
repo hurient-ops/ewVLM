@@ -33,6 +33,17 @@ export const MonitorALiveControl: React.FC = () => {
         message: `모니터 슬롯 ${slotId}에 카메라 바인딩 완료`,
         confidence: 1.0
       });
+      
+      // Simulate YOLO pipeline initialization
+      setTimeout(() => {
+        useEventLogStore.getState().addLog({
+          cameraId,
+          cameraName,
+          level: 'info',
+          message: `[Edge AI] ${cameraId} 채널 실시간 YOLO11 분석 파이프라인 활성화`,
+          confidence: 1.0
+        });
+      }, 800);
     }
   };
 

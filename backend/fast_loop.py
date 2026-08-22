@@ -5,6 +5,12 @@ import time
 import asyncio
 from datetime import datetime
 import requests
+import tempfile
+import numpy as np
+from paligemma_edge_validator import PaligemmaEdgeValidator
+
+# Create global instance of Edge Validator
+edge_validator = PaligemmaEdgeValidator()
 
 try:
     import cv2
@@ -25,11 +31,12 @@ except ImportError:
     sys.exit(1)
 
 API_GATEWAY_URL = "http://localhost:8000/api/v1/escalation/trigger"
-TARGET_FPS = int(os.getenv("TARGET_FPS", "5")) # Set to 5 FPS to save CPU
+TARGET_FPS = int(os.getenv("TARGET_FPS", "24")) # Set to 24 FPS for smoother real-time GPU processing
 
 CAMERAS = ["cam-01", "cam-02", "cam-03", "cam-04"]
 latest_frames = {cam: None for cam in CAMERAS}
 yolo_lock = asyncio.Lock()
+vlm_lock = asyncio.Semaphore(1)
 
 async def mjpeg_handler(request):
     camera_id = request.match_info.get('camera_id', 'cam-01')
@@ -52,7 +59,10 @@ async def mjpeg_handler(request):
     while True:
         frame = latest_frames[camera_id]
         if frame is not None:
-            ret, buffer = cv2.imencode('.jpg', frame)
+            # [Optimization] Drop JPEG quality to 70% for massive bandwidth savings
+            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
+            # Offload synchronous OpenCV imencode to prevent Event Loop blocking
+            ret, buffer = await asyncio.to_thread(cv2.imencode, '.jpg', frame, encode_param)
             if ret:
                 frame_data = buffer.tobytes()
                 try:
@@ -90,8 +100,18 @@ async def camera_loop(camera_id, model, video_source):
             async with yolo_lock:
                 results = await asyncio.to_thread(model, frame, verbose=False)
             
-            # Save the plotted frame for MJPEG stream
-            latest_frames[camera_id] = results[0].plot()
+            # [Optimization] Offload synchronous OpenCV processing to a thread
+            # Plotting and resizing 4K frames synchronously will block the asyncio event loop!
+            def process_plot(res):
+                plotted = res.plot()
+                h, w = plotted.shape[:2]
+                if h > 720:
+                    scale = 720 / h
+                    plotted = cv2.resize(plotted, (int(w * scale), 720))
+                return plotted
+                
+            plotted_frame = await asyncio.to_thread(process_plot, results[0])
+            latest_frames[camera_id] = plotted_frame
 
             detected_objects = []
             for result in results:
@@ -118,26 +138,59 @@ async def camera_loop(camera_id, model, video_source):
                 detected_frame_path = f"mock_videos/detected_{camera_id}.jpg"
                 cv2.imwrite(detected_frame_path, frame)
                 
-                req_payload = {
-                    "escalation_id": f"esc_{camera_id}_{int(time.time()*1000)}",
-                    "camera_id": camera_id.upper(), # E.g., CAM-01
-                    "timestamp": datetime.utcnow().isoformat() + "Z",
-                    "trigger_class": trigger_reason,
-                    "confidence": detected_objects[0]["detection_confidence"],
-                    "crop_box_coordinates": detected_objects[0]["bbox_coordinates_xyxy"][:4],
-                    "video_segment_chunk_path": detected_frame_path
-                }
-
-                if frame_count % (TARGET_FPS * 10) == 0:  # Escalate roughly every 10 seconds per camera
-                    print(f"🔥 [{camera_id}] Detected {len(detected_objects)} objects! Sending REST API Escalation...")
-                    try:
-                        # use aiohttp instead of requests to prevent blocking
-                        async with aiohttp.ClientSession() as session:
-                            async with session.post(API_GATEWAY_URL, json=req_payload, timeout=2) as res:
-                                if res.status == 202:
-                                    print(f" ✅ [{camera_id}] Successfully escalated to Slow-Loop VLM!")
-                    except Exception as e:
-                        print(f" ⚠️ [{camera_id}] Failed to reach API Gateway: {e}")
+                # Escalate at most once every 10 seconds per camera
+                if "last_escalation_frame" not in globals():
+                    global last_escalation_frame
+                    last_escalation_frame = {}
+                
+                last_frame = last_escalation_frame.get(camera_id, -9999)
+                if frame_count - last_frame >= (TARGET_FPS * 10):
+                    last_escalation_frame[camera_id] = frame_count
+                    
+                    # ---------------------------------------------------------
+                    # [NEW] Google PaliGemma 2 3B Edge Validator (정탐/오탐 1차 필터링)
+                    # ---------------------------------------------------------
+                    # [Optimization] Drop VQA escalation if VLM is currently busy to prevent RAM explosion
+                    # This prevents hundreds of 4K frames (24MB each) from queueing up in asyncio tasks 
+                    # while waiting for the LM Studio 5-second timeout, which causes numpy ArrayMemoryError.
+                    if vlm_lock.locked():
+                        continue
+                        
+                    print(f"🔥 [{camera_id}] Detected {len(detected_objects)} objects! Running Edge Validation in background...")
+                    
+                    temp_path = os.path.join(tempfile.gettempdir(), f"frame_{camera_id}_{int(time.time())}.jpg")
+                    cv2.imwrite(temp_path, frame)
+                    
+                    req_payload = {
+                        "escalation_id": f"esc_{camera_id}_{int(time.time()*1000)}",
+                        "camera_id": camera_id.upper(),
+                        "timestamp": datetime.utcnow().isoformat() + "Z",
+                        "trigger_class": trigger_reason,
+                        "confidence": detected_objects[0]["detection_confidence"],
+                        "crop_box_coordinates": detected_objects[0]["bbox_coordinates_xyxy"][:4],
+                        "video_segment_chunk_path": temp_path
+                    }
+                    
+                    async def validate_and_escalate(captured_frame, payload):
+                        # [Optimization] Serialize VQA requests to LM Studio to prevent VRAM explosion
+                        async with vlm_lock:
+                            is_real_threat = await asyncio.to_thread(edge_validator.verify_detection, captured_frame, trigger_reason)
+                            
+                            if not is_real_threat:
+                                print(f" 🛑 [{payload['camera_id']}] Edge Validation rejected the detection (False Positive).")
+                                return
+                                
+                            try:
+                                # use aiohttp instead of requests to prevent blocking
+                                async with aiohttp.ClientSession() as session:
+                                    async with session.post(API_GATEWAY_URL, json=payload, timeout=2) as res:
+                                        if res.status == 202:
+                                            print(f" ✅ [{payload['camera_id']}] Successfully escalated to Slow-Loop VLM!")
+                            except Exception as e:
+                                print(f" ⚠️ [{payload['camera_id']}] Failed to reach API Gateway: {e}")
+                    
+                    # Run it in the background so the video NEVER pauses!
+                    asyncio.create_task(validate_and_escalate(frame.copy(), req_payload))
 
             # Sleep to maintain TARGET_FPS
             await asyncio.sleep(1.0 / TARGET_FPS)
@@ -148,11 +201,11 @@ async def camera_loop(camera_id, model, video_source):
         cap.release()
 
 async def main():
-    print(f"🚀 Starting YOLOv8 Multi-Channel Fast-Loop (Target FPS: {TARGET_FPS})")
-    print("Loading YOLOv8 model...")
+    print(f"🚀 Starting YOLO11 Multi-Channel Fast-Loop (Target FPS: {TARGET_FPS})")
+    print("Loading YOLO11 model...")
     
     # We load YOLO once, and share it across all camera loops
-    model = YOLO("yolov8n.pt")
+    model = YOLO("yolo11n.pt")
     
     # Start Web Server
     port = int(os.getenv("PORT", 8890))

@@ -23,15 +23,22 @@ start "ewVLM - Backend API Gateway (Port: 8000)" cmd /k "cd backend && (if exist
 timeout /t 3 /nobreak >nul
 
 :: 2단계: React/Vite 프론트엔드 개발 서버 기동
-echo [2/3단계] React/Vite 프론트엔드 관제 웹 화면을 구동하는 중...
-start "ewVLM - Frontend UI Canvas (Port: 5173)" cmd /k "cd frontend && npm run dev"
+echo [2/4단계] React/Vite 프론트엔드 관제 웹 화면을 구동하는 중...
+start "ewVLM - Frontend UI Canvas (Port: 5174)" cmd /k "cd frontend && npm run dev"
 
 :: 화면 빌드 프로세스 수립 대기 (3초)
 timeout /t 3 /nobreak >nul
 
-:: 3단계: 가상 비디오 프레임 Ollama VLM 브릿지 구동
-echo [3/3단계] 가상 이미지 수송 Ollama VLM 브릿지 시뮬레이터를 가동하는 중...
-start "ewVLM - Ollama VLM Bridge" cmd /k "cd backend && (if exist .venv\Scripts\activate.bat (call .venv\Scripts\activate.bat) else if exist venv\Scripts\activate.bat (call venv\Scripts\activate.bat)) && python ewvlm_ollama_bridge.py"
+:: 3단계: 초고속 1차 탐지 YOLO11 Fast Loop 구동
+echo [3/4단계] YOLO11 다채널 고속 탐지 Fast-Loop 프로세스를 시작합니다...
+start "ewVLM - YOLO11 Fast Loop" cmd /k "cd backend && (if exist .venv\Scripts\activate.bat (call .venv\Scripts\activate.bat) else if exist venv\Scripts\activate.bat (call venv\Scripts\activate.bat)) && python fast_loop.py"
+
+:: 화면 빌드 프로세스 수립 대기 (3초)
+timeout /t 3 /nobreak >nul
+
+:: 4단계: 가상 비디오 프레임 LM Studio VLM 브릿지 구동 (테스트용)
+echo [4/4단계] 가상 이미지 수송 LM Studio VLM 브릿지 시뮬레이터를 가동하는 중...
+start "ewVLM - LM Studio VLM Bridge" cmd /k "cd backend && (if exist .venv\Scripts\activate.bat (call .venv\Scripts\activate.bat) else if exist venv\Scripts\activate.bat (call venv\Scripts\activate.bat)) && python ewvlm_lmstudio_bridge.py"
 
 echo.
 echo ==============================================================================

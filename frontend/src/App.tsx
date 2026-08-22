@@ -41,6 +41,7 @@ import { MultiChannelSyncPlayback } from './components/MultiChannelSyncPlayback'
 // Settings Group
 import { CameraSecurityPortal } from './components/CameraSecurityPortal';
 import { CameraSetupConfig } from './components/CameraSetupConfig';
+import { CameraListManager } from './components/CameraListManager';
 import { GeometryCalibrationConsole } from './components/GeometryCalibrationConsole';
 import { NetworkTopologyMonitor } from './components/NetworkTopologyMonitor';
 import { NvrStorageDashboard } from './components/NvrStorageDashboard';
@@ -49,14 +50,25 @@ import { SystemAuditLogPortal } from './components/SystemAuditLogPortal';
 
 
 export default function App() {
-  const { currentView, setCurrentView } = useAuthStore();
 
   useEffect(() => {
     initWebSocket();
+
+    // 부모 창(Monitor A)이 닫히거나 새로고침될 때 분리된 창(Monitor B)도 함께 강제 종료
+    const handleBeforeUnload = () => {
+      const bc = new BroadcastChannel('vlm_monitor_b_sync');
+      bc.postMessage('force_close_detached');
+      bc.close();
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, []);
 
-  // 15초 단위로 랜덤 VLM 이벤트 자동 발생 시뮬레이터 시작
-  useEventSimulator(15000);
+  // 15초 단위로 랜덤 VLM 이벤트 자동 발생 시뮬레이터 시작 (실제 VLM 테스트를 위해 주석 처리)
+  // useEventSimulator(15000);
 
   return (
     <BrowserRouter>
@@ -104,6 +116,7 @@ export default function App() {
           {/* ----- Settings / System ----- */}
           <Route path="/camera-security" element={<CameraSecurityPortal />} />
           <Route path="/camera-setup" element={<CameraSetupConfig />} />
+          <Route path="/camera-list" element={<CameraListManager />} />
           <Route path="/geometry-calib" element={<GeometryCalibrationConsole />} />
           <Route path="/network-topology" element={<NetworkTopologyMonitor />} />
           <Route path="/nvr-storage" element={<NvrStorageDashboard />} />

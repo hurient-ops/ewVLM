@@ -22,3 +22,6 @@ Thumbs.db
 
 # Other
 coverage/
+
+# Datasets
+backend/datasets/LLaVA-Video-178K/

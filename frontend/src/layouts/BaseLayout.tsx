@@ -171,8 +171,11 @@ export const BaseLayout: React.FC = () => {
                 <div className="px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-[#232C3F] mb-1">
                   시스템 설정
                 </div>
+                <button onMouseDown={() => navigate('/camera-list')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#31343f] hover:text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">list_alt</span> 카메라 목록 및 그룹 관리
+                </button>
                 <button onMouseDown={() => navigate('/camera-setup')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#31343f] hover:text-white flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px]">build</span> 카메라 환경설정
+                  <span className="material-symbols-outlined text-[18px]">build</span> 카메라 신규 등록
                 </button>
                 <button onMouseDown={() => navigate('/camera-security')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#31343f] hover:text-white flex items-center gap-2">
                   <span className="material-symbols-outlined text-[18px]">security</span> 보안 관리자 포탈

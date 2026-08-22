@@ -14,11 +14,11 @@ from typing import List, Dict, Any, Optional
 import crud
 import models
 from database import engine, get_db, AsyncSessionLocal
-from ewvlm_ollama_bridge import OllamaVLMBridge
+from ewvlm_lmstudio_bridge import LMStudioVLMBridge
 from onvif_controller import get_controller
 from playback_service import playback_router
 
-vlm_bridge = OllamaVLMBridge()
+vlm_bridge = LMStudioVLMBridge()
 
 # Third-party imports (Ensure graceful degradation if not in environment)
 try:
@@ -285,10 +285,10 @@ async def simulate_slow_loop_inference(escalation_data: EscalationRequest):
     
     try:
         caption, latency_ms = await asyncio.to_thread(
-            vlm_bridge.query_ollama_vision, base64_img, "llama3.2-vision", prompt
+            vlm_bridge.query_lmstudio_vision, base64_img, "Llama 3.2 11B Vision Instruct", prompt
         )
     except Exception as e:
-        logger.error(f"Ollama inference failed: {e}")
+        logger.error(f"LM Studio inference failed: {e}")
         caption = f"CCTV-0024 구역에서 {escalation_data.trigger_class} 정황 감지됨."
     
     vlm_event_id = f"vlm_evt_{int(time.time()*1000)}"
