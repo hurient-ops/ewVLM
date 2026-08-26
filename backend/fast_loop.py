@@ -31,10 +31,11 @@ except ImportError:
     sys.exit(1)
 
 API_GATEWAY_URL = "http://localhost:8000/api/v1/escalation/trigger"
+API_CAMERAS_URL = "http://localhost:8000/api/v1/cameras"
 TARGET_FPS = int(os.getenv("TARGET_FPS", "24")) # Set to 24 FPS for smoother real-time GPU processing
 
-CAMERAS = ["cam-01", "cam-02", "cam-03", "cam-04"]
-latest_frames = {cam: None for cam in CAMERAS}
+CAMERAS = []
+latest_frames = {}
 yolo_lock = asyncio.Lock()
 vlm_lock = asyncio.Semaphore(1)
 
@@ -231,24 +232,61 @@ async def main():
     await site.start()
     print(f"📹 Multi-Channel MJPEG Stream started at http://localhost:{port}/stream/{{camera_id}}")
 
+    # Fetch dynamic cameras
+    import aiohttp
+    
+    # Try fetching cameras from Gateway
+    for _ in range(5):
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(API_CAMERAS_URL) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        global CAMERAS, latest_frames
+                        for cam_data in data:
+                            if cam_data.get("vlm_enabled"):
+                                c_id = cam_data["camera_id"].lower()
+                                CAMERAS.append(c_id)
+                                latest_frames[c_id] = None
+                                if cam_data.get("rtsp_url"):
+                                    # Store real rtsp URL in a dictionary or just process it later
+                                    # We'll use a dynamic dictionary for sources
+                                    if 'CAMERA_SOURCES' not in globals():
+                                        global CAMERA_SOURCES
+                                        CAMERA_SOURCES = {}
+                                    CAMERA_SOURCES[c_id] = cam_data["rtsp_url"]
+                        break
+        except Exception as e:
+            print(f"Waiting for API Gateway... ({e})")
+            await asyncio.sleep(2)
+            
+    if not CAMERAS:
+        print("⚠️ No cameras found or API Gateway down. Falling back to default mock.")
+        CAMERAS = ["cam-01", "cam-02", "cam-03", "cam-04"]
+        latest_frames = {cam: None for cam in CAMERAS}
+
     # Start Camera Loops
     tasks = []
-    # Make sure we use aiohttp in the loop
-    global aiohttp
-    import aiohttp
     
     for cam in CAMERAS:
         mock_path = f"mock_videos/{cam}.mp4"
-        if os.path.exists(mock_path):
+        
+        # Determine video source (priority: Real RTSP -> Mock File -> Sample Video)
+        if 'CAMERA_SOURCES' in globals() and cam in CAMERA_SOURCES and CAMERA_SOURCES[cam]:
+            video_source = CAMERA_SOURCES[cam]
+            print(f"🔗 Using real RTSP stream for {cam}: {video_source}")
+        elif os.path.exists(mock_path):
             video_source = mock_path
+            print(f"🔗 Using mock video for {cam}: {video_source}")
         else:
-            print(f"⚠️ {mock_path} not found. Falling back to sample_video.mp4")
+            print(f"⚠️ {mock_path} and RTSP not found. Falling back to sample_video.mp4")
             video_source = "sample_video.mp4"
         
         task = asyncio.create_task(camera_loop(cam, model, video_source))
         tasks.append(task)
         
-    await asyncio.gather(*tasks)
+    if tasks:
+        await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
     asyncio.run(main())

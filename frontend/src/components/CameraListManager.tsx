@@ -1,19 +1,26 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCameraStore, CameraGroup, CameraDevice } from '../store/useCameraStore';
 
 export const CameraListManager: React.FC = () => {
   const navigate = useNavigate();
-  const { groups, cameras, changeCameraGroup, updateCamera } = useCameraStore();
+  const { groups, cameras, changeCameraGroup, updateCamera, deleteCamera, fetchCameras, addGroup, deleteGroup } = useCameraStore();
+
+  useEffect(() => {
+    fetchCameras();
+  }, [fetchCameras]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
   
   // Slide-over state for editing
   const [editingCamera, setEditingCamera] = useState<CameraDevice | null>(null);
 
   const filteredCameras = useMemo(() => {
     return cameras.filter(cam => {
-      const matchGroup = selectedGroupId === 'all' || cam.groupId === selectedGroupId;
+      const matchGroup = selectedGroupId === 'all' || cam.groupId === selectedGroupId || (selectedGroupId === 'none' && !cam.groupId);
       const matchSearch = 
         cam.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
         cam.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -22,11 +29,21 @@ export const CameraListManager: React.FC = () => {
     });
   }, [cameras, selectedGroupId, searchQuery]);
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (editingCamera) {
-      updateCamera(editingCamera.id, editingCamera);
+      await updateCamera(editingCamera.id, editingCamera);
       setEditingCamera(null); // close panel
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (window.confirm(`카메라 [${id}]를 정말 삭제하시겠습니까?`)) {
+      await deleteCamera(id);
+      if (editingCamera?.id === id) {
+        setEditingCamera(null);
+      }
     }
   };
 
@@ -46,11 +63,38 @@ export const CameraListManager: React.FC = () => {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar: Groups */}
         <div className="w-64 bg-surface border-r border-border-subtle flex flex-col flex-shrink-0">
-          <div className="p-4 border-b border-border-subtle bg-surface-container-low">
+          <div className="p-4 border-b border-border-subtle bg-surface-container-low flex justify-between items-center">
             <h3 className="text-title-sm font-title-sm text-text-primary">카메라 그룹</h3>
+            <button onClick={() => setIsCreatingGroup(true)} className="text-primary hover:text-primary/80" title="새 그룹 추가">
+              <span className="material-symbols-outlined text-[18px]">add</span>
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto p-2">
             <ul className="space-y-1">
+              {isCreatingGroup && (
+                <li className="px-2 py-2">
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="text" 
+                      value={newGroupName} 
+                      onChange={e => setNewGroupName(e.target.value)} 
+                      placeholder="그룹 이름" 
+                      className="w-full bg-surface-container border border-border-subtle rounded px-2 py-1 text-xs text-on-surface focus:border-primary outline-none"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newGroupName.trim()) {
+                          addGroup({ id: `group-${Date.now()}`, name: newGroupName.trim(), description: '' });
+                          setNewGroupName('');
+                          setIsCreatingGroup(false);
+                        } else if (e.key === 'Escape') {
+                          setNewGroupName('');
+                          setIsCreatingGroup(false);
+                        }
+                      }}
+                    />
+                  </div>
+                </li>
+              )}
               <li>
                 <button
                   onClick={() => setSelectedGroupId('all')}
@@ -66,16 +110,29 @@ export const CameraListManager: React.FC = () => {
               {groups.map(g => {
                 const count = cameras.filter(c => c.groupId === g.id).length;
                 return (
-                  <li key={g.id}>
+                  <li key={g.id} className="group relative flex items-center">
                     <button
                       onClick={() => setSelectedGroupId(g.id)}
-                      className={`w-full text-left px-3 py-2 rounded flex items-center gap-2 text-body-sm font-body-sm transition-colors ${
+                      className={`flex-1 text-left px-3 py-2 rounded flex items-center gap-2 text-body-sm font-body-sm transition-colors ${
                         selectedGroupId === g.id ? 'bg-primary/20 text-primary font-bold' : 'text-text-primary hover:bg-surface-variant'
                       }`}
                     >
                       <span className="material-symbols-outlined text-[18px]">folder</span>
-                      {g.name}
-                      <span className="ml-auto text-xs text-text-muted">{count}</span>
+                      <span className="truncate max-w-[100px]">{g.name}</span>
+                      <span className="ml-auto text-xs text-text-muted mr-6">{count}</span>
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if(window.confirm(`'${g.name}' 그룹을 삭제하시겠습니까? 속한 카메라는 미배정 처리됩니다.`)) {
+                          deleteGroup(g.id);
+                          if(selectedGroupId === g.id) setSelectedGroupId('all');
+                        }
+                      }}
+                      className="absolute right-2 text-text-muted hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                      title="그룹 삭제"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">delete</span>
                     </button>
                   </li>
                 );
@@ -133,10 +190,13 @@ export const CameraListManager: React.FC = () => {
                 </thead>
                 <tbody>
                   {filteredCameras.map(cam => (
-                    <tr key={cam.id} className="border-b border-border-subtle hover:bg-surface-container/50 transition-colors cursor-pointer" onClick={() => setEditingCamera(cam)}>
+                    <tr key={cam.id} className="border-b border-border-subtle hover:bg-surface-container/50 transition-colors">
                       <td className="px-4 py-3 text-mono-data font-mono-data text-on-surface">{cam.id}</td>
                       <td className="px-4 py-3 text-body-sm font-body-sm text-on-surface font-bold">{cam.name}</td>
-                      <td className="px-4 py-3 text-mono-data font-mono-data text-text-muted">{cam.ipAddress}</td>
+                      <td className="px-4 py-3 text-mono-data font-mono-data text-text-muted">
+                        <div>{cam.ipAddress}</div>
+                        <div className="text-[10px] text-tertiary mt-0.5 truncate max-w-[200px]" title={cam.rtspUrl}>{cam.rtspUrl || 'N/A'}</div>
+                      </td>
                       <td className="px-4 py-3 text-body-sm font-body-sm text-text-muted">
                         <select 
                           value={cam.groupId || 'none'} 
@@ -163,9 +223,14 @@ export const CameraListManager: React.FC = () => {
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button className="text-text-muted hover:text-primary transition-colors">
-                          <span className="material-symbols-outlined text-[18px]">edit</span>
-                        </button>
+                        <div className="flex justify-end gap-2">
+                          <button onClick={(e) => { e.stopPropagation(); setEditingCamera(cam); }} className="text-text-muted hover:text-primary transition-colors" title="수정">
+                            <span className="material-symbols-outlined text-[18px]">edit</span>
+                          </button>
+                          <button onClick={(e) => handleDelete(e, cam.id)} className="text-text-muted hover:text-danger transition-colors" title="삭제">
+                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -185,15 +250,17 @@ export const CameraListManager: React.FC = () => {
 
       {/* Slide-over Panel for Editing */}
       {editingCamera && (
-        <div className="absolute inset-y-0 right-0 w-96 bg-surface border-l border-border-subtle shadow-2xl flex flex-col z-50 animate-in slide-in-from-right">
+        <>
+          <div className="fixed inset-0 bg-black/50 z-40 transition-opacity" onClick={() => setEditingCamera(null)} />
+          <div className="fixed inset-y-0 right-0 w-96 bg-surface border-l border-border-subtle shadow-2xl flex flex-col z-50 animate-in slide-in-from-right">
           <div className="px-4 py-4 border-b border-border-subtle bg-surface-container-low flex justify-between items-center">
             <h3 className="text-title-sm font-title-sm text-text-primary">카메라 정보 수정</h3>
             <button onClick={() => setEditingCamera(null)} className="text-text-muted hover:text-white">
               <span className="material-symbols-outlined">close</span>
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-            <form id="editForm" onSubmit={handleSaveEdit} className="space-y-4">
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-4">
               <div>
                 <label className="block text-label-caps font-label-caps text-text-muted mb-1">카메라 ID</label>
                 <input disabled type="text" value={editingCamera.id} className="w-full bg-surface-container-highest border border-border-subtle rounded px-3 py-2 text-mono-data text-on-surface opacity-50 cursor-not-allowed" />
@@ -217,6 +284,18 @@ export const CameraListManager: React.FC = () => {
                 />
               </div>
               <div>
+                <label className="block text-label-caps font-label-caps text-text-muted mb-1">RTSP 주소</label>
+                <input 
+                  type="text" 
+                  value={editingCamera.rtspUrl || ''} 
+                  onChange={(e) => setEditingCamera({...editingCamera, rtspUrl: e.target.value})}
+                  className="w-full bg-background border border-border-subtle rounded px-3 py-2 text-mono-data text-on-surface focus:border-primary outline-none mb-1" 
+                />
+                <p className="text-[10px] text-tertiary font-body-sm leading-tight">
+                  💡 프로파일을 변경하시려면 주소 끝의 profile1(메인), profile2(서브) 부분을 직접 수정하세요.
+                </p>
+              </div>
+              <div>
                 <label className="block text-label-caps font-label-caps text-text-muted mb-1">해상도</label>
                 <select 
                   value={editingCamera.resolution}
@@ -227,29 +306,32 @@ export const CameraListManager: React.FC = () => {
                   <option value="QHD">QHD (2560x1440)</option>
                   <option value="FHD">FHD (1920x1080)</option>
                   <option value="HD">HD (1280x720)</option>
+                  <option value="SD">SD (704x480)</option>
+                  <option value="VGA">VGA (640x480)</option>
                 </select>
               </div>
               <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border-subtle">
                 <input 
                   type="checkbox" 
                   id="vlmToggle"
-                  checked={editingCamera.vlmEnabled}
+                  checked={!!editingCamera.vlmEnabled}
                   onChange={(e) => setEditingCamera({...editingCamera, vlmEnabled: e.target.checked})}
-                  className="w-4 h-4 text-primary bg-background border-border-subtle rounded focus:ring-primary focus:ring-offset-background"
+                  className="w-4 h-4 text-primary bg-background border-border-subtle rounded focus:ring-primary focus:ring-offset-background cursor-pointer"
                 />
-                <label htmlFor="vlmToggle" className="text-body-sm text-on-surface cursor-pointer">VLM 실시간 분석 활성화</label>
+                <label htmlFor="vlmToggle" className="text-body-sm text-on-surface cursor-pointer select-none">VLM 실시간 분석 활성화</label>
               </div>
-            </form>
-          </div>
-          <div className="p-4 border-t border-border-subtle bg-surface-container-low flex justify-end gap-2">
-            <button onClick={() => setEditingCamera(null)} className="px-4 py-2 rounded text-body-sm font-bold text-text-muted hover:bg-surface-variant transition-colors">
-              취소
-            </button>
-            <button type="submit" form="editForm" className="px-4 py-2 rounded text-body-sm font-bold bg-primary text-on-primary hover:bg-primary/90 transition-colors">
-              저장
-            </button>
+            </div>
+            <div className="p-4 border-t border-border-subtle bg-surface-container-low flex justify-end gap-2">
+              <button type="button" onClick={() => setEditingCamera(null)} className="px-4 py-2 rounded text-body-sm font-bold text-text-muted hover:bg-surface-variant transition-colors">
+                취소
+              </button>
+              <button type="button" onClick={handleSaveEdit} className="px-4 py-2 rounded text-body-sm font-bold bg-primary text-on-primary hover:bg-primary/90 transition-colors">
+                저장
+              </button>
+            </div>
           </div>
         </div>
+        </>
       )}
     </main>
   );

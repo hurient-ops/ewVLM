@@ -123,7 +123,7 @@ export const GisSmartMap: React.FC = () => {
           <div className="p-4 flex flex-col gap-4">
             {/* Live Mini Feed */}
             <div className="w-full h-32 bg-black border border-[#232C3F] rounded-lg relative overflow-hidden group">
-              <WebRTCPlayer streamUrl={`http://localhost:8889/${(selectedMarkerId || 'cam-01').toLowerCase()}`} />
+              <WebRTCPlayer streamUrl={`http://localhost:8889/${(selectedMarkerId || 'CAM-01')}/`} />
               <div className="absolute bottom-1 right-2 text-[#d2bbff] shadow-sm bg-black/80 px-1 rounded text-[10px] font-mono font-bold">LIVE • 1080p</div>
             </div>
             

@@ -10,6 +10,7 @@ apiAddress: :9997
 # WebRTC settings
 webrtc: yes
 webrtcAddress: :8889
+webrtcAllowOrigin: '*'
 
 # ----------------
 # HLS settings
@@ -26,7 +27,4 @@ rtspAddress: :8554
 # Paths
 paths:
   # Catch-all path for incoming RTMP/RTSP streams
-  all:
-    # Allow anyone to read and publish
-    readUser: any
-    publishUser: any
+  all: {}

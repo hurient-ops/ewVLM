@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import httpx
 import random
 import uuid
 import os
@@ -22,7 +23,7 @@ vlm_bridge = LMStudioVLMBridge()
 
 # Third-party imports (Ensure graceful degradation if not in environment)
 try:
-    from fastapi import FastAPI, HTTPException, BackgroundTasks, status, WebSocket, WebSocketDisconnect
+    from fastapi import FastAPI, HTTPException, BackgroundTasks, status, WebSocket, WebSocketDisconnect, Depends
     from fastapi.middleware.cors import CORSMiddleware
     from pydantic import BaseModel, Field, HttpUrl
     import uvicorn
@@ -59,6 +60,22 @@ class VSSRequest(BaseModel):
     query: str
     limit: int = 5
 
+class CameraCreate(BaseModel):
+    camera_id: str
+    name: str
+    ip_address: str
+    rtsp_url: Optional[str] = None
+    group_id: Optional[str] = None
+    vlm_enabled: bool = True
+    latitude: float = 0.0
+    longitude: float = 0.0
+
+class VideoRecordCreate(BaseModel):
+    camera_id: str
+    start_time: str
+    end_time: str
+    file_path: str
+    event_tags: Optional[List[str]] = []
 
 # Configure logging to match ewVLM enterprise console styling
 logging.basicConfig(
@@ -255,7 +272,6 @@ async def startup_event():
         await conn.run_sync(models.Base.metadata.create_all)
     async with AsyncSessionLocal() as db:
         await crud.seed_db_if_empty(db)
-    await kafka_manager.connect()
     # Populate mock assets
     DATABASE_MOCK["cameras"].append({
         "camera_id": "CCTV-0024-WEST",
@@ -263,6 +279,19 @@ async def startup_event():
         "fov_angle_arc": 90.0,
         "is_active": True
     })
+    
+    # Sync SQLite cameras to MediaMTX
+    async with AsyncSessionLocal() as db:
+        cameras = await crud.get_cameras(db)
+        for cam in cameras:
+            if cam.rtsp_url:
+                try:
+                    async with httpx.AsyncClient() as client:
+                        mediamtx_url = f"http://localhost:9997/v3/config/paths/add/{cam.camera_id}"
+                        payload = {"source": cam.rtsp_url}
+                        await client.post(mediamtx_url, json=payload, timeout=3.0)
+                except Exception as e:
+                    logger.error(f"Failed to sync {cam.camera_id} to MediaMTX on startup: {e}")
 
 # ==============================================================================
 # 4. Background Workers: Simulated DeepStream, VLM, and Blockchain Pipelines
@@ -409,6 +438,84 @@ async def simulate_sop_response(vlm_event_id: str, sop_id: str, operator_id: str
 # ==============================================================================
 # 5. RESTful API Gateway Endpoints
 # ==============================================================================
+
+@app.post("/api/v1/cameras", status_code=status.HTTP_201_CREATED)
+async def create_camera(req: CameraCreate, db: AsyncSession = Depends(get_db)):
+    camera_data = req.dict()
+    db_camera = await crud.create_camera(db, camera_data)
+    
+    # 2. Add to MediaMTX
+    try:
+        async with httpx.AsyncClient() as client:
+            mediamtx_url = f"http://localhost:9997/v3/config/paths/add/{req.camera_id}"
+            payload = {"source": req.rtsp_url or "publisher"}
+            response = await client.post(mediamtx_url, json=payload, timeout=5.0)
+            if response.status_code != 200:
+                logger.warning(f"MediaMTX failed to add path for {req.camera_id}: {response.text}")
+            else:
+                logger.info(f"MediaMTX successfully registered path for {req.camera_id}")
+    except Exception as e:
+        logger.error(f"Failed to communicate with MediaMTX: {e}")
+        
+    return db_camera
+
+@app.get("/api/v1/cameras")
+async def get_cameras(db: AsyncSession = Depends(get_db)):
+    cameras = await crud.get_cameras(db)
+    return cameras
+
+class CameraUpdate(BaseModel):
+    name: Optional[str] = None
+    ip_address: Optional[str] = None
+    rtsp_url: Optional[str] = None
+    group_id: Optional[str] = None
+    vlm_enabled: Optional[bool] = None
+
+@app.put("/api/v1/cameras/{camera_id}")
+async def update_camera(camera_id: str, req: CameraUpdate, db: AsyncSession = Depends(get_db)):
+    update_data = {k: v for k, v in req.model_dump().items() if v is not None}
+    db_camera = await crud.update_camera(db, camera_id, update_data)
+    if not db_camera:
+        raise HTTPException(status_code=404, detail="Camera not found")
+        
+    # Sync with MediaMTX if rtsp_url was updated
+    if req.rtsp_url is not None:
+        try:
+            async with httpx.AsyncClient() as client:
+                mediamtx_url = f"http://localhost:9997/v3/config/paths/edit/{camera_id}"
+                payload = {"source": req.rtsp_url}
+                # Use PUT or PATCH, depending on MTX API for edit. 
+                # Actually, MTX uses PATCH to edit. Wait, if it doesn't exist, we should ADD it. 
+                # Safe approach: Delete then Add, or just Add again?
+                # Using /v3/config/paths/patch/{name}
+                res = await client.patch(f"http://localhost:9997/v3/config/paths/patch/{camera_id}", json=payload, timeout=5.0)
+                if res.status_code == 404: # if path doesn't exist, try adding it
+                    await client.post(f"http://localhost:9997/v3/config/paths/add/{camera_id}", json=payload, timeout=5.0)
+        except Exception as e:
+            logger.error(f"Failed to update MediaMTX for {camera_id}: {e}")
+            
+    return db_camera
+
+@app.delete("/api/v1/cameras/{camera_id}")
+async def delete_camera(camera_id: str, db: AsyncSession = Depends(get_db)):
+    db_camera = await crud.delete_camera(db, camera_id)
+    if not db_camera:
+        raise HTTPException(status_code=404, detail="Camera not found")
+        
+    # Delete from MediaMTX
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.delete(f"http://localhost:9997/v3/config/paths/delete/{camera_id}", timeout=5.0)
+    except Exception as e:
+        logger.error(f"Failed to delete {camera_id} from MediaMTX: {e}")
+        
+    return {"status": "success"}
+
+@app.get("/api/v1/records")
+async def get_records(camera_id: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+    records = await crud.get_video_records(db, camera_id=camera_id)
+    return records
+
 @app.post("/api/v1/streams/link", status_code=status.HTTP_201_CREATED)
 async def link_stream(req: StreamLinkRequest):
     """

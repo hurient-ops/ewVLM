@@ -21,9 +21,21 @@ class Camera(Base):
     camera_id = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, nullable=False)
     ip_address = Column(String, nullable=False)
-    latitude = Column(Float, nullable=False)
-    longitude = Column(Float, nullable=False)
+    rtsp_url = Column(String, nullable=True)
+    group_id = Column(String, nullable=True)
+    vlm_enabled = Column(Integer, default=1) # 1 for True, 0 for False
+    latitude = Column(Float, nullable=False, default=0.0)
+    longitude = Column(Float, nullable=False, default=0.0)
     is_active = Column(Integer, default=1)
+
+class VideoRecord(Base):
+    __tablename__ = "video_records"
+    id = Column(Integer, primary_key=True, index=True)
+    camera_id = Column(String, index=True, nullable=False)
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
+    file_path = Column(String, nullable=False)
+    event_tags = Column(JSON, nullable=True)
 
 class User(Base):
     __tablename__ = "users"

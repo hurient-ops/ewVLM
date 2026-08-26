@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import axios from 'axios';
 
 export interface CameraSlot {
   slotId: number;
@@ -24,6 +25,7 @@ export interface CameraDevice {
   status: 'online' | 'offline' | 'warning';
   vlmEnabled: boolean;
   groupId: string | null;
+  rtspUrl?: string; // Optional since it might be null initially
   resolution: string;
   fps: number;
 }
@@ -42,10 +44,13 @@ interface CameraStoreState {
   // New Camera List properties
   groups: CameraGroup[];
   cameras: CameraDevice[];
+  fetchCameras: () => Promise<void>;
   addGroup: (group: CameraGroup) => void;
-  updateCamera: (id: string, data: Partial<CameraDevice>) => void;
-  deleteCamera: (id: string) => void;
-  changeCameraGroup: (cameraId: string, newGroupId: string | null) => void;
+  deleteGroup: (groupId: string) => Promise<void>;
+  addCamera: (camera: any) => Promise<void>;
+  updateCamera: (id: string, data: Partial<CameraDevice>) => Promise<void>;
+  deleteCamera: (id: string) => Promise<void>;
+  changeCameraGroup: (cameraId: string, groupId: string | null) => Promise<void>;
 }
 
 const generateInitialSlots = (): CameraSlot[] => {
@@ -56,21 +61,12 @@ const generateInitialSlots = (): CameraSlot[] => {
   return slots;
 };
 
-// 초기 Mock 데이터
+// 그룹 초기 데이터 (향후 API 연동 예정)
 const initialGroups: CameraGroup[] = [
   { id: 'g-1', name: '섹터 1 (본동 로비)' },
   { id: 'g-2', name: '섹터 2 (지하 주차장)' },
   { id: 'g-3', name: '섹터 3 (자재 창고)' },
   { id: 'g-4', name: '섹터 4 (외곽 펜스)' }
-];
-
-const initialCameras: CameraDevice[] = [
-  { id: 'CAM-01', name: '로비 메인 게이트', ipAddress: '192.168.10.101', macAddress: '00:1A:2B:3C:01', status: 'online', vlmEnabled: true, groupId: 'g-1', resolution: '4K', fps: 30 },
-  { id: 'CAM-02', name: '로비 인포데스크', ipAddress: '192.168.10.102', macAddress: '00:1A:2B:3C:02', status: 'online', vlmEnabled: true, groupId: 'g-1', resolution: 'FHD', fps: 30 },
-  { id: 'CAM-03', name: '주차장 B1 A구역', ipAddress: '192.168.10.103', macAddress: '00:1A:2B:3C:03', status: 'offline', vlmEnabled: false, groupId: 'g-2', resolution: 'FHD', fps: 15 },
-  { id: 'CAM-04', name: '자재 창고 입구', ipAddress: '192.168.10.104', macAddress: '00:1A:2B:3C:04', status: 'warning', vlmEnabled: true, groupId: 'g-3', resolution: '4K', fps: 30 },
-  { id: 'CAM-05', name: '서문 펜스', ipAddress: '192.168.10.105', macAddress: '00:1A:2B:3C:05', status: 'online', vlmEnabled: true, groupId: 'g-4', resolution: '4K', fps: 15 },
-  { id: 'CAM-06', name: '신규 설치 (미배정)', ipAddress: '192.168.10.106', macAddress: '00:1A:2B:3C:06', status: 'online', vlmEnabled: false, groupId: null, resolution: 'FHD', fps: 30 },
 ];
 
 export const useCameraStore = create<CameraStoreState>((set) => ({
@@ -92,15 +88,109 @@ export const useCameraStore = create<CameraStoreState>((set) => ({
   })),
 
   groups: initialGroups,
-  cameras: initialCameras,
+  cameras: [],
+  fetchCameras: async () => {
+    try {
+      const response = await axios.get('http://localhost:8000/api/v1/cameras');
+      const data = response.data.map((c: any) => ({
+        id: c.camera_id,
+        name: c.name,
+        ipAddress: c.ip_address,
+        macAddress: '00:00:00:00:00:00', // Mock
+        status: c.is_active ? 'online' : 'offline',
+        vlmEnabled: !!c.vlm_enabled, // Cast to boolean
+        groupId: c.group_id,
+        rtspUrl: c.rtsp_url, // Added rtspUrl so it can be edited
+        resolution: 'FHD',
+        fps: 30
+      }));
+      set({ cameras: data });
+    } catch (e) {
+      console.error("Failed to fetch cameras:", e);
+    }
+  },
   addGroup: (group) => set((state) => ({ groups: [...state.groups, group] })),
-  updateCamera: (id, data) => set((state) => ({
-    cameras: state.cameras.map((cam) => cam.id === id ? { ...cam, ...data } : cam)
-  })),
-  deleteCamera: (id) => set((state) => ({
-    cameras: state.cameras.filter((cam) => cam.id !== id)
-  })),
-  changeCameraGroup: (cameraId, newGroupId) => set((state) => ({
-    cameras: state.cameras.map((cam) => cam.id === cameraId ? { ...cam, groupId: newGroupId } : cam)
-  })),
+  deleteGroup: async (groupId) => {
+    // 1. Find cameras that need to be updated
+    const state = useCameraStore.getState();
+    const camerasToUpdate = state.cameras.filter(cam => cam.groupId === groupId);
+
+    // 2. Optimistic UI update
+    set((s) => {
+      const updatedCameras = s.cameras.map(cam => 
+        cam.groupId === groupId ? { ...cam, groupId: null } : cam
+      );
+      return { 
+        groups: s.groups.filter(g => g.id !== groupId),
+        cameras: updatedCameras 
+      };
+    });
+
+    // 3. Persist to API
+    try {
+      await Promise.all(
+        camerasToUpdate.map(cam => 
+          axios.put(`http://localhost:8000/api/v1/cameras/${cam.id}`, { group_id: null })
+        )
+      );
+    } catch (e) {
+      console.error("Failed to update cameras on group delete:", e);
+      // Rollback on failure
+      await useCameraStore.getState().fetchCameras();
+    }
+  },
+  addCamera: async (cameraData) => {
+    try {
+      await axios.post('http://localhost:8000/api/v1/cameras', {
+        camera_id: cameraData.id,
+        name: cameraData.name,
+        ip_address: cameraData.ipAddress,
+        rtsp_url: cameraData.rtspUrl,
+        group_id: cameraData.groupId,
+        vlm_enabled: cameraData.vlmEnabled
+      });
+      // Fetch again to update state
+      await useCameraStore.getState().fetchCameras();
+    } catch (e) {
+      console.error("Failed to add camera:", e);
+      throw e;
+    }
+  },
+  updateCamera: async (id, data) => {
+    try {
+      const payload: any = {};
+      if (data.name !== undefined) payload.name = data.name;
+      if (data.ipAddress !== undefined) payload.ip_address = data.ipAddress;
+      if (data.rtspUrl !== undefined) payload.rtsp_url = data.rtspUrl;
+      if (data.groupId !== undefined) payload.group_id = data.groupId;
+      if (data.vlmEnabled !== undefined) payload.vlm_enabled = data.vlmEnabled;
+      
+      await axios.put(`http://localhost:8000/api/v1/cameras/${id}`, payload);
+      await useCameraStore.getState().fetchCameras();
+    } catch (e) {
+      console.error("Failed to update camera:", e);
+    }
+  },
+  deleteCamera: async (id) => {
+    try {
+      await axios.delete(`http://localhost:8000/api/v1/cameras/${id}`);
+      await useCameraStore.getState().fetchCameras();
+    } catch (e) {
+      console.error("Failed to delete camera:", e);
+    }
+  },
+  changeCameraGroup: async (cameraId, newGroupId) => {
+    // 1. Optimistic update
+    set((state) => ({
+      cameras: state.cameras.map((cam) => cam.id === cameraId ? { ...cam, groupId: newGroupId } : cam)
+    }));
+    // 2. Persist to API
+    try {
+      await axios.put(`http://localhost:8000/api/v1/cameras/${cameraId}`, { group_id: newGroupId });
+    } catch (e) {
+      console.error("Failed to change camera group:", e);
+      // Rollback on failure
+      await useCameraStore.getState().fetchCameras();
+    }
+  },
 }));

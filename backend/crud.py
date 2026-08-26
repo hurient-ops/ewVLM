@@ -41,6 +41,52 @@ async def get_cameras(db: AsyncSession):
     result = await db.execute(select(models.Camera))
     return result.scalars().all()
 
+async def create_camera(db: AsyncSession, camera_data: dict):
+    db_camera = models.Camera(**camera_data)
+    db.add(db_camera)
+    await db.commit()
+    await db.refresh(db_camera)
+    return db_camera
+
+async def update_camera(db: AsyncSession, camera_id: str, camera_data: dict):
+    result = await db.execute(select(models.Camera).where(models.Camera.camera_id == camera_id))
+    db_camera = result.scalars().first()
+    if db_camera:
+        for key, value in camera_data.items():
+            setattr(db_camera, key, value)
+        await db.commit()
+        await db.refresh(db_camera)
+    return db_camera
+
+async def delete_camera(db: AsyncSession, camera_id: str):
+    result = await db.execute(select(models.Camera).where(models.Camera.camera_id == camera_id))
+    db_camera = result.scalars().first()
+    if db_camera:
+        await db.delete(db_camera)
+        await db.commit()
+    return db_camera
+
+async def create_video_record(db: AsyncSession, record_data: dict):
+    db_record = models.VideoRecord(
+        camera_id=record_data.get("camera_id"),
+        start_time=datetime.datetime.fromisoformat(record_data.get("start_time").replace("Z", "+00:00")),
+        end_time=datetime.datetime.fromisoformat(record_data.get("end_time").replace("Z", "+00:00")),
+        file_path=record_data.get("file_path"),
+        event_tags=record_data.get("event_tags", [])
+    )
+    db.add(db_record)
+    await db.commit()
+    await db.refresh(db_record)
+    return db_record
+
+async def get_video_records(db: AsyncSession, camera_id: str = None, limit: int = 50):
+    stmt = select(models.VideoRecord).order_by(desc(models.VideoRecord.start_time))
+    if camera_id:
+        stmt = stmt.where(models.VideoRecord.camera_id == camera_id)
+    result = await db.execute(stmt.limit(limit))
+    return result.scalars().all()
+
+
 # User Operations
 async def create_user(db: AsyncSession, user_data: dict) -> models.User:
     new_user = models.User(

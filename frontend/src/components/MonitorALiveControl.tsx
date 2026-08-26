@@ -12,7 +12,11 @@ const MOCK_CAMERAS = [
 ];
 
 export const MonitorALiveControl: React.FC = () => {
-  const { slots, activeLayout, setLayout, updateSlotStatus } = useCameraStore();
+  const { slots, activeLayout, setLayout, updateSlotStatus, cameras, groups, fetchCameras } = useCameraStore();
+
+  React.useEffect(() => {
+    fetchCameras();
+  }, [fetchCameras]);
 
   const handleDragStart = (e: React.DragEvent, cameraId: string, cameraName: string) => {
     e.dataTransfer.setData('cameraId', cameraId);
@@ -47,6 +51,17 @@ export const MonitorALiveControl: React.FC = () => {
     }
   };
 
+  const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (!document.fullscreenElement) {
+      el.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
   return (
     <div className="flex flex-1 h-full">
       {/* SideNavBar */}
@@ -57,7 +72,7 @@ export const MonitorALiveControl: React.FC = () => {
           </div>
           <div>
             <h2 className="text-[16px] font-semibold text-on-surface whitespace-nowrap">자산 탐색기</h2>
-            <p className="text-[12px] text-text-muted mt-1 font-mono">{MOCK_CAMERAS.length} 활성 채널</p>
+            <p className="text-[12px] text-text-muted mt-1 font-mono">{cameras.length} 활성 채널</p>
           </div>
         </div>
         
@@ -66,7 +81,7 @@ export const MonitorALiveControl: React.FC = () => {
           <div className="px-4 py-2 text-xs text-text-muted mb-2">
             💡 팁: 카메라를 우측 빈 슬롯으로 드래그하세요.
           </div>
-          {MOCK_CAMERAS.map((cam) => (
+          {cameras.map((cam) => (
             <div 
               key={cam.id} 
               draggable 
@@ -75,12 +90,15 @@ export const MonitorALiveControl: React.FC = () => {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full bg-[#4edea3] shadow-[0_0_4px_#4edea3]`}></span>
-                  <span className="font-mono text-[12px] font-bold text-white">{cam.id}</span>
+                  <span className={`w-2 h-2 rounded-full ${cam.isActive !== false ? 'bg-[#4edea3] shadow-[0_0_4px_#4edea3]' : 'bg-red-500 shadow-[0_0_4px_#f44336]'}`}></span>
+                  <span className="font-bold text-[13px] text-white truncate max-w-[150px]" title={cam.name}>{cam.name}</span>
                 </div>
                 <span className="material-symbols-outlined text-[16px]">drag_indicator</span>
               </div>
-              <span className="text-[12px] truncate">{cam.name}</span>
+              <span className="text-[11px] truncate flex items-center gap-1">
+                <span className="material-symbols-outlined text-[12px]">folder</span>
+                {groups.find(g => g.id === cam.groupId)?.name || '미배정 그룹'}
+              </span>
             </div>
           ))}
         </div>
@@ -101,19 +119,19 @@ export const MonitorALiveControl: React.FC = () => {
               key={slot.slotId}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => handleDrop(e, slot.slotId)}
+              onDoubleClick={handleDoubleClick}
               className={`relative bg-[#121724] border-2 ${slot.status === 'active' ? 'border-[#7C3AED] shadow-[0_0_15px_rgba(124,58,237,0.4)]' : 'border-[#232C3F] border-dashed'} flex items-center justify-center overflow-hidden transition-all`}
             >
               {slot.cameraId ? (
                 <>
                   <div className="absolute inset-0 bg-black flex items-center justify-center overflow-hidden">
-                    <WebRTCPlayer streamUrl={`http://localhost:8890/stream/${slot.cameraId.toLowerCase()}`} />
+                    <WebRTCPlayer streamUrl={`http://localhost:8889/${slot.cameraId}/`} />
                   </div>
                   <div className="absolute top-2 left-2 bg-[rgba(18,23,36,0.8)] px-2 py-1 rounded text-[12px] text-white z-10 flex flex-col gap-1">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-[#4edea3]"></span>
-                      <span className="font-bold">CH {String(slot.slotId).padStart(2, '0')} | {slot.cameraId}</span>
+                      <span className="font-bold">CH {String(slot.slotId).padStart(2, '0')} | {slot.cameraName}</span>
                     </div>
-                    <span className="text-[10px] text-gray-400">{slot.cameraName}</span>
                   </div>
                   {/* Mock PTZ Control overlay */}
                   <div className="absolute bottom-4 right-4 bg-[rgba(18,23,36,0.8)] backdrop-blur p-2 rounded-full flex gap-2 border border-[#232C3F]">
