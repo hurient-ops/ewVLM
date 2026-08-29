@@ -13,6 +13,14 @@ export const apiClient = axios.create({
 });
 
 export const API = {
+  exportPrivacyVideo: async (config: any) => {
+    const response = await apiClient.post('/api/v1/video/export/masking', config);
+    return response.data;
+  },
+  getBiStats: async () => {
+    const response = await apiClient.get('/api/v1/bi/stats');
+    return response.data;
+  },
   fetchEvents: async (limit: number = 50) => {
     const response = await apiClient.get(`/api/v1/events?limit=${limit}`);
     return response.data;
@@ -45,6 +53,48 @@ export const API = {
     });
     return response.data;
   },
+  transformCoordinate: async (cameraId: string, x: number, y: number, altitude: number, tilt: number, focalLength: number) => {
+    const response = await apiClient.post(`/api/v1/cameras/${cameraId}/transform`, {
+      x,
+      y,
+      altitude,
+      tilt,
+      focal_length: focalLength
+    });
+    return response.data;
+  },
+  getTopology: async () => {
+    const response = await apiClient.get('/api/v1/infra/topology');
+    return response.data;
+  },
+  healNode: async (nodeId: string, action: string) => {
+    const response = await apiClient.post('/api/v1/infra/heal', { node_id: nodeId, action });
+    return response.data;
+  },
+  startLoraTraining: async (target: string) => {
+    const response = await apiClient.post('/api/v1/mlops/train/lora', { action: 'START', target });
+    return response.data;
+  },
+  deployPrompt: async (target: string) => {
+    const response = await apiClient.post('/api/v1/mlops/deploy/prompt', { action: 'DEPLOY', target });
+    return response.data;
+  },
+  syncDeviceConfig: async (target: string = 'all') => {
+    const response = await apiClient.post('/api/v1/devices/config/sync', { action: 'SYNC', target });
+    return response.data;
+  },
+  dispatchAlert: async (alertId: string, action: string, target: string, message: string, level: string) => {
+    const response = await apiClient.post(`/api/v1/alerts/${alertId}/dispatch`, { action, target, message, level });
+    return response.data;
+  },
+  exportForensicVideo: async (cameras: string[], startTime: string, endTime: string, includeMetadata: boolean) => {
+    const response = await apiClient.post('/api/v1/records/export', { cameras, startTime, endTime, includeMetadata });
+    return response.data;
+  },
+  getAuditLogs: async (limit: number = 50) => {
+    const response = await apiClient.get(`/api/v1/audit/logs?limit=${limit}`);
+    return response.data;
+  },
   signup: async (username: string, password: string, role: string = 'user') => {
     const response = await apiClient.post('/api/v1/auth/signup', { username, password, role });
     return response.data;
@@ -64,6 +114,45 @@ export const API = {
   updateUserRole: async (userId: number, role: string) => {
     const response = await apiClient.put(`/api/v1/users/${userId}/role`, { role });
     return response.data;
+  },
+  submitEventFeedback: async (escalationId: string, isTruePositive: boolean, notes: string = "") => {
+    const response = await apiClient.post(`/api/v1/events/${escalationId}/feedback`, {
+      is_true_positive: isTruePositive,
+      notes: notes
+    });
+    return response.data;
+  },
+  generateSopRule: async (prompt: string) => {
+    const response = await apiClient.post('/api/v1/sop/rules/generate', {
+      natural_language_prompt: prompt
+    });
+    return response.data;
+  },
+  simulateEvent: async (ruleName: string, targetObject: string) => {
+    const response = await apiClient.post('/api/v1/events/simulate', {
+      rule_name: ruleName,
+      target_object: targetObject
+    });
+    return response.data;
+  },
+  broadcastAudio: async (zone: string, message: string) => {
+    const response = await apiClient.post('/api/v1/audio/broadcast', {
+      zone,
+      message
+    });
+    return response.data;
+  },
+  getUsers: async () => {
+    const response = await apiClient.get('/api/v1/users');
+    return response.data.users;
+  },
+  updateUserRole: async (userId: number, role: string) => {
+    const response = await apiClient.put(`/api/v1/users/${userId}/role`, { role });
+    return response.data;
+  },
+  getAuditLogs: async (limit: number = 100) => {
+    const response = await apiClient.get('/api/v1/audit/logs', { params: { limit } });
+    return response.data.logs;
   }
 };
 

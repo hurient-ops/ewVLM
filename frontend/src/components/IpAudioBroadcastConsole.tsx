@@ -1,12 +1,24 @@
 import React, { useState } from 'react';
+import { API } from '../api/client';
 
 export const IpAudioBroadcastConsole: React.FC = () => {
   const [isPttActive, setIsPttActive] = useState(false);
   const [ttsMessage, setTtsMessage] = useState('');
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
 
-  const handleBroadcast = () => {
-    console.log('Broadcasting message:', ttsMessage);
-    setTtsMessage('');
+  const handleBroadcast = async () => {
+    if (!ttsMessage.trim()) return;
+    setIsBroadcasting(true);
+    try {
+      await API.broadcastAudio('Z-A-01 정문 외 1곳', ttsMessage);
+      alert('✅ 방송 송출이 완료되었습니다.');
+      setTtsMessage('');
+    } catch (err) {
+      console.error(err);
+      alert('방송 송출에 실패했습니다.');
+    } finally {
+      setIsBroadcasting(false);
+    }
   };
 
   return ( <>
@@ -160,11 +172,11 @@ export const IpAudioBroadcastConsole: React.FC = () => {
 <div className="w-1/3 border-r border-border-subtle p-3 overflow-y-auto custom-scrollbar bg-surface-container-low">
 <div className="text-osd-label font-osd-label text-text-muted mb-2">빠른 시나리오</div>
 <div className="space-y-2">
-<button className="w-full text-left p-2 bg-surface-container hover:bg-surface-container-high border border-border-subtle rounded text-body-sm font-body-sm text-text-primary transition-colors flex items-center justify-between"> 대피 안내 <span className="material-symbols-outlined text-danger text-sm">play_arrow</span>
+<button onClick={() => setTtsMessage('현재 건물에 비상 상황이 발생했습니다. 즉시 안전한 곳으로 대피하시기 바랍니다.')} className="w-full text-left p-2 bg-surface-container hover:bg-surface-container-high border border-border-subtle rounded text-body-sm font-body-sm text-text-primary transition-colors flex items-center justify-between"> 대피 안내 <span className="material-symbols-outlined text-danger text-sm">play_arrow</span>
 </button>
-<button className="w-full text-left p-2 bg-surface-container hover:bg-surface-container-high border border-border-subtle rounded text-body-sm font-body-sm text-text-primary transition-colors flex items-center justify-between"> 침입자 경고 <span className="material-symbols-outlined text-warning text-sm">play_arrow</span>
+<button onClick={() => setTtsMessage('제한 구역입니다. 즉시 이탈하지 않으면 보안 요원이 출동합니다.')} className="w-full text-left p-2 bg-surface-container hover:bg-surface-container-high border border-border-subtle rounded text-body-sm font-body-sm text-text-primary transition-colors flex items-center justify-between"> 침입자 경고 <span className="material-symbols-outlined text-warning text-sm">play_arrow</span>
 </button>
-<button className="w-full text-left p-2 bg-surface-container hover:bg-surface-container-high border border-border-subtle rounded text-body-sm font-body-sm text-text-primary transition-colors flex items-center justify-between"> 교대 알림 <span className="material-symbols-outlined text-primary text-sm">play_arrow</span>
+<button onClick={() => setTtsMessage('야간 경계 근무 교대 시간입니다. 각 초소는 근무 준비를 하십시오.')} className="w-full text-left p-2 bg-surface-container hover:bg-surface-container-high border border-border-subtle rounded text-body-sm font-body-sm text-text-primary transition-colors flex items-center justify-between"> 교대 알림 <span className="material-symbols-outlined text-primary text-sm">play_arrow</span>
 </button>
 </div>
 </div>
@@ -179,10 +191,13 @@ export const IpAudioBroadcastConsole: React.FC = () => {
 <div className="flex justify-between items-center mt-3">
 <span className="text-mono-data font-mono-data text-text-muted">대상: 섹터 알파 (북쪽) • 2개 구역</span>
 <button 
-  className="py-2 px-6 bg-primary-container text-white text-body-sm font-bold rounded flex items-center gap-2 hover:bg-inverse-primary transition-colors shadow-[0_4px_12px_rgba(124,58,237,0.3)]"
+  className="py-2 px-6 bg-primary-container text-white text-body-sm font-bold rounded flex items-center gap-2 hover:bg-inverse-primary transition-colors shadow-[0_4px_12px_rgba(124,58,237,0.3)] disabled:opacity-50"
   onClick={handleBroadcast}
+  disabled={isBroadcasting || !ttsMessage.trim()}
 >
-<span className="material-symbols-outlined text-sm">send</span> 방송 송출 </button>
+{isBroadcasting ? <span className="material-symbols-outlined animate-spin text-sm">sync</span> : <span className="material-symbols-outlined text-sm">send</span>}
+{isBroadcasting ? '송출 중...' : '방송 송출'} 
+</button>
 </div>
 </div>
 </div>

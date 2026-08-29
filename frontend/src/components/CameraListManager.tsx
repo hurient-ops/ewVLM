@@ -22,9 +22,9 @@ export const CameraListManager: React.FC = () => {
     return cameras.filter(cam => {
       const matchGroup = selectedGroupId === 'all' || cam.groupId === selectedGroupId || (selectedGroupId === 'none' && !cam.groupId);
       const matchSearch = 
-        cam.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        cam.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        cam.ipAddress.includes(searchQuery);
+        (cam.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (cam.id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (cam.ipAddress || '').includes(searchQuery);
       return matchGroup && matchSearch;
     });
   }, [cameras, selectedGroupId, searchQuery]);
@@ -146,7 +146,7 @@ export const CameraListManager: React.FC = () => {
                 >
                   <span className="material-symbols-outlined text-[18px]">folder_off</span>
                   미배정
-                  <span className="ml-auto text-xs text-text-muted">{cameras.filter(c => c.groupId === null).length}</span>
+                  <span className="ml-auto text-xs text-text-muted">{cameras.filter(c => !c.groupId).length}</span>
                 </button>
               </li>
             </ul>

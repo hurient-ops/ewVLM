@@ -1,11 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useEventLogStore } from '../store/useEventLogStore';
+import axios from 'axios';
 
 export const MultiChannelSyncPlayback: React.FC = () => { 
   const [progress, setProgress] = useState(65);
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportUrl, setExportUrl] = useState<string | null>(null);
   const { logs } = useEventLogStore();
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([null, null, null, null]);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    setExportUrl(null);
+    try {
+      const response = await API.exportForensicVideo(['CAM-01', 'CAM-02', 'CAM-03', 'CAM-04'], '14:00:00', '14:30:00', true);
+      if (response.status === 'SUCCESS') {
+        setExportUrl(response.download_url);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
@@ -16,11 +37,50 @@ export const MultiChannelSyncPlayback: React.FC = () => {
   };
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setProgress(Number(e.target.value));
+    const newProgress = Number(e.target.value);
+    setProgress(newProgress);
+    videoRefs.current.forEach(v => {
+      if (v && v.duration) {
+        v.currentTime = (newProgress / 100) * v.duration;
+      }
+    });
   };
 
-  const handleScrubStart = () => setIsScrubbing(true);
-  const handleScrubEnd = () => setIsScrubbing(false);
+  const handleScrubStart = () => {
+    setIsScrubbing(true);
+    if (isPlaying) {
+      videoRefs.current.forEach(v => v?.pause());
+    }
+  };
+  const handleScrubEnd = () => {
+    setIsScrubbing(false);
+    if (isPlaying) {
+      videoRefs.current.forEach(v => v?.play());
+    }
+  };
+
+  const togglePlay = () => {
+    const nextPlay = !isPlaying;
+    setIsPlaying(nextPlay);
+    videoRefs.current.forEach(v => {
+      if (v) {
+        nextPlay ? v.play() : v.pause();
+      }
+    });
+  };
+
+  useEffect(() => {
+    let interval: any;
+    if (isPlaying) {
+      interval = setInterval(() => {
+        const v = videoRefs.current[0];
+        if (v && v.duration) {
+          setProgress((v.currentTime / v.duration) * 100);
+        }
+      }, 500);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying]);
 
   // 시뮬레이션용 시간 문자열 포맷팅 (줌 레벨에 따라 초 단위까지 표시)
   const formatTime = (percent: number, showSeconds = false) => {
@@ -50,7 +110,13 @@ export const MultiChannelSyncPlayback: React.FC = () => {
       <div className="grid grid-cols-2 grid-rows-2 gap-2 flex-1 min-h-0 bg-[#121724] p-2 rounded border border-[#232C3F]">
         {/* CH 1 */}
         <div className={`relative w-full h-full rounded overflow-hidden bg-black border border-[#232C3F] transition-opacity duration-200 ${isScrubbing ? 'opacity-70' : 'opacity-100'}`}>
-          <div className="absolute inset-0 bg-cover bg-center opacity-60" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAE92JBNpin3x35y4mN51JHEfhWnPvnrDET_t781BidPY1uW22zAVJLqZOqEkM43vOGGDd1cz5ZUGkmki9j8QHD6EK3O41CAvii8SEYkte5RwCrvlgjjqmnWBZq6-xre_vum6cu5T7GTTcOd6_XOKIB1DGCWnkxLP9WP6naTS0qTGvGSVpaswq7S2yB4bJdfLwCGTV8DEbUgbVxpbagy6uG9tVw6DA1YevJBX_EWZRJ1a4Vv_lJYvKhYw')" }}></div>
+          <video 
+            ref={el => videoRefs.current[0] = el}
+            src="http://localhost:8000/api/v1/records/demo/stream" 
+            className="absolute inset-0 w-full h-full object-cover opacity-60" 
+            muted
+            loop
+          />
           {isScrubbing && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40">
               <span className="material-symbols-outlined text-white text-5xl animate-pulse">fast_forward</span>
@@ -72,7 +138,13 @@ export const MultiChannelSyncPlayback: React.FC = () => {
 
         {/* CH 2 */}
         <div className={`relative w-full h-full rounded overflow-hidden bg-black border border-[#232C3F] transition-opacity duration-200 ${isScrubbing ? 'opacity-70' : 'opacity-100'}`}>
-          <div className="absolute inset-0 bg-cover bg-center opacity-60" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCOovSK6T3QufP9Sww5APta8jZNN-WpAOPFQWK-FN09ygk6nDLuKTkjGW8h33A1c445oQEBPlN0ib9V9glNdGwFMuep3upWZoiynxk2BTS6mYzOzSPCwGIDtakAOkLOisaiqff_sF3KtZb8zlCR-efYgYH6XwSf6sGrjitOPnXwuX_mnTS0U0s9GN3S8GZKulfKH5wtTAwMFIugelq1ylWSz6zKVLfnSux3OHQ1ejWw3rbnVTcu0aochA')" }}></div>
+          <video 
+            ref={el => videoRefs.current[1] = el}
+            src="http://localhost:8000/api/v1/records/demo/stream" 
+            className="absolute inset-0 w-full h-full object-cover opacity-60" 
+            muted
+            loop
+          />
           {isScrubbing && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40">
               <span className="material-symbols-outlined text-white text-5xl animate-pulse">fast_forward</span>
@@ -131,8 +203,8 @@ export const MultiChannelSyncPlayback: React.FC = () => {
             <button className="text-gray-400 hover:text-white transition-colors" title="이전 프레임">
               <span className="material-symbols-outlined text-3xl">skip_previous</span>
             </button>
-            <button className="w-14 h-14 rounded-full bg-[#7c3aed] text-white flex items-center justify-center hover:bg-[#6d28d9] transition-colors shadow-[0_0_15px_rgba(124,58,237,0.4)]">
-              <span className="material-symbols-outlined text-4xl">play_arrow</span>
+            <button onClick={togglePlay} className="w-14 h-14 rounded-full bg-[#7c3aed] text-white flex items-center justify-center hover:bg-[#6d28d9] transition-colors shadow-[0_0_15px_rgba(124,58,237,0.4)]">
+              <span className="material-symbols-outlined text-4xl">{isPlaying ? 'pause' : 'play_arrow'}</span>
             </button>
             <button className="text-gray-400 hover:text-white transition-colors" title="다음 프레임">
               <span className="material-symbols-outlined text-3xl">skip_next</span>
@@ -147,7 +219,11 @@ export const MultiChannelSyncPlayback: React.FC = () => {
             <button className="p-2 border border-[#232C3F] rounded text-gray-400 hover:text-white hover:bg-[#31343f] transition-colors" title="이벤트 마크">
               <span className="material-symbols-outlined text-xl">bookmark</span>
             </button>
-            <button className="p-2 border border-[#232C3F] rounded text-gray-400 hover:text-white hover:bg-[#31343f] transition-colors" title="클립 내보내기">
+            <button 
+              className="p-2 border border-[#232C3F] rounded text-gray-400 hover:text-white hover:bg-[#31343f] transition-colors" 
+              title="클립 내보내기"
+              onClick={() => setShowExportModal(true)}
+            >
               <span className="material-symbols-outlined text-xl">download</span>
             </button>
           </div>
@@ -238,5 +314,77 @@ export const MultiChannelSyncPlayback: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="absolute inset-0 bg-black/80 z-50 flex items-center justify-center">
+          <div className="bg-[#121724] border border-[#232C3F] rounded-lg p-6 w-[500px] shadow-2xl">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[#d2bbff]">movie</span>
+              포렌식 영상 내보내기 (Export)
+            </h2>
+            <div className="flex flex-col gap-4 mb-6 text-gray-300">
+              <p className="text-sm">선택한 다채널 영상과 VLM 메타데이터를 병합하여 다운로드합니다.</p>
+              <div className="bg-[#0b0e17] p-4 rounded border border-[#232C3F] flex flex-col gap-2 font-mono text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">포함 채널:</span>
+                  <span>CH 1, 2, 3, 4</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">시간 범위:</span>
+                  <span className="text-green-400">14:00:00 ~ 14:30:00</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">VLM 마커:</span>
+                  <span className="text-[#d2bbff]">포함 (ON)</span>
+                </div>
+              </div>
+              {isExporting && (
+                <div className="flex flex-col gap-2 mt-2">
+                  <span className="text-sm text-yellow-400 animate-pulse">영상 병합 및 인코딩 중...</span>
+                  <div className="w-full bg-[#232C3F] h-2 rounded-full overflow-hidden">
+                    <div className="bg-[#d2bbff] h-full animate-[progress_2.5s_ease-in-out_forwards]" style={{ width: '0%' }}>
+                      <style>{`
+                        @keyframes progress {
+                          0% { width: 0%; }
+                          100% { width: 100%; }
+                        }
+                      `}</style>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {exportUrl && (
+                <div className="mt-2 p-3 bg-green-500/10 border border-green-500/50 rounded flex items-center justify-between text-green-400">
+                  <span>✅ 병합 완료</span>
+                  <a href="#" className="font-bold underline text-white hover:text-green-300 transition-colors">
+                    MP4 다운로드
+                  </a>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-3">
+              <button 
+                className="px-4 py-2 rounded font-bold text-gray-400 hover:text-white hover:bg-[#31343f] transition-colors"
+                onClick={() => {
+                  setShowExportModal(false);
+                  setExportUrl(null);
+                  setIsExporting(false);
+                }}
+              >
+                닫기
+              </button>
+              <button 
+                className={`px-4 py-2 rounded font-bold transition-colors flex items-center gap-2 ${isExporting || exportUrl ? 'bg-[#31343f] text-gray-500 cursor-not-allowed' : 'bg-[#7c3aed] text-white hover:bg-[#6d28d9] shadow-[0_0_10px_rgba(124,58,237,0.4)]'}`}
+                onClick={handleExport}
+                disabled={isExporting || !!exportUrl}
+              >
+                <span className="material-symbols-outlined text-lg">sync</span>
+                {isExporting ? '처리 중' : exportUrl ? '완료됨' : '내보내기 실행'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main> </> );
 };

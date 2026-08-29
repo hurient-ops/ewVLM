@@ -20,7 +20,7 @@ export const CameraSecurityPortal: React.FC = () => {
   const fetchUsers = async () => {
     try {
       const res = await API.getUsers();
-      setUsers(res.users);
+      setUsers(res || []);
     } catch (e) {
       console.error(e);
     } finally {

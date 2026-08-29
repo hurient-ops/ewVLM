@@ -22,6 +22,7 @@ import { HardwareSelfHealingShell } from './components/HardwareSelfHealingShell'
 import { MassDeviceConfigClone } from './components/MassDeviceConfigClone';
 import { EdgeAiOrchestration } from './components/EdgeAiOrchestration';
 import { PrivacyExportWorkshop } from './components/PrivacyExportWorkshop';
+import { AlertCenterDashboard } from './components/AlertCenterDashboard';
 
 // Monitor B Group
 import { MonitorBVlmAnalysis } from './components/MonitorBVlmAnalysis';
@@ -35,7 +36,7 @@ import { PromptGatewayDeploy } from './components/PromptGatewayDeploy';
 import { LoraFinetuningConsole } from './components/LoraFinetuningConsole';
 
 // Common / Misc
-import { GisSmartMap } from './components/GisSmartMap';
+import { GisSmartMap } from './components/gis/GisSmartMap';
 import { MultiChannelSyncPlayback } from './components/MultiChannelSyncPlayback';
 
 // Settings Group
@@ -44,7 +45,7 @@ import { CameraSetupConfig } from './components/CameraSetupConfig';
 import { CameraListManager } from './components/CameraListManager';
 import { GeometryCalibrationConsole } from './components/GeometryCalibrationConsole';
 import { NetworkTopologyMonitor } from './components/NetworkTopologyMonitor';
-import { NvrStorageDashboard } from './components/NvrStorageDashboard';
+import { NvrStorageDashboard } from './components/nvr/NvrStorageDashboard';
 import { MultiSiteAuthMatrix } from './components/MultiSiteAuthMatrix';
 import { SystemAuditLogPortal } from './components/SystemAuditLogPortal';
 
@@ -95,7 +96,8 @@ export default function App() {
           <Route path="/mass-device-config" element={<MassDeviceConfigClone />} />
           <Route path="/edge-ai" element={<EdgeAiOrchestration />} />
           <Route path="/privacy-export" element={<PrivacyExportWorkshop />} />
-
+          <Route path="/alert-center" element={<AlertCenterDashboard />} />
+          
           {/* ----- Monitor B Domain (Uses specific Layout for Sidebar) ----- */}
           <Route element={<MonitorBLayout />}>
             <Route path="/monitor-b" element={<MonitorBVlmAnalysis />} />

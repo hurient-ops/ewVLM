@@ -1,17 +1,42 @@
 import React, { useState } from 'react'; 
+import { useNavigate } from 'react-router-dom';
+import { API } from '../api/client';
 export const NaturalLanguageRuleCopilot: React.FC = () => { 
-  const [prompt, setPrompt] = useState('주 진입로에서 차량 흐름을 역행하는 차량을 식별하십시오. 특히 트럭과 밴을 대상으로 합니다.');
+  const navigate = useNavigate();
+  const [prompt, setPrompt] = useState('입구 진입로에서 차량 흐름에 방해되는 차량을 식별하십시오. 특히 트럭이나 밴을 찾으시면 됩니다.');
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationComplete, setSimulationComplete] = useState(false);
+  const [generatedRule, setGeneratedRule] = useState<any>(null);
 
-  const handleSimulate = () => {
+  const handleSimulate = async () => {
     if (!prompt.trim()) return;
     setIsSimulating(true);
     setSimulationComplete(false);
-    setTimeout(() => {
+    
+    try {
+      const data = await API.generateSopRule(prompt);
+      if (data.status === 'SUCCESS') {
+        setGeneratedRule(data.generated_rule);
+        setSimulationComplete(true);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("시뮬레이션에 실패했습니다.");
+    } finally {
       setIsSimulating(false);
-      setSimulationComplete(true);
-    }, 2500);
+    }
+  };
+
+  const handleDeploy = async () => {
+    if (!generatedRule) return;
+    try {
+      await API.simulateEvent(generatedRule.rule_name, generatedRule.target_object);
+      alert(`✅ [AI엣지 배포 완료]\n- 룰셋: ${generatedRule.rule_name}\n- 대상: ${generatedRule.target_object}\n\n모의 이벤트가 발생하여 관제 대시보드로 이동합니다.`);
+      navigate('/events');
+    } catch (e) {
+      console.error(e);
+      alert("배포에 실패했습니다.");
+    }
   };
 
   return ( <>
@@ -87,13 +112,13 @@ export const NaturalLanguageRuleCopilot: React.FC = () => {
   </button>
 </div>
 {/* AI Chat Bubble */}
-{simulationComplete && (
+{simulationComplete && generatedRule && (
   <div className="ml-9 p-3 rounded bg-background border-l-2 border-primary-container text-body-base font-body-base text-text-primary relative shadow-sm">
   <div className="absolute -left-3 top-3 w-0 h-0 border-t-[6px] border-t-transparent border-r-[8px] border-r-primary-container border-b-[6px] border-b-transparent"></div>
-  <p>알겠습니다. 대상 구역에서 클래스 및 동작 패턴을 필터링하여 <strong>사용자 지정 감지</strong>를 위한 룰셋을 구성했습니다. 과거 데이터 기반의 제로샷 시뮬레이션 결과를 우측 뷰포트에 렌더링합니다.</p>
+  <p>알겠습니다. 대상 구역에서 클래스 및 동작 패턴을 필터링하여 <strong>{generatedRule.target_object}</strong> 감지를 위한 룰셋을 구성했습니다. 과거 데이터 기반의 제로샷 시뮬레이션 결과를 우측 뷰포트에 렌더링합니다.</p>
   <div className="mt-2 flex gap-2">
-  <span className="px-2 py-1 bg-surface-variant border border-border-subtle rounded text-mono-data text-text-muted">신뢰도: {Math.floor(Math.random() * 15 + 85)}%</span>
-  <span className="px-2 py-1 bg-surface-variant border border-border-subtle rounded text-mono-data text-text-muted">파라미터: 자동 추출됨</span>
+  <span className="px-2 py-1 bg-surface-variant border border-border-subtle rounded text-mono-data text-text-muted">신뢰도 임계값: {generatedRule.confidence_threshold * 100}%</span>
+  <span className="px-2 py-1 bg-surface-variant border border-border-subtle rounded text-mono-data text-text-muted">예상 정확도: {generatedRule.estimated_accuracy}%</span>
   </div>
   </div>
 )}
@@ -144,11 +169,19 @@ export const NaturalLanguageRuleCopilot: React.FC = () => {
 <div className="absolute top-[20%] left-[10%] w-[80%] h-[60%] border border-dashed border-text-muted opacity-50"></div>
 <span className="absolute top-[20%] left-[10%] bg-surface-dim/80 text-text-muted text-osd-label font-osd-label px-1 border border-text-muted">대상 구역: {prompt.includes('진입로') ? '진입로' : '전체 화면'}</span>
 {/* AI Detection Box */}
-<div className="absolute top-[45%] left-[60%] w-[15%] h-[20%] border-[1.5px] border-primary shadow-[0_0_8px_rgba(124,58,237,0.5)] flex flex-col justify-end animate-pulse">
-<div className="bg-primary/20 backdrop-blur-sm p-1 border-t border-primary mt-auto">
-<div className="text-osd-label font-osd-label text-primary">VLM: 사용자 정의 감지</div>
-<div className="text-mono-data font-mono-data text-white">매칭 스코어: 94%</div>
-</div>
+<div className="absolute top-[45%] left-[60%] w-[15%] h-[20%] border-[1.5px] border-primary shadow-[0_0_8px_rgba(124,58,237,0.5)] flex flex-col justify-end animate-[pulse_2s_ease-in-out_infinite] group">
+  <div className="absolute -top-3 -right-3 w-6 h-6 border-t-2 border-r-2 border-primary"></div>
+  <div className="absolute -bottom-3 -left-3 w-6 h-6 border-b-2 border-l-2 border-primary"></div>
+  <div className="bg-primary/20 backdrop-blur-sm p-1 border-t border-primary mt-auto transform transition-all duration-300">
+    <div className="text-osd-label font-osd-label text-primary flex items-center gap-1">
+      <span className="material-symbols-outlined text-[12px]">visibility</span>
+      VLM: {generatedRule.target_object} 감지
+    </div>
+    <div className="text-mono-data font-mono-data text-white flex items-center justify-between">
+      <span>매칭 스코어</span>
+      <span className="text-primary font-bold">{(generatedRule.confidence_threshold * 100).toFixed(0)}%</span>
+    </div>
+  </div>
 </div>
 </div>
 ) : null}
@@ -169,18 +202,21 @@ export const NaturalLanguageRuleCopilot: React.FC = () => {
 <div className="flex gap-6 w-2/3">
 <div className="flex flex-col gap-1 w-1/2">
 <label className="text-label-caps font-label-caps text-text-muted">룰셋 배포 이름</label>
-<input className="w-full bg-background border border-border-subtle rounded px-3 py-1.5 text-body-sm font-body-sm text-text-primary focus:outline-none focus:border-primary" type="text" value="Detect_WrongWay_Trucks_MainGate"/>
+<input className="w-full bg-background border border-border-subtle rounded px-3 py-1.5 text-body-sm font-body-sm text-text-primary focus:outline-none focus:border-primary" type="text" value={generatedRule?.rule_name || "Detect_Custom_Rule_1"} readOnly/>
 </div>
 <div className="flex flex-col gap-1 w-1/2">
 <label className="text-label-caps font-label-caps text-text-muted">활성 일정</label>
-<select className="w-full bg-background border border-border-subtle rounded px-3 py-1.5 text-body-sm font-body-sm text-text-primary focus:outline-none focus:border-primary appearance-none">
-<option>항상 켜짐 (24/7)</option>
-<option>야간 (22:00 - 06:00)</option>
-<option>사용자 지정 일정...</option>
+<select className="w-full bg-background border border-border-subtle rounded px-3 py-1.5 text-body-sm font-body-sm text-text-primary focus:outline-none focus:border-primary appearance-none" value={generatedRule?.schedule || "24/7"} readOnly>
+<option value="24/7">항상 켜짐 (24/7)</option>
+<option value="night">야간 (22:00 - 06:00)</option>
 </select>
 </div>
 </div>
-<button className="bg-primary-container text-on-primary-container px-6 py-2.5 rounded text-title-sm font-title-sm font-bold flex items-center gap-2 hover:bg-primary-fixed transition-colors shadow-sm">
+<button 
+  onClick={handleDeploy}
+  disabled={!simulationComplete}
+  className="bg-primary-container text-on-primary-container px-6 py-2.5 rounded text-title-sm font-title-sm font-bold flex items-center gap-2 hover:bg-primary-fixed transition-colors shadow-sm disabled:opacity-50"
+>
 <span className="material-symbols-outlined fill-icon text-[20px]">rocket_launch</span> 라이브 자산에 배포 </button>
 </div>
 </section>

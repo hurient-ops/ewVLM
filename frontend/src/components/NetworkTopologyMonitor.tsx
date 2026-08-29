@@ -1,7 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { API } from '../api/client';
 
 export const NetworkTopologyMonitor: React.FC = () => {
   const [inspectorVisible, setInspectorVisible] = useState(true);
+  const [nodes, setNodes] = useState<Record<string, any>>({});
+  const [selectedNodeId, setSelectedNodeId] = useState<string>('SW-01');
+
+  useEffect(() => {
+    API.getTopology().then(res => {
+      if (res.status === 'SUCCESS') {
+        setNodes(res.nodes);
+      }
+    }).catch(err => console.error("Failed to fetch topology", err));
+  }, []);
+
+  const handleNodeClick = (nodeId: string) => {
+    setSelectedNodeId(nodeId);
+    setInspectorVisible(true);
+  };
+  
+  const selectedNode = nodes[selectedNodeId] || {};
 
   return ( <>
 <main className="flex-1 md:bg-background relative overflow-hidden flex">
@@ -45,46 +63,40 @@ export const NetworkTopologyMonitor: React.FC = () => {
 <line className="topology-link error" stroke="#EF4444" x1="550" x2="650" y1="250" y2="400"></line>
 {/* Nodes */}
 {/* Core NVR */}
-<g className="topology-node cursor-pointer hover:opacity-80" onClick={() => setInspectorVisible(true)} transform="translate(400, 100)">
+<g className="topology-node cursor-pointer hover:opacity-80" onClick={() => handleNodeClick('NVR-CORE')} transform="translate(400, 100)">
 <rect fill="#121724" filter="url(#glow)" height="60" rx="4" stroke="#7c3aed" strokeWidth="2" width="80" x="-40" y="-30"></rect>
 <text fill="#E2E8F0" font-family="Inter" font-size="12" font-weight="bold" text-anchor="middle" x="0" y="-5">NVR-CORE</text>
 <text fill="#4edea3" font-family="JetBrains Mono" font-size="10" text-anchor="middle" x="0" y="15">UP</text>
 </g>
 {/* Switch 1 */}
-<g className="topology-node active cursor-pointer hover:opacity-80" onClick={() => setInspectorVisible(true)} transform="translate(250, 250)">
+<g className="topology-node active cursor-pointer hover:opacity-80" onClick={() => handleNodeClick('SW-01')} transform="translate(250, 250)">
 <rect fill="#121724" height="50" rx="4" stroke="#232C3F" strokeWidth="2" width="70" x="-35" y="-25"></rect>
 <text fill="#E2E8F0" font-family="Inter" font-size="10" font-weight="bold" text-anchor="middle" x="0" y="-2">SW-01</text>
 <circle cx="-15" cy="12" fill="#4edea3" filter="url(#glow)" r="3"></circle>
 <text fill="#ccc3d8" font-family="JetBrains Mono" font-size="9" x="-5" y="15">PoE</text>
 </g>
 {/* Switch 2 */}
-<g className="topology-node cursor-pointer hover:opacity-80" onClick={() => setInspectorVisible(true)} transform="translate(550, 250)">
+<g className="topology-node cursor-pointer hover:opacity-80" onClick={() => handleNodeClick('SW-02')} transform="translate(550, 250)">
 <rect fill="#121724" height="50" rx="4" stroke="#232C3F" strokeWidth="2" width="70" x="-35" y="-25"></rect>
 <text fill="#E2E8F0" font-family="Inter" font-size="10" font-weight="bold" text-anchor="middle" x="0" y="-2">SW-02</text>
 <circle cx="-15" cy="12" fill="#F59E0B" filter="url(#glow)" r="3"></circle>
 <text fill="#ccc3d8" font-family="JetBrains Mono" font-size="9" x="-5" y="15">PoE</text>
 </g>
 {/* Cameras under SW-01 */}
-<g className="topology-node" transform="translate(150, 400)">
+<g className="topology-node cursor-pointer hover:opacity-80" onClick={() => handleNodeClick('CAM-1A')} transform="translate(150, 400)">
 <circle cx="0" cy="0" fill="#121724" r="20" stroke="#232C3F" strokeWidth="2"></circle>
 <text fill="#E2E8F0" font-family="Material Symbols Outlined" font-size="18" text-anchor="middle" x="0" y="4">videocam</text>
 <text fill="#7D8D9F" font-family="JetBrains Mono" font-size="9" text-anchor="middle" x="0" y="35">CAM-1A</text>
 <circle cx="15" cy="-15" fill="#4edea3" filter="url(#glow)" r="4"></circle>
 </g>
-<g className="topology-node" transform="translate(300, 400)">
+<g className="topology-node cursor-pointer hover:opacity-80" onClick={() => handleNodeClick('CAM-1B')} transform="translate(300, 400)">
 <circle cx="0" cy="0" fill="#121724" filter="url(#glow)" r="20" stroke="#F59E0B" strokeWidth="2"></circle>
 <text fill="#E2E8F0" font-family="Material Symbols Outlined" font-size="18" text-anchor="middle" x="0" y="4">videocam</text>
 <text fill="#F59E0B" font-family="JetBrains Mono" font-size="9" text-anchor="middle" x="0" y="35">CAM-1B</text>
 <circle cx="15" cy="-15" fill="#F59E0B" filter="url(#glow)" r="4"></circle>
 </g>
 {/* Cameras under SW-02 */}
-<g className="topology-node" transform="translate(450, 400)">
-<circle cx="0" cy="0" fill="#121724" r="20" stroke="#232C3F" strokeWidth="2"></circle>
-<text fill="#E2E8F0" font-family="Material Symbols Outlined" font-size="18" text-anchor="middle" x="0" y="4">videocam</text>
-<text fill="#7D8D9F" font-family="JetBrains Mono" font-size="9" text-anchor="middle" x="0" y="35">CAM-2A</text>
-<circle cx="15" cy="-15" fill="#4edea3" r="4"></circle>
-</g>
-<g className="topology-node" transform="translate(650, 400)">
+<g className="topology-node cursor-pointer hover:opacity-80" onClick={() => handleNodeClick('CAM-2B')} transform="translate(650, 400)">
 <circle cx="0" cy="0" fill="#121724" filter="url(#glow)" r="20" stroke="#EF4444" strokeWidth="2"></circle>
 <text fill="#EF4444" font-family="Material Symbols Outlined" font-size="18" text-anchor="middle" x="0" y="4">videocam_off</text>
 <text fill="#EF4444" font-family="JetBrains Mono" font-size="9" text-anchor="middle" x="0" y="35">CAM-2B</text>
@@ -100,7 +112,7 @@ export const NetworkTopologyMonitor: React.FC = () => {
 <h2 className="text-title-sm font-title-sm text-on-surface">노드 인스펙터</h2>
 <span className="material-symbols-outlined text-text-muted text-sm cursor-pointer hover:text-on-surface" onClick={() => setInspectorVisible(false)}>close</span>
 </div>
-<div className="text-mono-data font-mono-data text-primary">SW-POE-01</div>
+<div className="text-mono-data font-mono-data text-primary">{selectedNode.id || 'N/A'}</div>
 </div>
 <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
 {/* Status Card */}
@@ -108,18 +120,33 @@ export const NetworkTopologyMonitor: React.FC = () => {
 <div className="flex justify-between items-center mb-3">
 <span className="text-label-caps font-label-caps text-text-muted">상태</span>
 <div className="flex items-center gap-1.5">
-<div className="w-2 h-2 rounded-full bg-tertiary glow-tertiary"></div>
-<span className="text-mono-data font-mono-data text-tertiary">온라인</span>
+{selectedNode.status === 'online' ? (
+  <><div className="w-2 h-2 rounded-full bg-tertiary glow-tertiary"></div><span className="text-mono-data font-mono-data text-tertiary">온라인</span></>
+) : selectedNode.status === 'warning' ? (
+  <><div className="w-2 h-2 rounded-full bg-warning glow-warning"></div><span className="text-mono-data font-mono-data text-warning">경고</span></>
+) : (
+  <><div className="w-2 h-2 rounded-full bg-danger glow-danger"></div><span className="text-mono-data font-mono-data text-danger">오프라인</span></>
+)}
 </div>
 </div>
-<div className="grid grid-cols-2 gap-2">
+<div className="grid grid-cols-2 gap-2 mb-2">
 <div>
 <div className="text-label-caps font-label-caps text-text-muted mb-1">가동 시간</div>
-<div className="text-mono-data font-mono-data text-on-surface">42d 14h 22m</div>
+<div className="text-mono-data font-mono-data text-on-surface">{selectedNode.uptime || 'N/A'}</div>
 </div>
 <div>
 <div className="text-label-caps font-label-caps text-text-muted mb-1">처리량</div>
-<div className="text-mono-data font-mono-data text-on-surface">450 Mbps</div>
+<div className="text-mono-data font-mono-data text-on-surface">{selectedNode.throughput || 'N/A'}</div>
+</div>
+</div>
+<div className="grid grid-cols-2 gap-2 border-t border-border-subtle pt-2">
+<div>
+<div className="text-label-caps font-label-caps text-text-muted mb-1">소비 전력</div>
+<div className="text-mono-data font-mono-data text-on-surface">{selectedNode.power_draw || 'N/A'}</div>
+</div>
+<div>
+<div className="text-label-caps font-label-caps text-text-muted mb-1">온도</div>
+<div className="text-mono-data font-mono-data text-on-surface">{selectedNode.temperature || 'N/A'}</div>
 </div>
 </div>
 </div>

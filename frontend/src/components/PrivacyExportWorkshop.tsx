@@ -1,11 +1,49 @@
 import React, { useState } from 'react';
+import { API } from '../api/client';
 
 export const PrivacyExportWorkshop: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
+  const [codec, setCodec] = useState("H.265 (HEVC) - 고효율");
+  const [resolution, setResolution] = useState("1080p (Native)");
+  const [framerate, setFramerate] = useState("30 fps");
+  const [watermark, setWatermark] = useState(true);
+  const [watermarkText, setWatermarkText] = useState("대외비 - 배포 금지");
+  const [encrypt, setEncrypt] = useState(false);
+  const [password, setPassword] = useState("");
 
-  const handleExport = () => {
+  const handleExport = async () => {
     setIsExporting(true);
-    setTimeout(() => setIsExporting(false), 2500);
+    try {
+      const config = {
+        codec,
+        resolution,
+        framerate,
+        watermark,
+        watermark_text: watermarkText,
+        encrypt,
+        password
+      };
+      
+      const data = await API.exportPrivacyVideo(config);
+      
+      if (data.status === 'SUCCESS') {
+        alert(`${data.message}\n파일: ${data.file_name}\n크기: ${data.size}`);
+        // 모의: 다운로드 링크 시뮬레이션
+        const url = window.URL.createObjectURL(new Blob(["mock video data"], { type: encrypt ? 'application/zip' : 'video/mp4' }));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = data.file_name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('반출 중 오류가 발생했습니다.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return ( <>
@@ -165,10 +203,10 @@ export const PrivacyExportWorkshop: React.FC = () => {
 <div className="flex flex-col gap-1.5">
 <label className="font-body-sm text-body-sm text-text-primary">코덱</label>
 <div className="relative">
-<select className="w-full bg-surface-container-low border border-border-subtle text-primary text-body-sm rounded p-2 appearance-none focus:outline-none focus:border-primary-container">
-<option>H.265 (HEVC) - 고효율</option>
-<option>H.264 (AVC) - 표준</option>
-<option>ProRes 422 - 무손실</option>
+<select className="w-full bg-surface-container-low border border-border-subtle text-primary text-body-sm rounded p-2 appearance-none focus:outline-none focus:border-primary-container" value={codec} onChange={e => setCodec(e.target.value)}>
+<option value="H.265 (HEVC) - 고효율">H.265 (HEVC) - 고효율</option>
+<option value="H.264 (AVC) - 표준">H.264 (AVC) - 표준</option>
+<option value="ProRes 422 - 무손실">ProRes 422 - 무손실</option>
 </select>
 <span className="material-symbols-outlined absolute right-2 top-2.5 text-text-muted pointer-events-none" style={{ fontSize: "18px" }}>expand_more</span>
 </div>
@@ -176,16 +214,16 @@ export const PrivacyExportWorkshop: React.FC = () => {
 <div className="flex gap-4">
 <div className="flex-1 flex flex-col gap-1.5">
 <label className="font-body-sm text-body-sm text-text-primary">해상도</label>
-<select className="w-full bg-surface-container-low border border-border-subtle text-primary text-body-sm rounded p-2 appearance-none">
-<option>1080p (Native)</option>
-<option>720p</option>
+<select className="w-full bg-surface-container-low border border-border-subtle text-primary text-body-sm rounded p-2 appearance-none" value={resolution} onChange={e => setResolution(e.target.value)}>
+<option value="1080p (Native)">1080p (Native)</option>
+<option value="720p">720p</option>
 </select>
 </div>
 <div className="flex-1 flex flex-col gap-1.5">
 <label className="font-body-sm text-body-sm text-text-primary">프레임레이트</label>
-<select className="w-full bg-surface-container-low border border-border-subtle text-primary text-body-sm rounded p-2 appearance-none">
-<option>30 fps</option>
-<option>60 fps</option>
+<select className="w-full bg-surface-container-low border border-border-subtle text-primary text-body-sm rounded p-2 appearance-none" value={framerate} onChange={e => setFramerate(e.target.value)}>
+<option value="30 fps">30 fps</option>
+<option value="60 fps">60 fps</option>
 </select>
 </div>
 </div>
@@ -200,13 +238,13 @@ export const PrivacyExportWorkshop: React.FC = () => {
 <div className="font-mono-data text-[10px] text-text-muted">사용자 ID 및 타임스탬프 오버레이</div>
 </div>
 {/* Toggle Switch */}
-<div className="w-10 h-5 bg-primary-container rounded-full relative cursor-pointer">
-<div className="absolute right-1 top-0.5 w-4 h-4 bg-on-primary-container rounded-full"></div>
+<div className={`w-10 h-5 rounded-full relative cursor-pointer transition-colors ${watermark ? 'bg-primary-container' : 'bg-surface-variant border border-border-subtle'}`} onClick={() => setWatermark(!watermark)}>
+<div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${watermark ? 'right-1 bg-on-primary-container' : 'left-1 bg-text-muted'}`}></div>
 </div>
 </div>
 <div className="flex flex-col gap-1.5">
 <label className="font-body-sm text-body-sm text-text-primary">사용자 정의 워터마크 텍스트</label>
-<input className="w-full bg-surface-container-low border border-border-subtle text-primary text-body-sm rounded p-2 focus:outline-none focus:border-primary-container font-mono-data" type="text" value="대외비 - 배포 금지"/>
+<input className="w-full bg-surface-container-low border border-border-subtle text-primary text-body-sm rounded p-2 focus:outline-none focus:border-primary-container font-mono-data" type="text" value={watermarkText} onChange={e => setWatermarkText(e.target.value)} disabled={!watermark}/>
 </div>
 <div className="w-full h-px bg-border-subtle my-2"></div>
 <div className="flex items-center justify-between">
@@ -214,14 +252,14 @@ export const PrivacyExportWorkshop: React.FC = () => {
 <div className="font-body-sm text-body-sm text-primary">아카이브 암호화</div>
 <div className="font-mono-data text-[10px] text-text-muted">AES-256으로 .zip 컨테이너 보호</div>
 </div>
-{/* Toggle Switch (Off) */}
-<div className="w-10 h-5 bg-surface-variant border border-border-subtle rounded-full relative cursor-pointer">
-<div className="absolute left-1 top-0.5 w-3.5 h-3.5 bg-text-muted rounded-full"></div>
+{/* Toggle Switch */}
+<div className={`w-10 h-5 rounded-full relative cursor-pointer transition-colors ${encrypt ? 'bg-primary-container' : 'bg-surface-variant border border-border-subtle'}`} onClick={() => setEncrypt(!encrypt)}>
+<div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${encrypt ? 'right-1 bg-on-primary-container' : 'left-1 bg-text-muted'}`}></div>
 </div>
 </div>
-<div className="flex flex-col gap-1.5 opacity-50 pointer-events-none">
+<div className={`flex flex-col gap-1.5 transition-opacity ${encrypt ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
 <label className="font-body-sm text-body-sm text-text-primary">복호화 비밀번호</label>
-<input className="w-full bg-surface-container-low border border-border-subtle text-primary text-body-sm rounded p-2" placeholder="비밀번호 입력..." type="password"/>
+<input className="w-full bg-surface-container-low border border-border-subtle text-primary text-body-sm rounded p-2" placeholder="비밀번호 입력..." type="password" value={password} onChange={e => setPassword(e.target.value)}/>
 </div>
 </div>
 {/* Footer Action */}

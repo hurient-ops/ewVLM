@@ -1,18 +1,24 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useEventLogStore } from '../store/useEventLogStore';
+import { API } from '../api/client';
 
 export const RealtimeBiDashboard: React.FC = () => { 
   const { logs } = useEventLogStore();
+  const [stats, setStats] = useState<any>(null);
 
-  // Basic analytics based on logs
-  const totalAlerts = logs.length;
+  useEffect(() => {
+    API.getBiStats().then(data => {
+      if (data.status === 'SUCCESS') {
+        setStats(data.data);
+      }
+    }).catch(console.error);
+  }, [logs.length]); // Refresh on new logs
+
   const criticalCount = logs.filter(l => l.level === 'critical').length;
-  const warningCount = logs.filter(l => l.level === 'warning').length;
-  
-  // Faux counting based on event levels for the UI
-  const personCount = 45820 + criticalCount * 12;
-  const vehicleCount = 12430 + warningCount * 5;
-  const highRiskCount = 145 + criticalCount;
+
+  const personCount = stats?.personCount || 0;
+  const vehicleCount = stats?.vehicleCount || 0;
+  const highRiskCount = stats?.highRiskCount || 0;
 
   return ( <>
 <main className="p-container-padding h-[calc(100vh-56px)] overflow-y-auto">
@@ -58,12 +64,18 @@ export const RealtimeBiDashboard: React.FC = () => {
 <div className="w-full bg-tertiary/20 border border-tertiary/50 h-[35%] relative group cursor-pointer hover:bg-tertiary/40 transition-colors rounded-t-sm"></div>
 </div>
 <div className="flex justify-between mt-2 text-[11px] font-mono-data text-text-muted px-4">
-<span>10:00</span>
-<span>12:00</span>
-<span>14:00</span>
-<span className="text-danger font-bold">15:00</span>
-<span>16:00</span>
-<span>18:00</span>
+{stats?.trends ? stats.trends.map((t: any, i: number) => (
+  <span key={i} className={t.critical > 5 ? 'text-danger font-bold' : ''}>{t.time}</span>
+)) : (
+  <>
+  <span>10:00</span>
+  <span>12:00</span>
+  <span>14:00</span>
+  <span className="text-danger font-bold">15:00</span>
+  <span>16:00</span>
+  <span>18:00</span>
+  </>
+)}
 </div>
 <div className="flex justify-center gap-6 mt-4 text-[11px] font-mono-data whitespace-nowrap">
 <div className="flex items-center gap-2"><div className="w-3 h-3 bg-danger/60 border border-danger rounded-sm"></div> 추락</div>
@@ -99,7 +111,7 @@ export const RealtimeBiDashboard: React.FC = () => {
 <div className="bg-surface-container-high border border-danger/30 rounded-lg p-6 flex justify-between items-center hover:border-danger transition-colors relative overflow-hidden">
 <div className="absolute left-0 top-0 bottom-0 w-1 bg-danger"></div>
 <div>
-<div className="text-danger text-[11px] font-label-caps mb-1 whitespace-nowrap truncate">고위험 오토바이</div>
+<div className="text-danger text-[11px] font-label-caps mb-1 whitespace-nowrap truncate">고위험군 (추적 중)</div>
 <div className="text-display-lg font-display-lg text-danger">{highRiskCount.toLocaleString()}</div>
 </div>
 <div className="w-12 h-12 rounded-full bg-danger/10 flex items-center justify-center border border-danger/20">

@@ -3,11 +3,24 @@ import { usePtzStore } from '../store/usePtzStore';
 import { API } from '../api/client';
 
 export const PtzPatrolSchedule: React.FC = () => { 
-  const { isPatrolling, togglePatrol, presets } = usePtzStore();
+  const { isPatrolling, togglePatrol, presets, activeCameraId } = usePtzStore();
   const [activePresetIndex, setActivePresetIndex] = useState(0);
 
+  const handlePatrolToggle = async () => {
+    const action = isPatrolling ? 'PATROL_STOP' : 'PATROL_START';
+    const camera = activeCameraId || 'CAM_01_PTZ';
+    
+    try {
+      await API.controlPtz(camera, action);
+      togglePatrol(); // Only toggle local state if API succeeds
+    } catch (err) {
+      console.error(`Failed to send ${action}`, err);
+      alert('순찰 명령 전송에 실패했습니다.');
+    }
+  };
+
   const handleSave = () => {
-    console.log('Saved Patrol Schedule');
+    alert('순찰 시나리오 체인이 저장되었습니다.');
   };
 
 return ( <>
@@ -22,7 +35,7 @@ return ( <>
 <button className="px-4 py-1.5 border border-border-subtle rounded-DEFAULT text-title-sm font-title-sm text-on-surface hover:bg-surface-container transition-colors">취소</button>
 <button 
   className={`px-4 py-1.5 rounded-DEFAULT text-title-sm font-title-sm transition-colors flex items-center gap-2 ${isPatrolling ? 'bg-danger text-white hover:bg-danger/80' : 'bg-primary-container text-white hover:bg-inverse-primary'}`}
-  onClick={togglePatrol}
+  onClick={handlePatrolToggle}
 >
   <span className="material-symbols-outlined text-sm">{isPatrolling ? 'stop' : 'play_arrow'}</span>
   {isPatrolling ? '순찰 중지' : '순찰 시작'}

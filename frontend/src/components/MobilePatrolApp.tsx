@@ -1,25 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export const MobilePatrolApp: React.FC = () => {
   const [isPttActive, setIsPttActive] = useState(false);
+  const [dispatchAlert, setDispatchAlert] = useState<any>(null);
+
+  useEffect(() => {
+    let ws: WebSocket;
+    const connectWs = () => {
+      ws = new WebSocket('ws://localhost:8000/ws/alerts');
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'DISPATCH') {
+            setDispatchAlert(data);
+          }
+        } catch (e) {
+          console.error("Failed to parse websocket message", e);
+        }
+      };
+      ws.onclose = () => {
+        setTimeout(connectWs, 3000); // Reconnect
+      };
+    };
+    connectWs();
+    return () => {
+      if (ws) ws.close();
+    };
+  }, []);
 
   return ( <>
 <main className="flex-1 flex flex-col gap-4 p-container-padding h-full overflow-hidden">
 {/* Emergency Alert Banner (Global Alert Level 4) */}
-<div className="bg-surface-container border-2 border-danger rounded-lg p-3 alert-glow relative overflow-hidden flex flex-col gap-2 cursor-pointer active:scale-95 transition-transform duration-100 shrink-0">
-<div className="absolute inset-0 bg-danger/10 animate-pulse"></div>
-<div className="relative z-10 flex justify-between items-start">
-<div className="flex items-center gap-2 text-danger">
-<span className="material-symbols-outlined" data-icon="warning" data-weight="fill">warning</span>
-<h2 className="text-title-sm font-title-sm font-bold">침입 감지 - Sector C</h2>
-</div>
-<span className="text-mono-data font-mono-data text-text-muted">14:02:45</span>
-</div>
-<div className="relative z-10 flex flex-col sm:flex-row justify-between sm:items-end gap-2">
-<p className="text-body-sm font-body-sm text-on-surface-variant w-full sm:w-3/4 break-words">CAM-012에서 미인가 인원 감지. 즉시 확인 요망.</p>
-<div className="bg-danger text-on-error px-2 py-1 rounded text-osd-label font-osd-label whitespace-nowrap self-end">터치하여 영상 확인</div>
-</div>
-</div>
+{dispatchAlert ? (
+  <div className={`bg-surface-container border-2 ${dispatchAlert.level === 'critical' ? 'border-danger alert-glow' : 'border-warning'} rounded-lg p-3 relative overflow-hidden flex flex-col gap-2 cursor-pointer active:scale-95 transition-transform duration-100 shrink-0`}>
+    {dispatchAlert.level === 'critical' && <div className="absolute inset-0 bg-danger/10 animate-pulse"></div>}
+    <div className="relative z-10 flex justify-between items-start">
+      <div className={`flex items-center gap-2 ${dispatchAlert.level === 'critical' ? 'text-danger' : 'text-warning'}`}>
+        <span className="material-symbols-outlined" data-icon="warning" data-weight="fill">warning</span>
+        <h2 className="text-title-sm font-title-sm font-bold">지령 수신: {dispatchAlert.alert_id}</h2>
+      </div>
+      <span className="text-mono-data font-mono-data text-text-muted">{dispatchAlert.timestamp}</span>
+    </div>
+    <div className="relative z-10 flex flex-col sm:flex-row justify-between sm:items-end gap-2">
+      <p className="text-body-sm font-body-sm text-on-surface-variant w-full sm:w-3/4 break-words">{dispatchAlert.message} (발생원: {dispatchAlert.target})</p>
+      <div className={`${dispatchAlert.level === 'critical' ? 'bg-danger text-on-error' : 'bg-warning text-on-warning'} px-2 py-1 rounded text-osd-label font-osd-label whitespace-nowrap self-end`}>터치하여 영상 확인</div>
+    </div>
+  </div>
+) : (
+  <div className="bg-surface-container border border-border-subtle rounded-lg p-3 flex items-center justify-center shrink-0">
+    <p className="text-body-sm text-text-muted">수신된 현장 디스패치 지령이 없습니다.</p>
+  </div>
+)}
 {/* Main Content: Left Video, Right Controls */}
 <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
   {/* Left: Video Area */}

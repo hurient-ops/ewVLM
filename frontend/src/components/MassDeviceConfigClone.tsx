@@ -1,5 +1,34 @@
-import React from 'react'; export const MassDeviceConfigClone: React.FC = () => { return ( <>
-<main className="flex-1 flex flex-col h-full bg-[#070A13] overflow-hidden relative">
+import React, { useState } from 'react';
+import { API } from '../api/client';
+
+export const MassDeviceConfigClone: React.FC = () => {
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    setToastMessage('⏳ 설정 동기화를 준비 중입니다...');
+    try {
+      const res = await API.syncDeviceConfig('group-all');
+      if (res.status === 'SUCCESS') {
+        setToastMessage('✅ 대상 장비 그룹에 설정이 성공적으로 동기화되었습니다.');
+      }
+    } catch (err) {
+      console.error(err);
+      setToastMessage('❌ 설정 동기화 중 오류가 발생했습니다.');
+    } finally {
+      setIsSyncing(false);
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  };
+
+  return ( <>
+<main className="h-full flex flex-col p-container-padding bg-[#070A13] relative">
+{toastMessage && (
+  <div className="absolute top-8 left-1/2 -translate-x-1/2 z-50 bg-primary-container border border-primary text-white px-6 py-3 rounded-lg shadow-2xl font-body-base text-body-base animate-pulse">
+    {toastMessage}
+  </div>
+)}
 {/* Header Area */}
 <div className="px-6 py-5 border-b border-border-subtle flex justify-between items-center bg-surface shrink-0">
 <div>
@@ -8,8 +37,14 @@ import React from 'react'; export const MassDeviceConfigClone: React.FC = () => 
 </div>
 <div className="flex gap-3">
 <button className="px-4 py-2 border border-border-subtle text-text-primary rounded text-sm hover:bg-surface-container-high transition-colors font-semibold">변경 취소</button>
-<button className="px-4 py-2 bg-primary-container text-white rounded text-sm hover:bg-inverse-primary transition-colors font-semibold flex items-center gap-2 shadow-lg shadow-primary-container/20">
-<span className="material-symbols-outlined text-sm">rocket_launch</span> 일괄 배포 실행 </button>
+<button 
+  className={`px-4 py-2 rounded text-sm font-semibold flex items-center gap-2 shadow-lg transition-colors ${isSyncing ? 'bg-surface-container border border-border-subtle text-text-muted cursor-not-allowed' : 'bg-primary-container text-white hover:bg-inverse-primary shadow-primary-container/20 glow-active'}`}
+  onClick={handleSync}
+  disabled={isSyncing}
+>
+<span className={`material-symbols-outlined text-sm ${isSyncing ? 'animate-spin' : ''}`}>rocket_launch</span> 
+{isSyncing ? '동기화 중...' : '일괄 배포 실행'} 
+</button>
 </div>
 </div>
 {/* Content Area (3-Column Layout) */}

@@ -49,6 +49,22 @@ class CalibrationRequest(BaseModel):
     tilt: float
     focal_length: float
 
+class TransformRequest(BaseModel):
+    x: int
+    y: int
+    altitude: float
+    tilt: float
+    focal_length: float
+
+class HealRequest(BaseModel):
+    node_id: str
+    action: str
+
+class MLOpsActionRequest(BaseModel):
+    action: str
+    target: Optional[str] = None
+    config: Optional[dict] = None
+
 class SignupRequest(BaseModel):
     username: str
     password: str
@@ -60,8 +76,29 @@ class VSSRequest(BaseModel):
     query: str
     limit: int = 5
 
+class PrivacyExportRequest(BaseModel):
+    codec: str = "H.265 (HEVC) - 고효율"
+    resolution: str = "1080p (Native)"
+    framerate: str = "30 fps"
+    watermark: bool = False
+    watermark_text: Optional[str] = None
+    encrypt: bool = False
+    password: Optional[str] = None
+
 class CameraCreate(BaseModel):
     camera_id: str
+    name: str
+    ip_address: str
+    rtsp_url: Optional[str] = None
+    group_id: Optional[str] = None
+    vlm_enabled: bool = True
+    latitude: float = 0.0
+    longitude: float = 0.0
+
+class CameraGroupCreate(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
     name: str
     ip_address: str
     rtsp_url: Optional[str] = None
@@ -473,7 +510,7 @@ class CameraUpdate(BaseModel):
 
 @app.put("/api/v1/cameras/{camera_id}")
 async def update_camera(camera_id: str, req: CameraUpdate, db: AsyncSession = Depends(get_db)):
-    update_data = {k: v for k, v in req.model_dump().items() if v is not None}
+    update_data = req.model_dump(exclude_unset=True)
     db_camera = await crud.update_camera(db, camera_id, update_data)
     if not db_camera:
         raise HTTPException(status_code=404, detail="Camera not found")
@@ -484,9 +521,6 @@ async def update_camera(camera_id: str, req: CameraUpdate, db: AsyncSession = De
             async with httpx.AsyncClient() as client:
                 mediamtx_url = f"http://localhost:9997/v3/config/paths/edit/{camera_id}"
                 payload = {"source": req.rtsp_url}
-                # Use PUT or PATCH, depending on MTX API for edit. 
-                # Actually, MTX uses PATCH to edit. Wait, if it doesn't exist, we should ADD it. 
-                # Safe approach: Delete then Add, or just Add again?
                 # Using /v3/config/paths/patch/{name}
                 res = await client.patch(f"http://localhost:9997/v3/config/paths/patch/{camera_id}", json=payload, timeout=5.0)
                 if res.status_code == 404: # if path doesn't exist, try adding it
@@ -494,7 +528,7 @@ async def update_camera(camera_id: str, req: CameraUpdate, db: AsyncSession = De
         except Exception as e:
             logger.error(f"Failed to update MediaMTX for {camera_id}: {e}")
             
-    return db_camera
+    return db_camera   
 
 @app.delete("/api/v1/cameras/{camera_id}")
 async def delete_camera(camera_id: str, db: AsyncSession = Depends(get_db)):
@@ -509,12 +543,45 @@ async def delete_camera(camera_id: str, db: AsyncSession = Depends(get_db)):
     except Exception as e:
         logger.error(f"Failed to delete {camera_id} from MediaMTX: {e}")
         
-    return {"status": "success"}
+    return {"status": "SUCCESS"}
+
+# ==========================================
+# Camera Groups
+# ==========================================
+
+@app.get("/api/v1/groups")
+async def get_groups(db: AsyncSession = Depends(get_db)):
+    return await crud.get_groups(db)
+
+@app.post("/api/v1/groups", status_code=status.HTTP_201_CREATED)
+async def create_group(req: CameraGroupCreate, db: AsyncSession = Depends(get_db)):
+    return await crud.create_group(db, req.model_dump())
+
+@app.delete("/api/v1/groups/{group_id}")
+async def delete_group(group_id: str, db: AsyncSession = Depends(get_db)):
+    db_group = await crud.delete_group(db, group_id)
+    if not db_group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    return {"status": "SUCCESS"}
+
+# ==========================================
+# Video Records & Streams
+# ==========================================
 
 @app.get("/api/v1/records")
 async def get_records(camera_id: Optional[str] = None, db: AsyncSession = Depends(get_db)):
     records = await crud.get_video_records(db, camera_id=camera_id)
     return records
+
+from fastapi.responses import FileResponse
+import os
+
+@app.get("/api/v1/records/{record_id}/stream")
+async def stream_record(record_id: str):
+    video_path = os.path.join(os.path.dirname(__file__), "sample_video.mp4")
+    if os.path.exists(video_path):
+        return FileResponse(video_path, media_type="video/mp4")
+    raise HTTPException(status_code=404, detail="Video file not found")
 
 @app.post("/api/v1/streams/link", status_code=status.HTTP_201_CREATED)
 async def link_stream(req: StreamLinkRequest):
@@ -598,10 +665,10 @@ async def trigger_escalation(req: EscalationRequest, background_tasks: Backgroun
         "estimated_inference_latency_sec": 1.25
     }
 
-from fastapi import Depends
+from fastapi import Depends, Query
 
 @app.get("/api/v1/events", status_code=status.HTTP_200_OK)
-async def get_events(limit: int = 50, db = Depends(get_db)):
+async def get_events(limit: int = Query(50, ge=1, le=500), db: AsyncSession = Depends(get_db)):
     """
     API Gateway 4: Fetch historical VLM events from the Database.
     """
@@ -625,9 +692,140 @@ async def get_events(limit: int = 50, db = Depends(get_db)):
 
 
 from jose import jwt
+class BroadcastRequest(BaseModel):
+    zone: str
+    message: str
+    voice: Optional[str] = "male_command"
+    language: Optional[str] = "KO"
 
+@app.post("/api/v1/audio/broadcast", status_code=status.HTTP_200_OK)
+async def broadcast_audio(req: BroadcastRequest):
+    """
+    Simulate TTS generation and broadcasting to an IP speaker zone.
+    """
+    logger.info(f"📢 [AUDIO_BROADCAST] Zone: {req.zone} | MSG: {req.message}")
+    
+    # Simulate network & TTS generation delay
+    await asyncio.sleep(2.0)
+    
+    # Broadcast status event via WS
+    payload = {
+        "zone": req.zone,
+        "status": "PLAYING",
+        "message": req.message
+    }
+    await manager.broadcast({"type": "audio_broadcast", "payload": payload})
+    
+    return {"status": "SUCCESS", "message": "Broadcast completed"}
 SECRET_KEY = "ewvlm_super_secret_key_for_demo"
 ALGORITHM = "HS256"
+
+# ==========================================
+# DevOps & Edge Infra (Phase 7)
+# ==========================================
+
+@app.get("/api/v1/infra/topology", status_code=status.HTTP_200_OK)
+async def get_infra_topology():
+    """Mock SNMP data for network nodes."""
+    nodes = {
+        "NVR-CORE": {
+            "id": "NVR-CORE",
+            "type": "nvr",
+            "status": "online",
+            "uptime": "124d 08h 12m",
+            "throughput": "4.2 Gbps",
+            "power_draw": "320W",
+            "temperature": "45°C"
+        },
+        "SW-01": {
+            "id": "SW-01",
+            "type": "switch",
+            "status": "online",
+            "uptime": "42d 14h 22m",
+            "throughput": "1.2 Gbps",
+            "power_draw": "150W (PoE)",
+            "temperature": "38°C"
+        },
+        "SW-02": {
+            "id": "SW-02",
+            "type": "switch",
+            "status": "warning",
+            "uptime": "42d 14h 20m",
+            "throughput": "850 Mbps",
+            "power_draw": "180W (PoE)",
+            "temperature": "52°C"
+        },
+        "CAM-1A": {
+            "id": "CAM-1A",
+            "type": "camera",
+            "status": "online",
+            "uptime": "12d 01h 05m",
+            "throughput": "8 Mbps",
+            "power_draw": "12W",
+            "temperature": "30°C"
+        },
+        "CAM-1B": {
+            "id": "CAM-1B",
+            "type": "camera",
+            "status": "warning",
+            "uptime": "0d 04h 12m",
+            "throughput": "4 Mbps",
+            "power_draw": "14W",
+            "temperature": "42°C"
+        },
+        "CAM-2B": {
+            "id": "CAM-2B",
+            "type": "camera",
+            "status": "offline",
+            "uptime": "0d 00h 00m",
+            "throughput": "0 Mbps",
+            "power_draw": "0W",
+            "temperature": "N/A"
+        }
+    }
+    return {"status": "SUCCESS", "nodes": nodes}
+
+@app.post("/api/v1/infra/heal")
+async def heal_infra_node(request: HealRequest):
+    """Simulate a remote self-healing script execution."""
+    logger.info(f"Self-healing requested for {request.node_id} with action {request.action}")
+    import asyncio
+    # Simulate SSH / script execution delay
+    await asyncio.sleep(2.5)
+    return {
+        "status": "SUCCESS", 
+        "message": f"Successfully executed {request.action} on {request.node_id}"
+    }
+
+# ==========================================
+# System Health
+# ==========================================
+
+import psutil
+
+@app.get("/api/v1/system/health", status_code=status.HTTP_200_OK)
+async def get_system_health():
+    cpu = psutil.cpu_percent(interval=None)
+    ram = psutil.virtual_memory()
+    disk = psutil.disk_usage('/')
+    
+    # Mocking network traffic for demo
+    import random
+    net_rx = round(random.uniform(0.5, 2.5), 1)
+    
+    return {
+        "status": "SUCCESS",
+        "metrics": [
+            {"id": "cpu", "label": "CPU", "value": cpu, "unit": "%"},
+            {"id": "ram", "label": "RAM", "value": round(ram.percent), "unit": "%"},
+            {"id": "disk", "label": "DISK", "value": round(disk.percent), "unit": "%"},
+            {"id": "net", "label": "NET Rx", "value": net_rx, "unit": "Gbps"},
+        ]
+    }
+
+# ==========================================
+# Authentication & Users
+# ==========================================
 
 @app.post("/api/v1/auth/login", status_code=status.HTTP_200_OK)
 async def login(req: LoginRequest, db = Depends(get_db)):
@@ -712,10 +910,19 @@ async def update_user_role_endpoint(user_id: int, req: RoleUpdateRequest, db = D
 
 @app.post("/api/v1/vss/search", status_code=status.HTTP_200_OK)
 async def semantic_search(req: VSSRequest, db = Depends(get_db)):
+    # Mock VLM extracting intent from natural language query
+    keywords = [word for word in req.query.split() if len(word) > 1]
+    search_intent = {
+        "target_objects": keywords[:2] if keywords else ["사람"],
+        "action_context": "쓰러짐" if "쓰러진" in req.query else ("역주행" if "역주행" in req.query else "배회"),
+        "temporal_filter": "최근 24시간"
+    }
+    
     events = await crud.search_events_semantic(db, req.query, req.limit)
     return {
         "status": "success",
         "query": req.query,
+        "search_intent": search_intent,
         "results": [
             {
                 "id": ev.id,
@@ -811,7 +1018,7 @@ async def control_ptz(camera_id: str, request: PTZRequest, db: AsyncSession = De
     await crud.create_ptz_log(db, ptz_data)
     
     # Also log it in the audit log
-    tx_hash = hashlib.sha256(f"{camera_id}{request.action}{datetime.datetime.now().isoformat()}".encode()).hexdigest()
+    tx_hash = hashlib.sha256(f"{camera_id}{request.action}{datetime.utcnow().isoformat()}".encode()).hexdigest()
     await crud.create_audit_log(db, {
         "username": "api_user",
         "action_type": "PTZ_CONTROL",
@@ -834,7 +1041,7 @@ async def save_camera_calibration(camera_id: str, request: CalibrationRequest, d
     cal = await crud.save_calibration(db, cal_data)
     
     # Audit log
-    tx_hash = hashlib.sha256(f"{camera_id}CALIB{datetime.datetime.now().isoformat()}".encode()).hexdigest()
+    tx_hash = hashlib.sha256(f"{camera_id}CALIB{datetime.utcnow().isoformat()}".encode()).hexdigest()
     await crud.create_audit_log(db, {
         "username": "api_user",
         "action_type": "CALIBRATION_UPDATE",
@@ -843,6 +1050,47 @@ async def save_camera_calibration(camera_id: str, request: CalibrationRequest, d
     })
     
     return {"status": "SUCCESS", "message": "Calibration saved", "data": request.dict()}
+
+@app.post("/api/v1/cameras/{camera_id}/transform")
+async def transform_coordinates(camera_id: str, request: TransformRequest):
+    """Calculate approximate 3D ground distance based on 2D pixel input and calibration parameters."""
+    import math
+    
+    # 간략화된 투영 변환 모델 (Ground Plane Assumption)
+    # y 픽셀 값이 이미지의 아래쪽(1080에 가까울수록) 카메라와 더 가깝다고 가정
+    img_height = 1080
+    img_width = 1920
+    
+    # 중심점 기준 정규화
+    cx = img_width / 2
+    cy = img_height / 2
+    
+    # Normalized coordinates
+    nx = (request.x - cx) / cx
+    ny = (request.y - cy) / cy
+    
+    # 틸트 각도 보정 (라디안)
+    tilt_rad = math.radians(abs(request.tilt))
+    
+    # 아주 대략적인 거리 계산 공식 (Mock)
+    # y 픽셀이 중심보다 아래에 있을수록 거리가 가까움
+    # y = 1080 (ny = 1) -> 거리가 고도와 비슷함
+    # y = 540 (ny = 0) -> 무한대에 가까워짐
+    if ny <= 0.1: # 지평선 너머이거나 너무 멀리 있음
+        distance_m = float('inf')
+    else:
+        # 간단한 삼각함수 비례식 적용
+        distance_m = request.altitude / math.tan(tilt_rad + ny * (request.focal_length / 10))
+    
+    # 좌우 오프셋 계산 (x 거리)
+    offset_x_m = nx * distance_m * (request.focal_length / 10)
+    
+    return {
+        "status": "SUCCESS",
+        "distance_m": round(abs(distance_m), 2) if distance_m != float('inf') else -1,
+        "offset_x_m": round(offset_x_m, 2),
+        "camera_id": camera_id
+    }
 
 @app.get("/api/v1/cameras", status_code=status.HTTP_200_OK)
 async def get_cameras():
@@ -867,12 +1115,246 @@ async def get_cameras():
             })
     return {"status": "SUCCESS", "cameras": mock_cameras}
 
+class EventFeedbackRequest(BaseModel):
+    is_true_positive: bool
+    notes: Optional[str] = None
+
+@app.post("/api/v1/events/{escalation_id}/feedback", status_code=status.HTTP_200_OK)
+async def submit_event_feedback(escalation_id: str, req: EventFeedbackRequest, db: AsyncSession = Depends(get_db)):
+    """API Endpoint to collect Active Learning feedback from operators."""
+    # Mocking the DB update
+    logger.info(f"📝 [ACTIVE LEARNING] Feedback received for {escalation_id}: {'True Positive' if req.is_true_positive else 'False Positive (오탐)'}")
+    
+    # Audit log
+    tx_hash = hashlib.sha256(f"{escalation_id}FEEDBACK{datetime.utcnow().isoformat()}".encode()).hexdigest()
+    await crud.create_audit_log(db, {
+        "username": "api_user",
+        "action_type": "EVENT_FEEDBACK_SUBMITTED",
+        "resource_query": f"{escalation_id} marked as {'TP' if req.is_true_positive else 'FP'}",
+        "tx_hash": tx_hash
+    })
+    
+    return {"status": "SUCCESS", "message": "Feedback recorded for VLM Active Learning"}
+
+class NLRuleRequest(BaseModel):
+    natural_language_prompt: str
+
+@app.post("/api/v1/sop/rules/generate", status_code=status.HTTP_200_OK)
+async def generate_sop_rule(req: NLRuleRequest):
+    """API Endpoint to parse natural language into structured VLM detection rule."""
+    logger.info(f"🧠 [VLM_COPILOT] Parsing rule: {req.natural_language_prompt}")
+    
+    # Simulate VLM processing delay
+    await asyncio.sleep(1.5)
+    
+    # Mock generated rule based on basic keyword matching
+    trigger_class = "person"
+    if "차량" in req.natural_language_prompt or "트럭" in req.natural_language_prompt:
+        trigger_class = "vehicle"
+        
+    generated_rule = {
+        "rule_name": f"AI_Rule_{int(time.time())}",
+        "target_object": trigger_class,
+        "confidence_threshold": 0.85,
+        "action_condition": req.natural_language_prompt,
+        "schedule": "24/7",
+        "estimated_accuracy": random.randint(85, 98)
+    }
+    
+    return {
+        "status": "SUCCESS",
+        "message": "제로샷 시뮬레이션 및 룰셋 추출 완료",
+        "generated_rule": generated_rule
+    }
+
+
+@app.post("/api/v1/video/export/masking", status_code=status.HTTP_200_OK)
+async def export_privacy_video(req: PrivacyExportRequest):
+    # 모의: 트랜스코딩 렌더링 파이프라인 시뮬레이션
+    await asyncio.sleep(2.5)  # Simulate processing delay
+    
+    file_name = f"export_{uuid.uuid4().hex[:8]}.mp4"
+    if req.encrypt:
+        file_name = file_name.replace(".mp4", ".zip")
+        
+    return {
+        "status": "SUCCESS",
+        "message": "프라이버시 영상 반출이 성공적으로 완료되었습니다.",
+        "file_name": file_name,
+        "size": "45.2 MB",
+        "config_applied": {
+            "codec": req.codec,
+            "resolution": req.resolution,
+            "watermark": req.watermark,
+            "encrypted": req.encrypt
+        }
+    }
+
+@app.get("/api/v1/bi/stats", status_code=status.HTTP_200_OK)
+async def get_bi_stats(db = Depends(get_db)):
+    # 모의: 실제 데이터가 쌓였다고 가정하고 BI 통계 계산
+    logs = await crud.get_audit_logs(db)
+    
+    # 가짜 수식 대신 좀 더 그럴듯한 데이터 반환
+    base_person = 45820
+    base_vehicle = 12430
+    base_high_risk = 145
+    
+    # DB 로그 개수 기반으로 약간의 랜덤성 부여
+    modifier = len(logs) if logs else 10
+    
+    return {
+        "status": "SUCCESS",
+        "data": {
+            "personCount": base_person + (modifier * 15),
+            "vehicleCount": base_vehicle + (modifier * 4),
+            "highRiskCount": base_high_risk + (modifier // 2),
+            "heatmap_zones": [
+                {"id": 1, "name": "서쪽 운동장", "status": "danger", "density": 0.85},
+                {"id": 2, "name": "북쪽 주차장", "status": "warning", "density": 0.60},
+                {"id": 3, "name": "동쪽 하역장", "status": "tertiary", "density": 0.20}
+            ],
+            "trends": [
+                {"time": "10:00", "critical": 2, "warning": 5},
+                {"time": "12:00", "critical": 1, "warning": 8},
+                {"time": "14:00", "critical": 4, "warning": 3},
+                {"time": "15:00", "critical": 12, "warning": 15},
+                {"time": "16:00", "critical": 3, "warning": 7},
+                {"time": "18:00", "critical": 0, "warning": 2}
+            ]
+        }
+    }
+
+# ==========================================
+# Phase 8: MLOps & Device Management
+# ==========================================
+
+@app.post("/api/v1/mlops/train/lora")
+async def start_lora_training(request: MLOpsActionRequest):
+    """Simulate starting a LoRA fine-tuning job."""
+    import asyncio
+    logger.info(f"LoRA Training started for target: {request.target}")
+    await asyncio.sleep(2)
+    return {
+        "status": "SUCCESS",
+        "job_id": f"lora-job-{datetime.utcnow().timestamp()}",
+        "message": "LoRA fine-tuning job successfully scheduled."
+    }
+
+@app.post("/api/v1/mlops/deploy/prompt")
+async def deploy_prompt_gateway(request: MLOpsActionRequest):
+    """Simulate prompt deployment to edge nodes."""
+    import asyncio
+    logger.info(f"Deploying prompts to edge nodes: {request.target}")
+    await asyncio.sleep(1.5)
+    return {
+        "status": "SUCCESS",
+        "message": f"Prompt successfully deployed to {request.target or 'all edge nodes'}."
+    }
+
+@app.post("/api/v1/devices/config/sync")
+async def sync_device_config(request: MLOpsActionRequest):
+    """Simulate mass configuration clone/sync to devices."""
+    import asyncio
+    logger.info("Starting mass device configuration synchronization.")
+    await asyncio.sleep(2.5)
+    return {
+        "status": "SUCCESS",
+        "message": "Device configuration sync completed across target fleet."
+    }
+
+# ==========================================
+# Phase 9: Incident & Dispatch (WebSocket)
+# ==========================================
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception as e:
+                logger.error(f"WebSocket broadcast error: {e}")
+                self.disconnect(connection)
+
+manager = ConnectionManager()
+
+@app.websocket("/ws/alerts")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # We just keep the connection alive
+            data = await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+class DispatchRequest(BaseModel):
+    action: str
+    target: str
+    message: str
+    level: str
+
+@app.post("/api/v1/alerts/{alert_id}/dispatch")
+async def dispatch_alert(alert_id: str, request: DispatchRequest):
+    """Broadcast dispatch order to mobile patrols."""
+    payload = {
+        "type": "DISPATCH",
+        "alert_id": alert_id,
+        "action": request.action,
+        "target": request.target,
+        "message": request.message,
+        "level": request.level,
+        "timestamp": datetime.now().strftime("%H:%M:%S")
+    }
+    await manager.broadcast(payload)
+    return {"status": "SUCCESS", "message": f"Alert {alert_id} dispatched."}
+
+# ==========================================
+# Phase 10: Forensics & Audit
+# ==========================================
+class ExportRequest(BaseModel):
+    cameras: List[str]
+    startTime: str
+    endTime: str
+    includeMetadata: bool
+
+@app.post("/api/v1/records/export")
+async def export_forensic_video(req: ExportRequest):
+    """Simulate exporting a forensic video segment."""
+    import asyncio
+    logger.info(f"Starting forensic video export for {req.cameras} from {req.startTime} to {req.endTime}")
+    await asyncio.sleep(2.5) # Simulate processing time
+    return {
+        "status": "SUCCESS",
+        "download_url": f"http://localhost:8000/static/exports/EV-{(int(time.time()))}.mp4"
+    }
+
+@app.get("/api/v1/audit/logs")
+async def get_audit_logs(limit: int = 50):
+    """Return mock audit logs."""
+    logs = [
+        {"id": "AUD-1001", "timestamp": "2023-10-27T14:12:00Z", "user": "admin", "action": "LOGIN", "target": "System", "ip": "192.168.1.10", "status": "SUCCESS"},
+        {"id": "AUD-1002", "timestamp": "2023-10-27T14:15:33Z", "user": "admin", "action": "PTZ_MOVE", "target": "CAM-012", "ip": "192.168.1.10", "status": "SUCCESS"},
+        {"id": "AUD-1003", "timestamp": "2023-10-27T14:20:11Z", "user": "operator_1", "action": "EXPORT_VIDEO", "target": "CAM-001,CAM-002", "ip": "10.0.5.22", "status": "SUCCESS"},
+        {"id": "AUD-1004", "timestamp": "2023-10-27T14:25:05Z", "user": "system", "action": "AUTO_HEAL", "target": "SW-CORE-01", "ip": "localhost", "status": "SUCCESS"},
+        {"id": "AUD-1005", "timestamp": "2023-10-27T14:30:00Z", "user": "admin", "action": "DISPATCH_ALERT", "target": "ALT-101", "ip": "192.168.1.10", "status": "SUCCESS"},
+        {"id": "AUD-1006", "timestamp": "2023-10-27T14:35:10Z", "user": "unauthorized", "action": "LOGIN_FAILED", "target": "System", "ip": "11.22.33.44", "status": "FAILED"},
+        {"id": "AUD-1007", "timestamp": "2023-10-27T14:40:22Z", "user": "admin", "action": "FIRMWARE_UPDATE", "target": "CAM-045", "ip": "192.168.1.10", "status": "PENDING"},
+    ]
+    return {"status": "SUCCESS", "data": logs[:limit]}
+
 # ==============================================================================
 # 6. Main Executable Entry Point
 # ==============================================================================
 if __name__ == "__main__":
-    logger.info("==========================================================")
-    logger.info("  🚀 Starting ewVLM-Core Intelligent VMS API Gateway Prototype")
-    logger.info("  Standard: Korea Public Safety Standard (NDAA-Free Llama Base)")
-    logger.info("==========================================================")
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    uvicorn.run("ewvlm_fastapi_gateway:app", host="0.0.0.0", port=8000, reload=True)

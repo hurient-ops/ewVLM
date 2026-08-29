@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useSopStore } from '../store/useSopStore';
 
 export const DisasterVirtualWarRoom: React.FC = () => {
+  const { currentEventId, ruleTitle, actions, isSopActive, toggleAction, dismissSop } = useSopStore();
   const [isEscalated, setIsEscalated] = useState(false);
 
   return ( <>
@@ -13,10 +15,23 @@ export const DisasterVirtualWarRoom: React.FC = () => {
 </div>
 <div>
 <h1 className="text-title-sm font-title-sm text-danger flex items-center gap-2">
-<span className="led led-live"></span> 중대 재난 대응 프로토콜 발효 </h1>
-<p className="text-mono-data font-mono-data text-on-surface-variant mt-1">INCIDENT ID: VLM-992-A | LOC: METRO SECTOR 7 | TIME: 00:14:02 ELAPSED</p>
+<span className="led led-live"></span> {isSopActive ? ruleTitle : '중대 재난 대응 프로토콜 발효'} </h1>
+<p className="text-mono-data font-mono-data text-on-surface-variant mt-1">INCIDENT ID: {isSopActive ? currentEventId : 'VLM-992-A'} | LOC: METRO SECTOR 7 | TIME: 00:14:02 ELAPSED</p>
 </div>
 </div>
+{/* SOP Checklist Render */}
+{isSopActive && actions.length > 0 && (
+  <div className="flex-1 px-8 flex items-center gap-6">
+    {actions.map((act, idx) => (
+      <div key={idx} className="flex items-center gap-2 cursor-pointer group" onClick={() => toggleAction(idx)}>
+        <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${act.isCompleted ? 'bg-primary border-primary text-white' : 'border-border-subtle bg-surface-container group-hover:border-primary'}`}>
+          {act.isCompleted && <span className="material-symbols-outlined text-[14px]">check</span>}
+        </div>
+        <span className={`text-sm font-semibold transition-colors ${act.isCompleted ? 'text-text-muted line-through' : 'text-on-surface'}`}>{act.clause}: {act.description}</span>
+      </div>
+    ))}
+  </div>
+)}
 <div className="flex gap-2">
 <button className="bg-surface-container border border-border-subtle text-on-surface px-4 py-2 rounded text-body-sm font-body-sm hover:bg-surface-container-high transition-colors flex items-center gap-2">
 <span className="material-symbols-outlined text-sm">download</span> 로그 내보내기 </button>

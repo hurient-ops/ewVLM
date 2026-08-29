@@ -37,6 +37,25 @@ async def get_recent_events(db: AsyncSession, limit: int = 50):
     )
     return result.scalars().all()
 
+async def get_groups(db: AsyncSession):
+    result = await db.execute(select(models.CameraGroup))
+    return result.scalars().all()
+
+async def create_group(db: AsyncSession, group_data: dict):
+    db_group = models.CameraGroup(**group_data)
+    db.add(db_group)
+    await db.commit()
+    await db.refresh(db_group)
+    return db_group
+
+async def delete_group(db: AsyncSession, group_id: str):
+    result = await db.execute(select(models.CameraGroup).where(models.CameraGroup.id == group_id))
+    db_group = result.scalars().first()
+    if db_group:
+        await db.delete(db_group)
+        await db.commit()
+    return db_group
+
 async def get_cameras(db: AsyncSession):
     result = await db.execute(select(models.Camera))
     return result.scalars().all()
@@ -52,6 +71,7 @@ async def update_camera(db: AsyncSession, camera_id: str, camera_data: dict):
     result = await db.execute(select(models.Camera).where(models.Camera.camera_id == camera_id))
     db_camera = result.scalars().first()
     if db_camera:
+        # camera_data now includes 'group_id': None if explicitly passed (due to exclude_unset=True in route)
         for key, value in camera_data.items():
             setattr(db_camera, key, value)
         await db.commit()
@@ -225,13 +245,24 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(pwd_bytes, hashed_bytes)
 
 async def seed_db_if_empty(db: AsyncSession):
+    # Seed groups
+    groups = await get_groups(db)
+    if not groups:
+        dummy_groups = [
+            models.CameraGroup(id="g-1", name="섹터 1 (본동 로비)"),
+            models.CameraGroup(id="g-2", name="섹터 2 (지하 주차장)"),
+            models.CameraGroup(id="g-3", name="섹터 3 (자재 창고)"),
+            models.CameraGroup(id="g-4", name="섹터 4 (외곽 펜스)")
+        ]
+        db.add_all(dummy_groups)
+
     # Seed cameras
     cameras = await get_cameras(db)
     if not cameras:
         dummy_cams = [
-            models.Camera(camera_id="CCTV-0024", name="서측 외곽 울타리", ip_address="192.168.10.124", latitude=37.3949, longitude=127.1110),
-            models.Camera(camera_id="CCTV-0025", name="동측 정문", ip_address="192.168.10.125", latitude=37.3952, longitude=127.1120),
-            models.Camera(camera_id="CCTV-0026", name="북측 자재창고", ip_address="192.168.10.126", latitude=37.3960, longitude=127.1115)
+            models.Camera(camera_id="CCTV-0024", name="서측 외곽 울타리", ip_address="192.168.10.124", latitude=37.3949, longitude=127.1110, group_id="g-4"),
+            models.Camera(camera_id="CCTV-0025", name="동측 정문", ip_address="192.168.10.125", latitude=37.3952, longitude=127.1120, group_id="g-1"),
+            models.Camera(camera_id="CCTV-0026", name="북측 자재창고", ip_address="192.168.10.126", latitude=37.3960, longitude=127.1115, group_id="g-3")
         ]
         db.add_all(dummy_cams)
     

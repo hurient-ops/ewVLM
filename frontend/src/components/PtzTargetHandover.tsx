@@ -5,6 +5,7 @@ import { usePtzStore } from '../store/usePtzStore';
 export const PtzTargetHandover: React.FC = () => {
   const activeCameraId = usePtzStore(state => state.activeCameraId) || 'CAM_04_PTZ_NORTH';
   const [handoverStage, setHandoverStage] = useState<'tracking' | 'handover' | 'lost'>('handover');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     // Simulate handover sequence
@@ -16,14 +17,23 @@ export const PtzTargetHandover: React.FC = () => {
     API.controlPtz(activeCameraId, action)
       .then(res => {
         console.log(`PTZ action ${action} successful on ${activeCameraId}:`, res);
+        setToastMessage(`명령 전송: ${action}`);
+        setTimeout(() => setToastMessage(null), 2000);
       })
       .catch(err => {
         console.error(`PTZ action ${action} failed:`, err);
+        setToastMessage(`전송 실패: ${action}`);
+        setTimeout(() => setToastMessage(null), 2000);
       });
   };
 
   return ( <>
-<main className="w-full h-full">
+<main className="w-full h-full relative">
+{toastMessage && (
+  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-primary-container text-white px-4 py-2 rounded-lg shadow-lg font-mono-data text-[12px] animate-pulse">
+    {toastMessage}
+  </div>
+)}
 <div className="ptz-grid">
 {/* Left: Video Canvas & Lock-on View */}
 <div className="flex flex-col gap-gutter bg-[#070A13] p-gutter">

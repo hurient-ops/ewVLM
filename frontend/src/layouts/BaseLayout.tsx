@@ -205,6 +205,9 @@ export const BaseLayout: React.FC = () => {
                 <div className="px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-[#232C3F] mb-1 mt-2">
                   운영 및 제어
                 </div>
+                <button onMouseDown={() => navigate('/alert-center')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#31343f] hover:text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">gpp_maybe</span> 통합 알람 센터
+                </button>
                 <button onMouseDown={() => navigate('/ptz-patrol')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#31343f] hover:text-white flex items-center gap-2">
                   <span className="material-symbols-outlined text-[18px]">camera_outdoor</span> PTZ 순찰 스케줄
                 </button>

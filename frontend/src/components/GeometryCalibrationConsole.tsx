@@ -5,6 +5,33 @@ export const GeometryCalibrationConsole: React.FC = () => {
   const [altitude, setAltitude] = useState<number>(4.25);
   const [tilt, setTilt] = useState<number>(-15.2);
   const [focalLength, setFocalLength] = useState<number>(4.0);
+  const [clickPos, setClickPos] = useState<{x: number, y: number} | null>(null);
+  const [distanceInfo, setDistanceInfo] = useState<{dist: number, offsetX: number} | null>(null);
+
+  const handleImageClick = async (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setClickPos({ x, y });
+
+    try {
+      // Scale coordinates to 1920x1080 for backend assumption
+      const scaleX = 1920 / rect.width;
+      const scaleY = 1080 / rect.height;
+      const scaledX = Math.round(x * scaleX);
+      const scaledY = Math.round(y * scaleY);
+      
+      const res = await API.transformCoordinate('CH-04', scaledX, scaledY, altitude, tilt, focalLength);
+      if (res.status === 'SUCCESS') {
+        setDistanceInfo({
+          dist: res.distance_m,
+          offsetX: res.offset_x_m
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleSave = () => {
     API.saveCalibration('CH-04', altitude, tilt, focalLength)
@@ -50,8 +77,23 @@ export const GeometryCalibrationConsole: React.FC = () => {
 </div>
 </div>
 {/* Simulated Camera Feed with Calibration Overlay */}
-<div className="relative w-full h-full bg-surface-container-lowest grid-overlay overflow-hidden">
+<div className="relative w-full h-full bg-surface-container-lowest grid-overlay overflow-hidden cursor-crosshair" onClick={handleImageClick}>
 <img alt="Camera Feed Background" className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-screen" data-alt="A wide-angle, high-resolution security camera feed looking down at an industrial perimeter fence line during dusk. The scene is slightly desaturated, emphasizing the concrete textures and steel fencing. A digital 3D perspective grid in bright primary violet is overlaid on the ground plane, receding towards the horizon, simulating a calibration tool interface. Technical, precise, dark mode aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBoMFKlCS3W7LW3VPx4asiUb-QnQ4mJw0rZ_tDnHyZ7JFeB7gb-TNnOyFlfQmZIj6bVaNp73b9sIwohnNMTwZ7TQAhoVXYgaKHGtl9xTuSxWEP0oF_dxJLhAnjhPOlEO-SQTaVDgTW-nhbbJ8jiVwBY-QcJMcj3oBevhl-ztrtstonX15QrgJF0NYCyDxUx4SW5DKL8iwq5z3QiBajpE8fh7wDVSqIE1vgef7diEuY3RPkYVtQVxjqm6Q"/>
+{/* Click Overlay */}
+{clickPos && (
+  <div className="absolute pointer-events-none" style={{ left: clickPos.x, top: clickPos.y, transform: 'translate(-50%, -50%)' }}>
+    <div className="w-4 h-4 border-2 border-danger rounded-full animate-ping absolute"></div>
+    <div className="w-4 h-4 border-2 border-danger rounded-full relative z-10 flex items-center justify-center">
+      <div className="w-1 h-1 bg-danger rounded-full"></div>
+    </div>
+    {distanceInfo && (
+      <div className="absolute top-4 left-4 bg-surface-container/90 backdrop-blur border border-border-subtle p-1.5 rounded shadow-lg whitespace-nowrap z-20">
+        <div className="text-mono-data font-mono-data text-[10px] text-on-surface">거리: <span className="text-primary font-bold">{distanceInfo.dist > 0 ? `${distanceInfo.dist}m` : '측정불가'}</span></div>
+        <div className="text-mono-data font-mono-data text-[10px] text-text-muted">가로편차: {distanceInfo.offsetX}m</div>
+      </div>
+    )}
+  </div>
+)}
 {/* 3D Perspective Lines (SVG Overlay) */}
 <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none" viewBox="0 0 1000 600">
 <defs>

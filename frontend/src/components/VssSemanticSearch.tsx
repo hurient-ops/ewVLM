@@ -17,6 +17,7 @@ export const VssSemanticSearch: React.FC = () => {
   const [events, setEvents] = useState<EventHistory[]>([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [searchIntent, setSearchIntent] = useState<any>(null);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -39,6 +40,9 @@ export const VssSemanticSearch: React.FC = () => {
       const data = await API.searchVss(query, 10);
       if (data.status === 'success') {
         setEvents(data.results);
+        if (data.search_intent) {
+          setSearchIntent(data.search_intent);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -135,6 +139,22 @@ export const VssSemanticSearch: React.FC = () => {
                 <span className="text-label-caps font-label-caps text-text-muted">필터:</span>
                 <span className="bg-surface-container px-2 py-1 rounded border border-border-subtle text-mono-data font-mono-data text-on-surface-variant text-[10px] flex items-center gap-1 cursor-pointer hover:border-outline"><span className="material-symbols-outlined text-[12px]">schedule</span> 최근 24시간</span>
                 <span className="bg-surface-container px-2 py-1 rounded border border-border-subtle text-mono-data font-mono-data text-on-surface-variant text-[10px] flex items-center gap-1 cursor-pointer hover:border-outline"><span className="material-symbols-outlined text-[12px]">videocam</span> 전체 카메라</span>
+                
+                {searchIntent && (
+                  <>
+                    <div className="w-[1px] h-4 bg-border-subtle mx-1"></div>
+                    <span className="text-label-caps font-label-caps text-primary flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">psychology</span> AI 추출 의도:</span>
+                    {searchIntent.target_objects?.map((obj: string, idx: number) => (
+                      <span key={idx} className="bg-primary/10 text-primary border border-primary/30 px-2 py-1 rounded text-mono-data font-mono-data text-[10px] font-bold">대상: {obj}</span>
+                    ))}
+                    {searchIntent.action_context && (
+                      <span className="bg-danger/10 text-danger border border-danger/30 px-2 py-1 rounded text-mono-data font-mono-data text-[10px] font-bold">행동: {searchIntent.action_context}</span>
+                    )}
+                    {searchIntent.temporal_filter && (
+                      <span className="bg-secondary/10 text-secondary border border-secondary/30 px-2 py-1 rounded text-mono-data font-mono-data text-[10px] font-bold">시간: {searchIntent.temporal_filter}</span>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>

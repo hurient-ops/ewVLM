@@ -1,19 +1,54 @@
-import React from 'react'; export const PromptGatewayDeploy: React.FC = () => { return ( <>
+import React, { useState } from 'react';
+import { API } from '../api/client';
+
+export const PromptGatewayDeploy: React.FC = () => {
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const handleDeploy = async () => {
+    setIsDeploying(true);
+    setToastMessage('⏳ 엣지 노드에 프롬프트를 배포 중입니다...');
+    try {
+      const res = await API.deployPrompt('all-edges');
+      if (res.status === 'SUCCESS') {
+        setToastMessage(`✅ 배포 성공: ${res.message}`);
+      }
+    } catch (err) {
+      console.error(err);
+      setToastMessage('❌ 배포 중 오류가 발생했습니다.');
+    } finally {
+      setIsDeploying(false);
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  };
+
+  return ( <>
 <main className="flex-1 p-container-padding bg-[#070A13] overflow-y-auto relative h-full">
-<div className="flex justify-between items-end mb-6">
-<div>
-<h2 className="text-headline-md font-headline-md text-on-surface flex items-center gap-2">
-<span className="material-symbols-outlined text-primary">hub</span> 프롬프트 게이트웨이 및 엣지 장치 일괄 배포 콘솔 </h2>
-<p className="text-body-base font-body-base text-text-muted mt-1">VLM 추론 템플릿을 패키징하여 원격 에지 Gen AI 박스에 배포합니다.</p>
-</div>
-<div className="flex gap-2">
-<button className="px-4 py-2 border border-border-subtle text-on-surface rounded hover:bg-surface-container-highest transition-colors font-body-sm text-body-sm flex items-center gap-2">
-<span className="material-symbols-outlined">sync</span> 장치 동기화 </button>
-<button className="px-4 py-2 bg-primary-container text-on-primary-container rounded hover:bg-inverse-primary transition-colors font-title-sm text-title-sm flex items-center gap-2 shadow-lg glow-active">
-<span className="material-symbols-outlined">cloud_upload</span> 배포 실행 </button>
-</div>
-</div>
-{/* Bento Grid Layout */}
+{toastMessage && (
+  <div className="absolute top-8 left-1/2 -translate-x-1/2 z-50 bg-primary-container border border-primary text-white px-6 py-3 rounded-lg shadow-2xl font-body-base text-body-base animate-pulse">
+    {toastMessage}
+  </div>
+)}
+  <div className="flex justify-between items-end mb-6">
+  <div>
+  <h2 className="text-headline-md font-headline-md text-on-surface flex items-center gap-2">
+  <span className="material-symbols-outlined text-primary">hub</span> 프롬프트 게이트웨이 및 엣지 장치 일괄 배포 콘솔 </h2>
+  <p className="text-body-base font-body-base text-text-muted mt-1">VLM 추론 템플릿을 패키징하여 원격 에지 Gen AI 박스에 배포합니다.</p>
+  </div>
+  <div className="flex gap-2">
+  <button className="px-4 py-2 border border-border-subtle text-on-surface rounded hover:bg-surface-container-highest transition-colors font-body-sm text-body-sm flex items-center gap-2">
+  <span className="material-symbols-outlined">sync</span> 장치 동기화 </button>
+  <button 
+    className={`px-4 py-2 rounded text-title-sm font-title-sm flex items-center gap-2 shadow-lg transition-colors ${isDeploying ? 'bg-surface-container border border-border-subtle text-text-muted cursor-not-allowed' : 'bg-primary-container text-on-primary-container hover:bg-inverse-primary glow-active'}`}
+    onClick={handleDeploy}
+    disabled={isDeploying}
+  >
+  <span className={`material-symbols-outlined ${isDeploying ? 'animate-bounce' : ''}`}>cloud_upload</span> 
+  {isDeploying ? '배포 중...' : '배포 실행'} 
+  </button>
+  </div>
+  </div>
+  {/* Bento Grid Layout */}
 <div className="grid grid-cols-12 gap-gutter h-[calc(100vh-140px)]">
 {/* Prompt Library (Left) */}
 <div className="col-span-4 glass-panel rounded-lg flex flex-col overflow-hidden">

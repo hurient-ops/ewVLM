@@ -1,4 +1,36 @@
-import React from 'react'; export const MultiSiteAuthMatrix: React.FC = () => { return ( <>
+import React, { useState, useEffect } from 'react';
+import { API } from '../api/client';
+
+export const MultiSiteAuthMatrix: React.FC = () => {
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadUsers = async () => {
+    try {
+      const data = await API.getUsers();
+      setUsers(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const handleRoleChange = async (userId: number, newRole: string) => {
+    try {
+      await API.updateUserRole(userId, newRole);
+      loadUsers();
+      alert('✅ 권한 변경이 완료되었습니다.');
+    } catch (err) {
+      alert('권한 변경 실패');
+    }
+  };
+
+  return ( <>
 <main className="flex-1 overflow-y-auto p-container-padding flex flex-col gap-4 relative bg-surface-container-lowest">
 {/* Header */}
 <div className="flex justify-between items-end mb-2">
@@ -110,9 +142,11 @@ import React from 'react'; export const MultiSiteAuthMatrix: React.FC = () => { 
 </div>
 </div>
 </div>
-{/* Right Column: RBAC Matrix */}
-<div className="xl:col-span-2 bg-surface border border-border-subtle rounded-lg flex flex-col overflow-hidden shadow-lg">
-<div className="p-4 border-b border-border-subtle bg-surface-container-low flex justify-between items-center">
+{/* Right Column: RBAC & Users */}
+<div className="xl:col-span-2 flex flex-col gap-4">
+{/* RBAC Matrix */}
+<div className="bg-surface border border-border-subtle rounded-lg flex flex-col overflow-hidden shadow-lg h-[400px]">
+<div className="p-4 border-b border-border-subtle bg-surface-container-low flex justify-between items-center shrink-0">
 <div>
 <h2 className="text-title-sm font-title-sm text-on-surface flex items-center gap-2">
 <span className="material-symbols-outlined text-primary text-lg">admin_panel_settings</span> 역할 기반 권한 제어 (RBAC) 매트릭스 </h2>
@@ -307,5 +341,57 @@ import React from 'react'; export const MultiSiteAuthMatrix: React.FC = () => { 
 </div>
 </div>
 </div>
+
+{/* System Users Panel */}
+<div className="bg-surface border border-border-subtle rounded-lg flex flex-col overflow-hidden shadow-lg flex-1 min-h-[250px]">
+  <div className="p-4 border-b border-border-subtle bg-surface-container-low flex justify-between items-center">
+    <h2 className="text-title-sm font-title-sm text-on-surface flex items-center gap-2">
+      <span className="material-symbols-outlined text-primary text-lg">group</span> 시스템 사용자 관리
+    </h2>
+    <button className="px-3 py-1.5 bg-primary-container text-white rounded text-body-sm font-body-sm transition-colors flex items-center gap-1 hover:bg-primary" onClick={loadUsers}>
+      <span className="material-symbols-outlined text-sm">refresh</span> 새로고침
+    </button>
+  </div>
+  <div className="flex-1 overflow-auto bg-surface-container-lowest">
+    {loading ? (
+      <div className="flex items-center justify-center h-full text-text-muted">
+        <span className="material-symbols-outlined animate-spin text-2xl">sync</span>
+      </div>
+    ) : (
+      <table className="w-full text-left border-collapse">
+        <thead>
+          <tr className="bg-surface-container/50 border-b border-border-subtle">
+            <th className="p-3 text-label-caps text-text-muted">ID</th>
+            <th className="p-3 text-label-caps text-text-muted">사용자명</th>
+            <th className="p-3 text-label-caps text-text-muted">소속 / 직책</th>
+            <th className="p-3 text-label-caps text-text-muted text-right">권한 (Role)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {users.map(user => (
+            <tr key={user.id} className="border-b border-border-subtle hover:bg-surface-container-high transition-colors">
+              <td className="p-3 text-mono-data text-text-muted">#{user.id}</td>
+              <td className="p-3 text-body-sm font-semibold text-on-surface">{user.username}</td>
+              <td className="p-3 text-body-sm text-text-muted">{user.id === 1 ? '보안 통제실 / 실장' : '관제 센터 / 사원'}</td>
+              <td className="p-3 text-right">
+                <select 
+                  className="bg-surface-container border border-border-subtle text-body-sm rounded px-2 py-1 focus:border-primary text-on-surface"
+                  value={user.role}
+                  onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                >
+                  <option value="SystemAdmin">전역 관리자 (SystemAdmin)</option>
+                  <option value="SecurityAdmin">사이트 관리자 (SecurityAdmin)</option>
+                  <option value="Viewer">일반 관제사 (Viewer)</option>
+                </select>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </div>
+</div>
+</div>
+
 </main> </> );
 };

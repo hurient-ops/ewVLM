@@ -1,15 +1,33 @@
 import React, { useState } from 'react';
+import { API } from '../api/client';
 
 export const HardwareSelfHealingShell: React.FC = () => {
   const [isHealing, setIsHealing] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const handleHealing = () => {
+  const handleHealing = async () => {
     setIsHealing(true);
-    setTimeout(() => setIsHealing(false), 3000);
+    try {
+      const res = await API.healNode('CAM-042-NORTH', 'AUTO_RECOVER');
+      if (res.status === 'SUCCESS') {
+        setToastMessage('✅ 자율 복구가 성공적으로 완료되었습니다.');
+      }
+    } catch (err) {
+      console.error(err);
+      setToastMessage('❌ 자율 복구 중 오류가 발생했습니다.');
+    } finally {
+      setIsHealing(false);
+      setTimeout(() => setToastMessage(null), 3000);
+    }
   };
 
   return ( <>
-<main className="h-[calc(100vh-3.5rem)] w-full p-container-padding flex flex-col lg:flex-row gap-unit overflow-hidden">
+<main className="h-[calc(100vh-3.5rem)] w-full p-container-padding flex flex-col lg:flex-row gap-unit overflow-hidden relative">
+{toastMessage && (
+  <div className="absolute top-8 left-1/2 -translate-x-1/2 z-50 bg-surface-container-high border border-border-subtle text-on-surface px-6 py-3 rounded-lg shadow-2xl font-body-base text-body-base animate-pulse">
+    {toastMessage}
+  </div>
+)}
 {/* Left Column: Camera Feed & Primary Controls */}
 <div className="lg:w-2/3 flex-1 flex flex-col gap-unit h-full min-h-0">
 {/* Video Feed Area */}

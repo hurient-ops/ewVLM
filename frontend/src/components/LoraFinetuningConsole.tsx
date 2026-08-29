@@ -1,26 +1,55 @@
 import React, { useState } from 'react';
+import { API } from '../api/client';
 
 export const LoraFinetuningConsole: React.FC = () => {
   const [isTraining, setIsTraining] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const handleTrainingToggle = async () => {
+    if (isTraining) {
+      setIsTraining(false);
+      setToastMessage('🛑 훈련이 중단되었습니다.');
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
+    setIsTraining(true);
+    setToastMessage('⏳ 모델 훈련을 시작합니다...');
+    try {
+      const res = await API.startLoraTraining('lora-target-vlm');
+      if (res.status === 'SUCCESS') {
+        setToastMessage(`✅ 훈련 스케줄 등록 성공 (Job ID: ${res.job_id})`);
+      }
+    } catch (err) {
+      console.error(err);
+      setToastMessage('❌ 훈련 시작 중 오류 발생');
+      setIsTraining(false);
+    } finally {
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  };
 
   return ( <>
-<main className="flex-1 min-w-0 flex-1 h-[calc(100vh-3.5rem)] overflow-hidden bg-background relative p-container-padding flex flex-col gap-4">
-{/* Header Section */}
-<div className="flex justify-between items-end shrink-0">
+<main className="h-full flex flex-col p-container-padding bg-[#070A13] relative">
+{toastMessage && (
+  <div className="absolute top-8 left-1/2 -translate-x-1/2 z-50 bg-primary-container border border-primary text-white px-6 py-3 rounded-lg shadow-2xl font-body-base text-body-base animate-pulse">
+    {toastMessage}
+  </div>
+)}
+{/* Header */}
+<header className="flex justify-between items-end pb-4 border-b border-border-subtle mb-4">
 <div>
-<h1 className="text-headline-md font-headline-md text-text-primary">자율 피드백 루프 및 LoRA 미세조정 관리 콘솔</h1>
-<p className="text-body-base font-body-base text-text-muted mt-1">오탐 검증 데이터를 기반으로 온프레미스 VLM 자율 미세조정을 관리합니다.</p>
+<h1 className="text-headline-md font-headline-md text-on-surface">LoRA 어댑터 엣지 파인튜닝 (VLM-Vision)</h1>
+<p className="text-body-base font-body-base text-text-muted mt-1">현장 카메라 데이터를 바탕으로 특정 도메인(야간 해상 감시) 특화 가중치 학습</p>
 </div>
-<div className="flex gap-2">
-<button className="px-4 py-2 bg-surface-container-high border border-border-subtle text-on-surface text-body-sm font-body-sm rounded hover:bg-surface-variant transition-colors flex items-center gap-2">
-<span className="material-symbols-outlined text-[18px]">download</span> 데이터셋 내보내기 </button>
+<div className="flex gap-2 items-center">
 <button 
   className={`px-4 py-2 rounded text-body-sm font-body-sm flex items-center gap-2 font-semibold transition-colors ${isTraining ? 'bg-danger text-white hover:bg-danger/80' : 'bg-primary-container text-white hover:bg-inverse-primary'}`}
-  onClick={() => setIsTraining(!isTraining)}
+  onClick={handleTrainingToggle}
 >
 <span className="material-symbols-outlined text-[18px]">{isTraining ? 'stop' : 'play_arrow'}</span> {isTraining ? '훈련 강제 중단' : '훈련 강제 시작'} </button>
 </div>
-</div>
+</header>
 {/* Bento Grid Layout */}
 <div className="flex-1 grid grid-cols-12 grid-rows-3 gap-4 min-h-0">
 {/* Left Column: Data Set Builder & Review */}

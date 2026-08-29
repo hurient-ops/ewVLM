@@ -15,6 +15,12 @@ class EventLog(Base):
     crop_box_coordinates = Column(JSON, nullable=True)
     video_segment_chunk_path = Column(String, nullable=True)
 
+class CameraGroup(Base):
+    __tablename__ = "camera_groups"
+    id = Column(String, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+
 class Camera(Base):
     __tablename__ = "cameras"
     id = Column(Integer, primary_key=True, index=True)

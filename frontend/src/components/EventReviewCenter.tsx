@@ -44,6 +44,34 @@ export const EventReviewCenter: React.FC = () => {
     }
   };
 
+  const handleFeedback = async (isTruePositive: boolean) => {
+    if (!activeLogId) return;
+    
+    try {
+      const activeLog = logs.find(l => l.id === activeLogId);
+      const eventId = activeLog?.escalationId || activeLogId.replace('db-', '');
+      await API.submitEventFeedback(eventId, isTruePositive, isTruePositive ? "Verified by Operator" : "False Positive");
+      
+      // Remove from list
+      const updatedLogs = logs.filter(l => l.id !== activeLogId);
+      setLogs(updatedLogs);
+      
+      // Select next available or clear
+      if (updatedLogs.length > 0) {
+        handleLogClick(updatedLogs[0]);
+      } else {
+        setActiveLogId(null);
+        setSelectedReport(null);
+      }
+      
+      alert(isTruePositive ? "✅ VLM 모델에 '정답'으로 학습 피드백을 전송했습니다." : "❌ VLM 모델에 '오답(오탐)'으로 피드백을 전송하여 차후 필터링되도록 조치했습니다.");
+      
+    } catch (e) {
+      console.error(e);
+      alert("피드백 전송에 실패했습니다.");
+    }
+  };
+
   return (
     <div className="flex flex-1 h-full bg-background overflow-hidden relative">
 
@@ -57,18 +85,29 @@ export const EventReviewCenter: React.FC = () => {
             <div 
               key={log.id} 
               onClick={() => handleLogClick(log)}
-              className={`p-3 border-b border-border-subtle cursor-pointer relative overflow-hidden group ${log.level === 'critical' ? 'bg-surface-container-highest border-l-4 border-l-warning' : 'hover:bg-surface-container'} ${activeLogId === log.id ? 'bg-surface-container-high' : ''}`}
+              className={`p-3 border-b border-border-subtle cursor-pointer relative overflow-hidden group transition-colors ${log.level === 'critical' ? 'bg-warning/10 border-l-4 border-l-warning hover:bg-warning/20' : 'hover:bg-surface-container'} ${activeLogId === log.id ? 'bg-primary/20 border-l-4 border-l-primary' : ''}`}
             >
-              <div className="flex justify-between items-start mb-2">
-                <span className={`text-[16px] font-semibold ${log.level === 'critical' ? 'text-warning' : 'text-on-surface'}`}>{log.message}</span>
-                <span className="text-[12px] font-mono text-text-muted bg-surface-dim px-1.5 py-0.5 rounded">{Math.round(log.confidence * 100)}% 신뢰도</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-[12px] font-mono text-text-muted">
-                <div className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[14px]">videocam</span> {log.cameraName}
+              <div className="flex gap-3">
+                <div className="w-20 h-14 bg-black rounded shrink-0 overflow-hidden relative border border-border-subtle">
+                  <video 
+                    src="http://localhost:8000/api/v1/records/demo/stream" 
+                    className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" 
+                  />
+                  <div className="absolute top-0 right-0 bg-black/60 px-1 text-[9px] font-mono text-white">CH {log.cameraId.replace('CAM-', '')}</div>
                 </div>
-                <div className="flex items-center gap-1 justify-end">
-                  <span className="material-symbols-outlined text-[14px]">schedule</span> {log.timestamp}
+                <div className="flex-1 flex flex-col justify-between">
+                  <div className="flex justify-between items-start">
+                    <span className={`text-[14px] font-bold line-clamp-2 ${log.level === 'critical' ? 'text-warning' : 'text-on-surface'}`}>{log.message}</span>
+                  </div>
+                  <div className="flex justify-between items-end mt-1">
+                    <div className="flex items-center gap-2 text-[11px] font-mono text-text-muted">
+                      <span className="flex items-center gap-0.5"><span className="material-symbols-outlined text-[14px]">videocam</span> {log.cameraName}</span>
+                      <span className="flex items-center gap-0.5"><span className="material-symbols-outlined text-[14px]">schedule</span> {log.timestamp}</span>
+                    </div>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${log.confidence > 0.9 ? 'bg-primary/20 text-primary' : 'bg-surface-dim text-text-muted'}`}>
+                      {Math.round(log.confidence * 100)}% Match
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -83,25 +122,38 @@ export const EventReviewCenter: React.FC = () => {
           <div className="flex-1 grid grid-rows-2 gap-[2px] bg-border-subtle relative">
             <div className="bg-black relative group overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.5)] flex items-center justify-center">
               <video 
-                src="http://localhost:8000/api/v1/nvr/playback/CAM-01" 
+                src="http://localhost:8000/api/v1/records/demo/stream" 
                 controls 
+                loop
+                muted
                 className="w-full h-full object-cover"
-                autoPlay={false}
               />
-              <div className="absolute top-2 left-2 bg-black/60 px-2 rounded text-xs text-white">Playback: CAM-01 (Reference)</div>
+              <div className="absolute top-2 left-2 bg-black/60 px-2 rounded text-xs text-white">Playback: Reference (Live)</div>
             </div>
-            <div className="bg-black relative group overflow-hidden border-2 border-warning/50 shadow-[0_4px_12px_rgba(0,0,0,0.5)] flex items-center justify-center">
+            <div className="bg-black relative group overflow-hidden border-2 border-warning shadow-[0_0_15px_rgba(245,158,11,0.2)] flex items-center justify-center">
               {activeLogId ? (
-                <video 
-                  src={`http://localhost:8000/api/v1/nvr/playback/CAM-01?t=${activeLogId}`} 
-                  controls 
-                  autoPlay
-                  className="w-full h-full object-cover"
-                />
+                <>
+                  <video 
+                    src={`http://localhost:8000/api/v1/records/demo/stream?t=${activeLogId}`} 
+                    controls 
+                    autoPlay
+                    loop
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Bounding Box overlay for event */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-[35%] left-[45%] w-[20%] h-[30%] border-2 border-warning bg-warning/20 animate-pulse">
+                      <span className="absolute -top-5 left-[-2px] bg-warning text-black text-[10px] font-mono px-2 py-0.5 font-bold">DETECTED EVENT</span>
+                    </div>
+                  </div>
+                </>
               ) : (
-                <div className="text-gray-500 font-mono text-sm">사건 기록을 선택하여 NVR 녹화 영상 확인</div>
+                <div className="text-gray-500 font-mono text-sm flex flex-col items-center gap-2">
+                  <span className="material-symbols-outlined text-4xl">movie</span>
+                  사건 기록을 선택하여 NVR 녹화 영상 및 VLM 분석 결과 확인
+                </div>
               )}
-              <div className="absolute top-2 left-2 bg-warning/80 px-2 rounded text-xs text-black font-bold">Event NVR Playback</div>
+              <div className="absolute top-2 left-2 bg-warning px-2 rounded text-xs text-black font-bold">Event NVR Playback & Analytics</div>
             </div>
           </div>
 
@@ -140,10 +192,18 @@ export const EventReviewCenter: React.FC = () => {
             </div>
           </div>
           <div className="flex gap-4">
-            <button className="px-6 py-2 border border-border-subtle text-text-primary text-[16px] font-semibold rounded hover:bg-surface-container-high transition-colors flex items-center gap-2">
+            <button 
+              onClick={() => handleFeedback(false)}
+              disabled={!activeLogId}
+              className="px-6 py-2 border border-border-subtle text-text-primary text-[16px] font-semibold rounded hover:bg-surface-container-high transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
               <span className="material-symbols-outlined text-[18px]">block</span> 무시 (오탐)
             </button>
-            <button className="px-8 py-2 bg-danger text-[#ffdad6] text-[16px] font-semibold rounded hover:brightness-110 transition-all flex items-center gap-2 uppercase tracking-wide">
+            <button 
+              onClick={() => handleFeedback(true)}
+              disabled={!activeLogId}
+              className="px-8 py-2 bg-danger text-[#ffdad6] text-[16px] font-semibold rounded hover:brightness-110 transition-all flex items-center gap-2 uppercase tracking-wide disabled:opacity-50 disabled:grayscale"
+            >
               <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span> 검증: 실제 이벤트
             </button>
           </div>

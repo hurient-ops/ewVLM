@@ -61,13 +61,8 @@ const generateInitialSlots = (): CameraSlot[] => {
   return slots;
 };
 
-// 그룹 초기 데이터 (향후 API 연동 예정)
-const initialGroups: CameraGroup[] = [
-  { id: 'g-1', name: '섹터 1 (본동 로비)' },
-  { id: 'g-2', name: '섹터 2 (지하 주차장)' },
-  { id: 'g-3', name: '섹터 3 (자재 창고)' },
-  { id: 'g-4', name: '섹터 4 (외곽 펜스)' }
-];
+// We will fetch groups from the backend API.
+const initialGroups: CameraGroup[] = [];
 
 export const useCameraStore = create<CameraStoreState>((set) => ({
   slots: generateInitialSlots(),
@@ -91,8 +86,15 @@ export const useCameraStore = create<CameraStoreState>((set) => ({
   cameras: [],
   fetchCameras: async () => {
     try {
-      const response = await axios.get('http://localhost:8000/api/v1/cameras');
-      const data = response.data.map((c: any) => ({
+      // Fetch both groups and cameras
+      const [groupsResponse, camerasResponse] = await Promise.all([
+        axios.get('http://localhost:8000/api/v1/groups'),
+        axios.get('http://localhost:8000/api/v1/cameras')
+      ]);
+
+      set({ groups: groupsResponse.data });
+
+      const data = camerasResponse.data.map((c: any) => ({
         id: c.camera_id,
         name: c.name,
         ipAddress: c.ip_address,
@@ -109,7 +111,18 @@ export const useCameraStore = create<CameraStoreState>((set) => ({
       console.error("Failed to fetch cameras:", e);
     }
   },
-  addGroup: (group) => set((state) => ({ groups: [...state.groups, group] })),
+  addGroup: async (group) => {
+    try {
+      await axios.post('http://localhost:8000/api/v1/groups', {
+        id: group.id,
+        name: group.name,
+        description: group.description
+      });
+      set((state) => ({ groups: [...state.groups, group] }));
+    } catch (e) {
+      console.error("Failed to add group:", e);
+    }
+  },
   deleteGroup: async (groupId) => {
     // 1. Find cameras that need to be updated
     const state = useCameraStore.getState();
@@ -128,6 +141,9 @@ export const useCameraStore = create<CameraStoreState>((set) => ({
 
     // 3. Persist to API
     try {
+      // Delete the group
+      await axios.delete(`http://localhost:8000/api/v1/groups/${groupId}`);
+      // Nullify camera groups
       await Promise.all(
         camerasToUpdate.map(cam => 
           axios.put(`http://localhost:8000/api/v1/cameras/${cam.id}`, { group_id: null })
@@ -186,7 +202,9 @@ export const useCameraStore = create<CameraStoreState>((set) => ({
     }));
     // 2. Persist to API
     try {
-      await axios.put(`http://localhost:8000/api/v1/cameras/${cameraId}`, { group_id: newGroupId });
+      // Pass null explicitly if unassigned
+      const payload = { group_id: newGroupId === 'none' ? null : newGroupId };
+      await axios.put(`http://localhost:8000/api/v1/cameras/${cameraId}`, payload);
     } catch (e) {
       console.error("Failed to change camera group:", e);
       // Rollback on failure
