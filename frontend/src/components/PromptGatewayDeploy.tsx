@@ -1,15 +1,49 @@
 import React, { useState } from 'react';
 import { API } from '../api/client';
 
+const PROMPTS = [
+  {
+    template_id: "vlm_pt_094",
+    name: "Perimeter Intrusion (Night)",
+    version: "2.4",
+    engine: "ewVLM-Turbo-v2",
+    system_prompt: "You are a specialized security visual language model operating on a high-latency edge node.",
+    user_prompt_template: "Analyze the current frame from {{camera_id}}. Identify human figures traversing fence line {{sector}}. Ignore small wildlife under 20kg. Focus on thermal signatures. Describe direction of movement.",
+    parameters: { temperature: 0.1, max_tokens: 128, confidence_threshold: 0.85 },
+    action_triggers: [ { type: "webhook", url: "internal://alert/high" }, { type: "ptz_track", target: "detected_entity" } ]
+  },
+  {
+    template_id: "vlm_pt_102",
+    name: "Crowd Density Alert",
+    version: "1.1",
+    engine: "ewVLM-Base-v1",
+    system_prompt: "You are an AI for safety and crowd monitoring.",
+    user_prompt_template: "Estimate the number of people in the main hall. Alert if density exceeds 4 persons per square meter for over 30 seconds.",
+    parameters: { temperature: 0.2, max_tokens: 64, confidence_threshold: 0.80 },
+    action_triggers: [ { type: "webhook", url: "internal://alert/crowd" } ]
+  },
+  {
+    template_id: "vlm_pt_105",
+    name: "Vehicle Loitering",
+    version: "3.0",
+    engine: "ewVLM-Turbo-v2",
+    system_prompt: "You are a traffic monitoring AI.",
+    user_prompt_template: "Detect vehicles stopped in drop-off zone B for more than 5 minutes. Extract license plate if visible.",
+    parameters: { temperature: 0.1, max_tokens: 128, confidence_threshold: 0.90 },
+    action_triggers: [ { type: "log", level: "warning" } ]
+  }
+];
+
 export const PromptGatewayDeploy: React.FC = () => {
   const [isDeploying, setIsDeploying] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [selectedPromptIndex, setSelectedPromptIndex] = useState(0);
 
   const handleDeploy = async () => {
     setIsDeploying(true);
     setToastMessage('⏳ 엣지 노드에 프롬프트를 배포 중입니다...');
     try {
-      const res = await API.deployPrompt('all-edges');
+      const res = await API.deployPrompt('all-edges', PROMPTS[selectedPromptIndex]);
       if (res.status === 'SUCCESS') {
         setToastMessage(`✅ 배포 성공: ${res.message}`);
       }
@@ -62,10 +96,10 @@ export const PromptGatewayDeploy: React.FC = () => {
 </div>
 <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
 {/* Prompt Card 1 */}
-<div className="border border-primary bg-surface-container-high rounded p-3 cursor-pointer relative glow-active">
+<div onClick={() => setSelectedPromptIndex(0)} className={`border ${selectedPromptIndex === 0 ? 'border-primary bg-surface-container-high glow-active' : 'border-border-subtle bg-surface-container hover:border-outline-variant transition-colors'} rounded p-3 cursor-pointer relative`}>
 <div className="absolute top-3 right-3 flex items-center gap-1">
-<span className="w-2 h-2 rounded-full bg-tertiary"></span>
-<span className="text-mono-data font-mono-data text-tertiary text-[10px]">v2.4</span>
+<span className={`w-2 h-2 rounded-full ${selectedPromptIndex === 0 ? 'bg-tertiary' : 'bg-text-muted'}`}></span>
+<span className={`text-mono-data font-mono-data ${selectedPromptIndex === 0 ? 'text-tertiary' : 'text-text-muted'} text-[10px]`}>v2.4</span>
 </div>
 <h4 className="text-title-sm font-title-sm text-on-surface mb-1">외곽 침입 (야간)</h4>
 <p className="text-body-sm font-body-sm text-text-muted line-clamp-2 mb-2">섹터 4 펜스 라인을 가로지르는 인물을 식별합니다. 20kg 미만의 소형 야생 동물은 무시합니다. 열화상 신호에 집중합니다.</p>
@@ -75,10 +109,10 @@ export const PromptGatewayDeploy: React.FC = () => {
 </div>
 </div>
 {/* Prompt Card 2 */}
-<div className="border border-border-subtle bg-surface-container rounded p-3 cursor-pointer hover:border-outline-variant transition-colors">
+<div onClick={() => setSelectedPromptIndex(1)} className={`border ${selectedPromptIndex === 1 ? 'border-primary bg-surface-container-high glow-active' : 'border-border-subtle bg-surface-container hover:border-outline-variant transition-colors'} rounded p-3 cursor-pointer relative`}>
 <div className="absolute top-3 right-3 flex items-center gap-1">
-<span className="w-2 h-2 rounded-full bg-text-muted"></span>
-<span className="text-mono-data font-mono-data text-text-muted text-[10px]">v1.1</span>
+<span className={`w-2 h-2 rounded-full ${selectedPromptIndex === 1 ? 'bg-tertiary' : 'bg-text-muted'}`}></span>
+<span className={`text-mono-data font-mono-data ${selectedPromptIndex === 1 ? 'text-tertiary' : 'text-text-muted'} text-[10px]`}>v1.1</span>
 </div>
 <h4 className="text-title-sm font-title-sm text-on-surface mb-1">군중 밀집 알림</h4>
 <p className="text-body-sm font-body-sm text-text-muted line-clamp-2 mb-2">메인 홀의 대략적인 인원수를 계산합니다. 30초 이상 제곱미터당 4명을 초과할 경우 알림을 발생시킵니다.</p>
@@ -87,10 +121,10 @@ export const PromptGatewayDeploy: React.FC = () => {
 </div>
 </div>
 {/* Prompt Card 3 */}
-<div className="border border-border-subtle bg-surface-container rounded p-3 cursor-pointer hover:border-outline-variant transition-colors">
+<div onClick={() => setSelectedPromptIndex(2)} className={`border ${selectedPromptIndex === 2 ? 'border-primary bg-surface-container-high glow-active' : 'border-border-subtle bg-surface-container hover:border-outline-variant transition-colors'} rounded p-3 cursor-pointer relative`}>
 <div className="absolute top-3 right-3 flex items-center gap-1">
-<span className="w-2 h-2 rounded-full bg-text-muted"></span>
-<span className="text-mono-data font-mono-data text-text-muted text-[10px]">v3.0</span>
+<span className={`w-2 h-2 rounded-full ${selectedPromptIndex === 2 ? 'bg-tertiary' : 'bg-text-muted'}`}></span>
+<span className={`text-mono-data font-mono-data ${selectedPromptIndex === 2 ? 'text-tertiary' : 'text-text-muted'} text-[10px]`}>v3.0</span>
 </div>
 <h4 className="text-title-sm font-title-sm text-on-surface mb-1">차량 배회</h4>
 <p className="text-body-sm font-body-sm text-text-muted line-clamp-2 mb-2">하차 구역 B에서 5분 이상 정차 중인 차량을 감지합니다. 번호판이 보이는 경우 추출합니다.</p>
@@ -113,8 +147,7 @@ export const PromptGatewayDeploy: React.FC = () => {
 </div>
 <div className="p-4 flex-1 bg-surface-container-lowest overflow-y-auto">
 <div className="bg-surface-dim p-4 rounded border border-border-subtle font-mono-data text-mono-data text-text-primary leading-relaxed h-full overflow-y-auto">
-<pre><code>{`{ "template_id": "vlm_pt_094", "name": "Perimeter Intrusion (Night)", "version": "2.4", "engine": "ewVLM-Turbo-v2", "system_prompt": "You are a specialized security visual language model operating on a high-latency edge node.", "user_prompt_template": "Analyze the current frame from {{camera_id}}. Identify human figures traversing fence line {{sector}}. Ignore small wildlife under 20kg. Focus on thermal signatures. Describe direction of movement.", "parameters": { "temperature": 0.1, "max_tokens": 128, "confidence_threshold": 0.85 }, "action_triggers": [ { "type": "webhook", "url": "internal://alert/high" }, { "type": "ptz_track", "target": "detected_entity" } ]
-}`}</code></pre>
+<pre><code>{JSON.stringify(PROMPTS[selectedPromptIndex], null, 2)}</code></pre>
 </div>
 </div>
 </div>
@@ -131,7 +164,7 @@ export const PromptGatewayDeploy: React.FC = () => {
 <table className="w-full text-left border-collapse">
 <thead className="bg-surface-container-lowest text-mono-data font-mono-data text-text-muted sticky top-0">
 <tr>
-<th className="p-2 border-b border-border-subtle w-8"><input defaultChecked="" className="rounded border-border-subtle bg-surface-container text-primary focus:ring-primary focus:ring-offset-surface" type="checkbox"/></th>
+<th className="p-2 border-b border-border-subtle w-8"><input defaultChecked className="rounded border-border-subtle bg-surface-container text-primary focus:ring-primary focus:ring-offset-surface" type="checkbox"/></th>
 <th className="p-2 border-b border-border-subtle">노드 ID</th>
 <th className="p-2 border-b border-border-subtle">위치</th>
 <th className="p-2 border-b border-border-subtle">상태</th>
@@ -139,13 +172,13 @@ export const PromptGatewayDeploy: React.FC = () => {
 </thead>
 <tbody className="text-body-sm font-body-sm">
 <tr className="hover:bg-surface-container-highest transition-colors border-b border-border-subtle bg-surface-container-high">
-<td className="p-2"><input defaultChecked="" className="rounded border-border-subtle bg-surface-container text-primary focus:ring-primary focus:ring-offset-surface" type="checkbox"/></td>
+<td className="p-2"><input defaultChecked className="rounded border-border-subtle bg-surface-container text-primary focus:ring-primary focus:ring-offset-surface" type="checkbox"/></td>
 <td className="p-2 font-mono-data text-mono-data text-primary">EDGE-NRT-01</td>
 <td className="p-2 text-text-muted">북쪽 펜스</td>
 <td className="p-2 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-tertiary led-active"></span> <span className="text-mono-data font-mono-data">온라인</span></td>
 </tr>
 <tr className="hover:bg-surface-container-highest transition-colors border-b border-border-subtle bg-surface-container-high">
-<td className="p-2"><input defaultChecked="" className="rounded border-border-subtle bg-surface-container text-primary focus:ring-primary focus:ring-offset-surface" type="checkbox"/></td>
+<td className="p-2"><input defaultChecked className="rounded border-border-subtle bg-surface-container text-primary focus:ring-primary focus:ring-offset-surface" type="checkbox"/></td>
 <td className="p-2 font-mono-data text-mono-data text-primary">EDGE-NRT-02</td>
 <td className="p-2 text-text-muted">동쪽 게이트</td>
 <td className="p-2 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-tertiary led-active"></span> <span className="text-mono-data font-mono-data">온라인</span></td>
@@ -157,7 +190,7 @@ export const PromptGatewayDeploy: React.FC = () => {
 <td className="p-2 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-warning"></span> <span className="text-mono-data font-mono-data text-text-muted">동기화 중</span></td>
 </tr>
 <tr className="hover:bg-surface-container-highest transition-colors">
-<td className="p-2"><input defaultChecked="" className="rounded border-border-subtle bg-surface-container text-primary focus:ring-primary focus:ring-offset-surface" type="checkbox"/></td>
+<td className="p-2"><input defaultChecked className="rounded border-border-subtle bg-surface-container text-primary focus:ring-primary focus:ring-offset-surface" type="checkbox"/></td>
 <td className="p-2 font-mono-data text-mono-data text-primary">EDGE-WST-05</td>
 <td className="p-2 text-text-muted">서쪽 경계</td>
 <td className="p-2 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-tertiary led-active"></span> <span className="text-mono-data font-mono-data">온라인</span></td>

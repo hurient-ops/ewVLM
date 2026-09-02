@@ -26,3 +26,6 @@ SQLAlchemy>=2.0.25
 psycopg2-binary>=2.9.9
 asyncpg>=0.29.0
 pgvector>=0.2.5
+
+# PTZ Camera Control
+onvif-zeep>=0.2.12

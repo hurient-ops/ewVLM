@@ -5,16 +5,17 @@ export const HardwareSelfHealingShell: React.FC = () => {
   const [isHealing, setIsHealing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const handleHealing = async () => {
+  const handleAction = async (actionStr: string) => {
     setIsHealing(true);
+    setToastMessage(`실행 중: ${actionStr}...`);
     try {
-      const res = await API.healNode('CAM-042-NORTH', 'AUTO_RECOVER');
+      const res = await API.healNode('CAM-042-NORTH', actionStr);
       if (res.status === 'SUCCESS') {
-        setToastMessage('✅ 자율 복구가 성공적으로 완료되었습니다.');
+        setToastMessage(`✅ ${actionStr} 성공적으로 완료되었습니다.`);
       }
     } catch (err) {
       console.error(err);
-      setToastMessage('❌ 자율 복구 중 오류가 발생했습니다.');
+      setToastMessage(`❌ ${actionStr} 중 오류가 발생했습니다.`);
     } finally {
       setIsHealing(false);
       setTimeout(() => setToastMessage(null), 3000);
@@ -62,7 +63,7 @@ export const HardwareSelfHealingShell: React.FC = () => {
 {/* Self-Healing Trigger */}
 <button 
   className={`px-4 py-2 rounded text-label-caps font-label-caps flex items-center gap-2 shadow-lg transition-colors border ${isHealing ? 'bg-inverse-primary border-primary text-white' : 'bg-primary-container hover:bg-inverse-primary text-white border-primary'}`}
-  onClick={handleHealing}
+  onClick={() => handleAction('AUTO_RECOVER')}
   disabled={isHealing}
 >
 <span className={`material-symbols-outlined text-[18px] ${isHealing ? 'animate-spin' : ''}`} data-icon="auto_fix">auto_fix</span> {isHealing ? '자율 복구 진행 중...' : '자율 복구 시작'} </button>
@@ -109,7 +110,10 @@ export const HardwareSelfHealingShell: React.FC = () => {
 <div className="flex flex-col gap-4 flex-grow justify-center">
 <div className="flex justify-between items-center">
 <span className="text-body-sm font-body-sm text-on-surface-variant">Wiper Motor</span>
-<button className="border border-border-subtle hover:bg-surface-container-high px-3 py-1 rounded text-label-caps font-label-caps text-on-surface transition-colors flex items-center gap-1">
+<button 
+  onClick={() => handleAction('TEST_WIPER')}
+  disabled={isHealing}
+  className="border border-border-subtle hover:bg-surface-container-high px-3 py-1 rounded text-label-caps font-label-caps text-on-surface transition-colors flex items-center gap-1">
 <span className="material-symbols-outlined text-[14px]" data-icon="water_drop">water_drop</span> 테스트 </button>
 </div>
 <div className="flex justify-between items-center">
@@ -138,7 +142,10 @@ export const HardwareSelfHealingShell: React.FC = () => {
 <span className="text-mono-data font-mono-data text-warning">저하됨 (-12%)</span>
 </div>
 <p className="text-body-sm font-body-sm text-text-muted mb-4">Thermal expansion detected affecting back-plane focus. Remote calibration recommended.</p>
-<button className="w-full bg-surface-container hover:bg-surface-container-high border border-primary/50 text-primary px-4 py-2 rounded text-label-caps font-label-caps flex items-center justify-center gap-2 transition-colors">
+<button 
+  onClick={() => handleAction('CALIBRATE_LENS')}
+  disabled={isHealing}
+  className="w-full bg-surface-container hover:bg-surface-container-high border border-primary/50 text-primary px-4 py-2 rounded text-label-caps font-label-caps flex items-center justify-center gap-2 transition-colors">
 <span className="material-symbols-outlined text-[16px]" data-icon="center_focus_strong">center_focus_strong</span> 원격 캘리브레이션 실행 </button>
 </div>
 {/* Jog Control Simulation */}

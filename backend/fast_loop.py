@@ -7,7 +7,10 @@ from datetime import datetime
 import requests
 import tempfile
 import numpy as np
+from collections import deque
 from paligemma_edge_validator import PaligemmaEdgeValidator
+from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
+from av import VideoFrame
 
 # Create global instance of Edge Validator
 edge_validator = PaligemmaEdgeValidator()
@@ -25,6 +28,7 @@ except ImportError:
     sys.exit(1)
 
 try:
+    import aiohttp
     from aiohttp import web
 except ImportError:
     print("aiohttp package is missing. Run `pip install aiohttp`")
@@ -36,6 +40,7 @@ TARGET_FPS = int(os.getenv("TARGET_FPS", "24")) # Set to 24 FPS for smoother rea
 
 CAMERAS = []
 latest_frames = {}
+frame_buffers = {}
 yolo_lock = asyncio.Lock()
 vlm_lock = asyncio.Semaphore(1)
 
@@ -78,6 +83,60 @@ async def mjpeg_handler(request):
         await asyncio.sleep(0.05)
     return response
 
+class CameraStreamTrack(VideoStreamTrack):
+    def __init__(self, camera_id):
+        super().__init__()
+        self.camera_id = camera_id
+        
+    async def recv(self):
+        pts, time_base = await self.next_timestamp()
+        
+        # Throttle to TARGET_FPS
+        await asyncio.sleep(1.0 / TARGET_FPS)
+        
+        frame = latest_frames.get(self.camera_id)
+        if frame is None:
+            # Create a blank black frame if none exists
+            frame = np.zeros((480, 640, 3), dtype=np.uint8)
+            
+        # Convert BGR (OpenCV) to RGB (PyAV)
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
+        video_frame = VideoFrame.from_ndarray(frame_rgb, format="rgb24")
+        video_frame.pts = pts
+        video_frame.time_base = time_base
+        return video_frame
+
+async def whep_handler(request):
+    camera_id = request.match_info.get('camera_id', 'cam-01').lower()
+    
+    if camera_id not in latest_frames:
+        return web.Response(status=404, text="Camera not found")
+
+    # WHEP requires returning SDP answer based on SDP offer payload
+    params = await request.text()
+    offer = RTCSessionDescription(sdp=params, type='offer')
+
+    pc = RTCPeerConnection()
+    
+    @pc.on("connectionstatechange")
+    async def on_connectionstatechange():
+        print(f"[WebRTC] {camera_id} state is {pc.connectionState}")
+        if pc.connectionState == "failed" or pc.connectionState == "closed":
+            await pc.close()
+
+    video_track = CameraStreamTrack(camera_id)
+    pc.addTrack(video_track)
+
+    await pc.setRemoteDescription(offer)
+    answer = await pc.createAnswer()
+    await pc.setLocalDescription(answer)
+
+    return web.Response(
+        content_type='application/sdp',
+        text=pc.localDescription.sdp,
+    )
+
 async def camera_loop(camera_id, model, video_source):
     print(f"[{camera_id}] Starting video stream from: {video_source}")
     cap = cv2.VideoCapture(video_source)
@@ -85,6 +144,9 @@ async def camera_loop(camera_id, model, video_source):
     if not cap.isOpened():
         print(f"❌ [{camera_id}] Failed to open video source: {video_source}")
         return
+
+    if camera_id not in frame_buffers:
+        frame_buffers[camera_id] = deque(maxlen=60)
 
     frame_count = 0
     try:
@@ -95,11 +157,13 @@ async def camera_loop(camera_id, model, video_source):
                 cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                 continue
             
+            frame_buffers[camera_id].append(frame.copy())
             frame_count += 1
             
             # Serialize YOLO inference to prevent CPU overload
+            # [NEW] model(frame) -> model.track(frame, persist=True) for ByteTrack Object Tracking
             async with yolo_lock:
-                results = await asyncio.to_thread(model, frame, verbose=False)
+                results = await asyncio.to_thread(model.track, frame, persist=True, verbose=False)
             
             # [Optimization] Offload synchronous OpenCV processing to a thread
             # Plotting and resizing 4K frames synchronously will block the asyncio event loop!
@@ -125,8 +189,14 @@ async def camera_loop(camera_id, model, video_source):
                     # Trigger on person, car, motorcycle, bus, truck
                     if cls_id in [0, 2, 3, 5, 7] and conf > 0.4:
                         xyxy = [int(v) for v in box.xyxy[0]]
+                        
+                        # [NEW] Extract ByteTrack ID if tracking is active
+                        track_id = int(box.id[0]) if box.id is not None else -1
+                        target_uid = f"{camera_id}_{class_name}_{track_id}" if track_id != -1 else f"{camera_id}_{class_name}_{int(time.time()*1000)}"
+
                         detected_objects.append({
-                            "target_uid": f"{class_name}_{int(time.time()*1000)}",
+                            "target_uid": target_uid,
+                            "track_id": track_id,
                             "class_label": class_name,
                             "detection_confidence": conf,
                             "bbox_coordinates_xyxy": xyxy
@@ -135,18 +205,23 @@ async def camera_loop(camera_id, model, video_source):
             if detected_objects:
                 trigger_reason = "unauthorized_entry" if any(o['class_label'] == 'person' for o in detected_objects) else "vehicle_detected"
                 
-                # Save the exact frame where detection occurred for VLM to analyze
-                detected_frame_path = f"mock_videos/detected_{camera_id}.jpg"
-                cv2.imwrite(detected_frame_path, frame)
+                # [NEW] Escalate at most once every 10 seconds PER OBJECT ID (Track ID)
+                if "tracked_objects_cooldown" not in globals():
+                    global tracked_objects_cooldown
+                    tracked_objects_cooldown = {}
                 
-                # Escalate at most once every 10 seconds per camera
-                if "last_escalation_frame" not in globals():
-                    global last_escalation_frame
-                    last_escalation_frame = {}
+                # Check if any detected object is new or its cooldown has expired
+                should_escalate = False
+                current_time = time.time()
+                for obj in detected_objects:
+                    tid = obj["target_uid"]
+                    # If it's not tracked (-1), we always escalate but throttle per camera as fallback
+                    last_esc_time = tracked_objects_cooldown.get(tid, 0)
+                    if current_time - last_esc_time >= 10.0:
+                        tracked_objects_cooldown[tid] = current_time
+                        should_escalate = True
                 
-                last_frame = last_escalation_frame.get(camera_id, -9999)
-                if frame_count - last_frame >= (TARGET_FPS * 10):
-                    last_escalation_frame[camera_id] = frame_count
+                if should_escalate:
                     
                     # ---------------------------------------------------------
                     # [NEW] Google PaliGemma 2 3B Edge Validator (정탐/오탐 1차 필터링)
@@ -159,8 +234,29 @@ async def camera_loop(camera_id, model, video_source):
                         
                     print(f"🔥 [{camera_id}] Detected {len(detected_objects)} objects! Running Edge Validation in background...")
                     
+                    # [NEW] Multi-Frame Grid Generation for Temporal Context
+                    buf = frame_buffers[camera_id]
+                    if len(buf) >= 4:
+                        idx = [0, len(buf)//3, 2*len(buf)//3, len(buf)-1]
+                        frames = [buf[i] for i in idx]
+                    else:
+                        frames = [frame.copy()] * 4
+                        
+                    # 안전한 병합을 위해 640x360으로 일괄 리사이즈
+                    resized = [cv2.resize(f, (640, 360)) for f in frames]
+                    
+                    # 각 프레임의 시간적 순서(시계열)를 VLM이 알 수 있도록 텍스트 오버레이 삽입
+                    cv2.putText(resized[0], "T-2.5s", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    cv2.putText(resized[1], "T-1.6s", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    cv2.putText(resized[2], "T-0.8s", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    cv2.putText(resized[3], "T-0.0s (Current)", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                    
+                    top_row = np.hstack((resized[0], resized[1]))
+                    bottom_row = np.hstack((resized[2], resized[3]))
+                    grid_image = np.vstack((top_row, bottom_row))
+                    
                     temp_path = os.path.join(tempfile.gettempdir(), f"frame_{camera_id}_{int(time.time())}.jpg")
-                    cv2.imwrite(temp_path, frame)
+                    cv2.imwrite(temp_path, grid_image)
                     
                     req_payload = {
                         "escalation_id": f"esc_{camera_id}_{int(time.time()*1000)}",
@@ -225,6 +321,10 @@ async def main():
     # New route supports dynamic camera ID
     route = app.router.add_get('/stream/{camera_id}', mjpeg_handler)
     cors.add(route)
+
+    # WebRTC WHEP route
+    route_webrtc = app.router.add_post('/webrtc/{camera_id}/whep', whep_handler)
+    cors.add(route_webrtc)
     
     runner = web.AppRunner(app)
     await runner.setup()

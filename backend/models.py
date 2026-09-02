@@ -14,6 +14,7 @@ class EventLog(Base):
     semantic_caption = Column(String, nullable=True)
     crop_box_coordinates = Column(JSON, nullable=True)
     video_segment_chunk_path = Column(String, nullable=True)
+    embedding = Column(JSON, nullable=True) # [NEW] SQLite 호환 인메모리 검색용 벡터 배열
 
 class CameraGroup(Base):
     __tablename__ = "camera_groups"
@@ -79,3 +80,60 @@ class PTZLog(Base):
     action = Column(String, nullable=False) # e.g., PAN_LEFT, ZOOM_IN
     timestamp = Column(DateTime, default=lambda: datetime.datetime.now(datetime.UTC), nullable=False)
     user_id = Column(String, nullable=True)
+
+class PtzSchedule(Base):
+    __tablename__ = "ptz_schedules"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    camera_id = Column(String, nullable=False)
+    schedule_data = Column(JSON, nullable=False) # Store the chain nodes and schedule grid
+    is_active = Column(Integer, default=1)
+
+class MLOpsJob(Base):
+    __tablename__ = "mlops_jobs"
+    id = Column(Integer, primary_key=True, index=True)
+    job_type = Column(String, nullable=False)
+    target_model = Column(String, nullable=False)
+    status = Column(String, default="PENDING", nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.UTC), nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+
+class PromptDeployment(Base):
+    __tablename__ = "prompt_deployments"
+    id = Column(Integer, primary_key=True, index=True)
+    target_edge_id = Column(String, nullable=False)
+    action_type = Column(String, nullable=False)
+    status = Column(String, default="SUCCESS", nullable=False)
+    payload_json = Column(JSON, nullable=True) # [NEW] 프롬프트 엔진 템플릿(시스템 프롬프트, 사용자 프롬프트 템플릿)
+    deployed_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.UTC), nullable=False)
+
+class SOPRule(Base):
+    __tablename__ = "sop_rules"
+    id = Column(Integer, primary_key=True, index=True)
+    rule_name = Column(String, unique=True, index=True, nullable=False)
+    natural_language_prompt = Column(String, nullable=False)
+    target_object = Column(String, nullable=False)
+    confidence_threshold = Column(Float, default=0.85, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.UTC), nullable=False)
+
+class ExportJob(Base):
+    __tablename__ = "export_jobs"
+    id = Column(Integer, primary_key=True, index=True)
+    job_type = Column(String, nullable=False)
+    target_cameras = Column(String, nullable=False)
+    status = Column(String, default="PENDING", nullable=False)
+    download_url = Column(String, nullable=True)
+    requested_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.UTC), nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+
+class NvrNode(Base):
+    __tablename__ = "nvr_nodes"
+    id = Column(Integer, primary_key=True, index=True)
+    node_name = Column(String, nullable=False)
+    ip_address = Column(String, nullable=False)
+    role = Column(String, nullable=False) # e.g., PRIMARY, FAILOVER
+    status = Column(String, default="ACTIVE", nullable=False)
+    cpu_usage = Column(Float, default=0.0)
+    ram_usage = Column(Float, default=0.0)
+    storage_total_tb = Column(Float, default=0.0)
+    storage_used_tb = Column(Float, default=0.0)

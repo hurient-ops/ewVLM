@@ -13,6 +13,67 @@ const MOCK_CAMERAS = [
 
 export const MonitorALiveControl: React.FC = () => {
   const { slots, activeLayout, setLayout, updateSlotStatus, cameras, groups, fetchCameras } = useCameraStore();
+  const [vlmModels, setVlmModels] = React.useState<string[]>([]);
+  const [activeModels, setActiveModels] = React.useState<string[]>(["Llama 3.2 11B Vision Instruct"]);
+  
+  const [expandedGroups, setExpandedGroups] = React.useState<Record<string, boolean>>({});
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups(prev => {
+      const isExpanded = prev[groupId] !== false; // defaults to true
+      return { ...prev, [groupId]: !isExpanded };
+    });
+  };
+
+  const groupedCameras = React.useMemo(() => {
+    const grouped: Record<string, { groupName: string, cameras: typeof cameras }> = {};
+    groups.forEach(g => {
+      grouped[g.id] = { groupName: g.name, cameras: [] };
+    });
+    grouped['unassigned'] = { groupName: '미배정 그룹', cameras: [] };
+    
+    cameras.forEach(cam => {
+      if (cam.groupId && grouped[cam.groupId]) {
+        grouped[cam.groupId].cameras.push(cam);
+      } else {
+        grouped['unassigned'].cameras.push(cam);
+      }
+    });
+    return grouped;
+  }, [cameras, groups]);
+
+  React.useEffect(() => {
+    API.getVlmModels().then((data) => {
+      setVlmModels(data.available || []);
+      if (data.active && Array.isArray(data.active)) {
+        setActiveModels(data.active);
+      }
+    }).catch(console.error);
+  }, []);
+
+  const handleModelToggle = async (model: string) => {
+    let newModels;
+    if (activeModels.includes(model)) {
+      newModels = activeModels.filter(m => m !== model);
+      if (newModels.length === 0) return;
+    } else {
+      newModels = [...activeModels, model];
+    }
+    
+    try {
+      await API.setVlmModel(newModels);
+      setActiveModels(newModels);
+      useEventLogStore.getState().addLog({
+        cameraId: 'SYSTEM',
+        cameraName: 'SYSTEM',
+        level: 'info',
+        message: `[SYSTEM] AI 모델이 앙상블 조합(${newModels.join(', ')})으로 교체되었습니다.`,
+        confidence: 1.0
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   React.useEffect(() => {
     fetchCameras();
@@ -61,6 +122,13 @@ export const MonitorALiveControl: React.FC = () => {
       document.exitFullscreen();
     }
   };
+  
+  // Sort entries: groups first, unassigned last
+  const sortedGroupEntries = Object.entries(groupedCameras).sort(([idA], [idB]) => {
+    if (idA === 'unassigned') return 1;
+    if (idB === 'unassigned') return -1;
+    return 0;
+  });
 
   return (
     <div className="flex flex-1 h-full">
@@ -81,31 +149,85 @@ export const MonitorALiveControl: React.FC = () => {
           <div className="px-4 py-2 text-xs text-text-muted mb-2">
             💡 팁: 카메라를 우측 빈 슬롯으로 드래그하세요.
           </div>
-          {cameras.map((cam) => (
-            <div 
-              key={cam.id} 
-              draggable 
-              onDragStart={(e) => handleDragStart(e, cam.id, cam.name)}
-              className="px-3 py-3 flex flex-col gap-1 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high mx-2 rounded-lg mb-2 cursor-grab active:cursor-grabbing border border-border-subtle bg-surface"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${cam.isActive !== false ? 'bg-[#4edea3] shadow-[0_0_4px_#4edea3]' : 'bg-red-500 shadow-[0_0_4px_#f44336]'}`}></span>
-                  <span className="font-bold text-[13px] text-white truncate max-w-[150px]" title={cam.name}>{cam.name}</span>
+          {sortedGroupEntries.map(([groupId, data]) => (
+            (data.cameras.length > 0 || groupId !== 'unassigned') && (
+              <div key={groupId} className="mb-2">
+                <div 
+                  className="px-4 py-2 flex items-center justify-between cursor-pointer hover:bg-surface-container-high transition-colors text-text-primary"
+                  onClick={() => toggleGroup(groupId)}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[16px]">{expandedGroups[groupId] === false ? 'folder' : 'folder_open'}</span>
+                    <span className="text-body-sm font-bold truncate max-w-[150px]" title={data.groupName}>{data.groupName}</span>
+                  </div>
+                  <span className="material-symbols-outlined text-[16px] transition-transform" style={{ transform: expandedGroups[groupId] === false ? 'rotate(0deg)' : 'rotate(180deg)' }}>expand_more</span>
                 </div>
-                <span className="material-symbols-outlined text-[16px]">drag_indicator</span>
+                {expandedGroups[groupId] !== false && (
+                  <div className="flex flex-col gap-1 mt-1 pl-2 pr-2">
+                    {data.cameras.map(cam => (
+                      <div 
+                        key={cam.id} 
+                        draggable 
+                        onDragStart={(e) => handleDragStart(e, cam.id, cam.name)}
+                        className="px-3 py-2 flex flex-col gap-1 text-text-muted hover:text-on-surface-variant hover:bg-surface-container-high mx-2 rounded-lg cursor-grab active:cursor-grabbing border border-border-subtle bg-surface"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${cam.isActive !== false ? 'bg-[#4edea3] shadow-[0_0_4px_#4edea3]' : 'bg-red-500 shadow-[0_0_4px_#f44336]'}`}></span>
+                            <span className="font-bold text-[13px] text-white truncate max-w-[150px]" title={cam.name}>{cam.name}</span>
+                          </div>
+                          <span className="material-symbols-outlined text-[16px]">drag_indicator</span>
+                        </div>
+                      </div>
+                    ))}
+                    {data.cameras.length === 0 && (
+                      <div className="px-4 py-1 mx-2 text-[11px] text-text-muted italic">카메라 없음</div>
+                    )}
+                  </div>
+                )}
               </div>
-              <span className="text-[11px] truncate flex items-center gap-1">
-                <span className="material-symbols-outlined text-[12px]">folder</span>
-                {groups.find(g => g.id === cam.groupId)?.name || '미배정 그룹'}
-              </span>
-            </div>
+            )
           ))}
         </div>
       </aside>
 
       {/* Main Content Area */}
       <main className="flex-1 flex bg-background min-w-0">
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex items-center justify-between p-2 bg-surface border-b border-border-subtle">
+          <div className="flex items-center space-x-2">
+            <span className="text-xs font-bold text-text-muted">실시간 모니터링 컨트롤</span>
+          </div>
+          <div className="flex items-center space-x-3">
+            <div className="relative group text-xs flex items-center space-x-2 z-50">
+              <span className="text-text-muted font-bold">VLM 앙상블 ({activeModels.length}): </span>
+              <div className="bg-[#070A13] border border-[#232C3F] text-white rounded px-2 py-1 text-[11px] font-mono cursor-pointer min-w-[150px] text-center shadow-inner">
+                {activeModels.length > 0 ? (activeModels.length === 1 ? activeModels[0] : `${activeModels[0]} 외 ${activeModels.length - 1}개`) : '선택'}
+              </div>
+              <div className="absolute top-full right-0 mt-1 w-[260px] bg-[#121724] border border-[#232C3F] rounded shadow-lg hidden group-hover:block p-2">
+                <div className="text-[10px] text-[#8E9AA8] mb-2 px-1">다중 선택 시 병렬 교차 검증을 수행합니다.</div>
+                <div className="space-y-1">
+                  {vlmModels.map(model => (
+                    <label key={model} className="flex items-center space-x-2 text-white cursor-pointer hover:bg-[#1E293B] p-1.5 rounded transition-colors">
+                      <input 
+                        type="checkbox" 
+                        checked={activeModels.includes(model)}
+                        onChange={() => handleModelToggle(model)}
+                        className="rounded border-[#232C3F] bg-[#070A13] text-primary focus:ring-primary"
+                      />
+                      <span className="text-[11px] font-mono truncate">{model}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="text-xs text-[#8E9AA8] flex items-center space-x-1.5 bg-[#121724] px-2 py-1 rounded border border-[#232C3F]">
+              <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping"></span>
+              <span>CCTV RTSP 디코더: </span>
+              <span className="text-white font-mono font-bold">NVIDIA NVDEC Hardware</span>
+            </div>
+          </div>
+        </div>
         {/* Video Grid */}
         <div 
           className="grid gap-[2px] p-[2px] flex-1 min-h-0" 
@@ -125,7 +247,7 @@ export const MonitorALiveControl: React.FC = () => {
               {slot.cameraId ? (
                 <>
                   <div className="absolute inset-0 bg-black flex items-center justify-center overflow-hidden">
-                    <WebRTCPlayer streamUrl={`http://localhost:8889/${slot.cameraId}/`} />
+                    <WebRTCPlayer streamUrl={`http://localhost:8889/${slot.cameraId.toLowerCase()}`} />
                   </div>
                   <div className="absolute top-2 left-2 bg-[rgba(18,23,36,0.8)] px-2 py-1 rounded text-[12px] text-white z-10 flex flex-col gap-1">
                     <div className="flex items-center gap-2">
@@ -153,9 +275,10 @@ export const MonitorALiveControl: React.FC = () => {
             </div>
           ))}
         </div>
+      </div>
 
-        {/* Right Sidebar Control Area */}
-        <aside className="w-[300px] flex-shrink-0 bg-[#0b0e17] border-l border-[#232C3F] flex flex-col p-6 gap-8 text-gray-300 overflow-y-auto">
+      {/* Right Sidebar Control Area */}
+      <aside className="w-[300px] flex-shrink-0 bg-[#0b0e17] border-l border-[#232C3F] flex flex-col p-6 gap-8 text-gray-300 overflow-y-auto">
           
           {/* PTZ Controls */}
           <div className="flex flex-col gap-4">

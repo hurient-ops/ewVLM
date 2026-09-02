@@ -8,6 +8,23 @@ export const MobilePatrolApp: React.FC = () => {
     let ws: WebSocket;
     const connectWs = () => {
       ws = new WebSocket('ws://localhost:8000/ws/alerts');
+      
+      let gpsInterval: any;
+      ws.onopen = () => {
+        // 모바일 기기의 GPS 위치를 주기적으로 관제실로 전송 (시뮬레이션)
+        gpsInterval = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+              type: 'GPS_UPDATE',
+              patrol_id: 'MOBILE-UNIT-01',
+              lat: 37.5665 + (Math.random() - 0.5) * 0.01,
+              lng: 126.9780 + (Math.random() - 0.5) * 0.01,
+              timestamp: new Date().toISOString()
+            }));
+          }
+        }, 5000);
+      };
+
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -18,7 +35,9 @@ export const MobilePatrolApp: React.FC = () => {
           console.error("Failed to parse websocket message", e);
         }
       };
+      
       ws.onclose = () => {
+        clearInterval(gpsInterval);
         setTimeout(connectWs, 3000); // Reconnect
       };
     };

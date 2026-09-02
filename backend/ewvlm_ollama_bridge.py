@@ -90,6 +90,7 @@ class OllamaVLMBridge:
         url = f"{self.ollama_url}/api/chat"
         payload = {
             "model": "llava",  # Changed from llama3.2-vision to llava due to old Ollama engine
+            "format": "json",
             "messages": [
                 {
                     "role": "user",
@@ -109,12 +110,11 @@ class OllamaVLMBridge:
 
         start_time = time.time()
         
-        # 실제 서버가 구동 중이지 않은 오프라인 환경을 위한 가상 탄력적 응답 정의
+        # 네트워크 미지원 시 오프라인 처리
         if not HAS_REQUESTS:
             latency = 1.15
-            mock_caption = "지면 상에 누출된 유독 가스로 추정되는 백색 연기가 배관 3번 피팅 밸브 주변부에서 급격히 피어오르고 있으며, 인근 작업자가 헬멧을 착용하지 않은 상태에서 대피 동선을 탐색하는 정황이 포착됨."
             time.sleep(latency)
-            return mock_caption, latency * 1000
+            return "[VLM_OFFLINE] requests 모듈이 없어 AI 서버에 연결할 수 없습니다.", latency * 1000
 
         try:
             response = requests.post(url, json=payload, timeout=300)
@@ -129,11 +129,8 @@ class OllamaVLMBridge:
 
         except Exception as e:
             latency_ms = (time.time() - start_time) * 1000
-            print(f"[CONN_FALLBACK] Ollama 서버 미탐지 또는 응답 지연: {e}")
-            print(" └─ [자가치유] 가상 가속 VLM 추론 모듈을 작동시킵니다.")
-            time.sleep(1.2) # VLM 로컬 하드웨어 평균 추론 레이턴시 에뮬레이션
-            mock_caption = "[가상 VLM 정적 탐지] CCTV-0024 서쪽 옹벽 인근, 30대 중반의 남성이 보안 펜스를 넘은 뒤 균형을 잃고 낙상하여 머리와 척추 부위에 가해진 강한 충격으로 거동이 차단된 비상 정황이 식별됨."
-            return mock_caption, latency_ms
+            print(f"[ERROR] Ollama 서버 연결 실패: {e}")
+            return f"[VLM_OFFLINE] Ollama 서버에 연결할 수 없습니다 ({e}). 실시간 분석이 중단되었습니다.", latency_ms
 
     def forward_to_gateway(self, camera_id, timestamp, caption, confidence=0.92):
         """

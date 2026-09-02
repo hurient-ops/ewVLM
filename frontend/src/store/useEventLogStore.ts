@@ -8,6 +8,7 @@ export interface EventLog {
   level: 'info' | 'warning' | 'critical';
   message: string;
   confidence: number;
+  escalationId?: string;
 }
 
 interface EventLogState {

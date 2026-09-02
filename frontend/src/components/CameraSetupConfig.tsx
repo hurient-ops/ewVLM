@@ -224,7 +224,7 @@ export const CameraSetupConfig: React.FC = () => {
 <label className="block text-mono-data font-mono-data text-text-muted mb-1">입력 1 (센서)</label>
 <select className="w-full bg-surface border border-border-subtle rounded px-2 py-1 text-mono-data font-mono-data text-on-surface focus:border-primary-container outline-none">
 <option>도어 접점</option>
-<option selected="">PIR 모션</option>
+<option>PIR 모션</option>
 <option>없음</option>
 </select>
 </div>

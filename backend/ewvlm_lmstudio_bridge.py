@@ -88,7 +88,8 @@ class LMStudioVLMBridge:
         """
         url = f"{self.lmstudio_url}/v1/chat/completions"
         payload = {
-            "model": "local-model",
+            "model": model_name,
+            "response_format": {"type": "json_object"},
             "messages": [
                 {
                     "role": "user",
@@ -100,6 +101,9 @@ class LMStudioVLMBridge:
             ],
             "temperature": 0.2,
             "max_tokens": 512,
+            "top_p": 0.9,
+            "frequency_penalty": 0.3,
+            "presence_penalty": 0.3,
             "stream": False
         }
 
@@ -108,12 +112,11 @@ class LMStudioVLMBridge:
 
         start_time = time.time()
         
-        # 실제 서버가 구동 중이지 않은 오프라인 환경을 위한 가상 탄력적 응답 정의
+        # 네트워크 미지원 시 오프라인 처리
         if not HAS_REQUESTS:
             latency = 1.15
-            mock_caption = "지면 상에 누출된 유독 가스로 추정되는 백색 연기가 배관 3번 피팅 밸브 주변부에서 급격히 피어오르고 있으며, 인근 작업자가 헬멧을 착용하지 않은 상태에서 대피 동선을 탐색하는 정황이 포착됨."
             time.sleep(latency)
-            return mock_caption, latency * 1000
+            return "[VLM_OFFLINE] requests 모듈이 없어 AI 서버에 연결할 수 없습니다.", latency * 1000
 
         try:
             # 타임아웃 300초 설정 (대형 모델 로딩 대비)
@@ -142,11 +145,8 @@ class LMStudioVLMBridge:
 
         except Exception as e:
             latency_ms = (time.time() - start_time) * 1000
-            print(f"[CONN_FALLBACK] LM Studio 서버 미탐지 또는 응답 지연: {e}")
-            print(" └─ [자가치유] 가상 가속 VLM 추론 모듈을 작동시킵니다.")
-            time.sleep(1.2) # VLM 로컬 하드웨어 평균 추론 레이턴시 에뮬레이션
-            mock_caption = "[가상 VLM 정적 탐지] CCTV-0024 서쪽 옹벽 인근, 30대 중반의 남성이 보안 펜스를 넘은 뒤 균형을 잃고 낙상하여 머리와 척추 부위에 가해진 강한 충격으로 거동이 차단된 비상 정황이 식별됨."
-            return mock_caption, latency_ms
+            print(f"[ERROR] LM Studio 서버 연결 실패: {e}")
+            return f"[VLM_OFFLINE] LM Studio 서버에 연결할 수 없습니다 ({e}). 실시간 분석이 중단되었습니다.", latency_ms
 
     def forward_to_gateway(self, camera_id, timestamp, caption, confidence=0.92):
         """
@@ -198,7 +198,11 @@ def main():
     print(f" └─ 해상도 규격: {w}x{h} px | Base64 스트링 길이: {len(base64_data)} 자")
 
     # 2. LM Studio Vision 추론 및 레이턴시 프로파일링
-    prompt = "CCTV 영상 프레임 속 위험 상황(작업자 안전모 장비 착용 상태, 침입 유무, 낙상 정황)을 한국어 3줄 요약 문맥으로 조밀하게 서술해줘."
+    prompt = """[System] 당신은 산업 안전 및 보안 관제 AI(ewVLM)입니다. 다음 형식으로 정확하게 응답하세요.
+[상황] (현재 보이는 상황 1줄 요약)
+[위협 수준] (안전/경고/심각 중 택1)
+[권장 조치] (필요한 즉각적 조치 1줄)
+분석할 사항: 작업자 안전모 착용 여부, 비인가자 침입 유무, 낙상 정황 등."""
     caption, latency_ms = bridge.query_lmstudio_vision(base64_data, model_name=args.model, prompt=prompt)
     print(f"\n[VLM_RESPONSE] LM Studio 의미론적 추론 결과 수신 완료.")
     print(f" └─ 정황 설명(Caption): \"{caption}\"")

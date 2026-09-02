@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/useAuthStore';
 import { initWebSocket } from './api/client';
-import { useEventSimulator } from './hooks/useEventSimulator';
 import Login from './components/Login';
 import Signup from './components/Signup';
 
@@ -55,7 +54,7 @@ export default function App() {
   useEffect(() => {
     initWebSocket();
 
-    // 부모 창(Monitor A)이 닫히거나 새로고침될 때 분리된 창(Monitor B)도 함께 강제 종료
+    // 遺紐?李?Monitor A)???ロ엳嫄곕굹 ?덈줈怨좎묠????遺꾨━??李?Monitor B)???④퍡 媛뺤젣 醫낅즺
     const handleBeforeUnload = () => {
       const bc = new BroadcastChannel('vlm_monitor_b_sync');
       bc.postMessage('force_close_detached');
@@ -67,9 +66,6 @@ export default function App() {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);
-
-  // 15초 단위로 랜덤 VLM 이벤트 자동 발생 시뮬레이터 시작 (실제 VLM 테스트를 위해 주석 처리)
-  // useEventSimulator(15000);
 
   return (
     <BrowserRouter>

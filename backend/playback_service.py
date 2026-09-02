@@ -15,7 +15,10 @@ def send_bytes_range_requests(
         f.seek(start)
         while (pos := f.tell()) <= end:
             read_size = min(chunk_size, end + 1 - pos)
-            yield f.read(read_size)
+            data = f.read(read_size)
+            if not data:
+                break
+            yield data
 
 @playback_router.get("/api/v1/nvr/playback/{camera_id}")
 async def get_nvr_playback(camera_id: str, request: Request, timestamp: str = None):

@@ -24,6 +24,7 @@ export interface CameraDevice {
   macAddress: string;
   status: 'online' | 'offline' | 'warning';
   vlmEnabled: boolean;
+  isActive?: boolean;
   groupId: string | null;
   rtspUrl?: string; // Optional since it might be null initially
   resolution: string;

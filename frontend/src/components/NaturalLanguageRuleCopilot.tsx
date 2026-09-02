@@ -56,7 +56,7 @@ export const NaturalLanguageRuleCopilot: React.FC = () => {
 <div className="flex-1 overflow-y-auto p-1 flex flex-col gap-1">
 {/* List Item */}
 <label className="flex items-center gap-3 p-2 hover:bg-surface-variant cursor-pointer rounded border border-transparent hover:border-border-subtle transition-colors group">
-<input defaultChecked="" className="form-checkbox bg-background border-border-subtle text-primary rounded-sm w-4 h-4 focus:ring-primary focus:ring-offset-0 focus:ring-offset-background" type="checkbox"/>
+<input defaultChecked className="form-checkbox bg-background border-border-subtle text-primary rounded-sm w-4 h-4 focus:ring-primary focus:ring-offset-0 focus:ring-offset-background" type="checkbox"/>
 <div className="w-12 h-8 bg-surface-container-highest rounded border border-border-subtle relative overflow-hidden flex-shrink-0">
 <img className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" data-alt="A low-resolution, monochrome thumbnail of an industrial gate security camera feed. The image shows a chain-link fence and a dark asphalt road under harsh artificial lighting. High contrast, gritty texture." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB8w9P4q1VNKji2GLqwenU91ZxleVJDIpYLwl4GS6SgYyJnOVZSESD0WDwECkdcBtHnvda-cwraRav0zhTfIWUiwkOODrkIj-XFt0ZYdRwN9gx2ddWSwo9-SoD_gc0b58lI9KnC9wzt9i5xfwS3O_UlAQHlx0jAHNh7GcQRw-WFcnqM4dQ-ToJzw7rzAaiI9KaTgrdO2FI2uvN9LLJeakxJmiA3bNNk9WYOLW2SufgCEfzhH1mlKE4AJA"/>
 </div>
@@ -206,7 +206,7 @@ export const NaturalLanguageRuleCopilot: React.FC = () => {
 </div>
 <div className="flex flex-col gap-1 w-1/2">
 <label className="text-label-caps font-label-caps text-text-muted">활성 일정</label>
-<select className="w-full bg-background border border-border-subtle rounded px-3 py-1.5 text-body-sm font-body-sm text-text-primary focus:outline-none focus:border-primary appearance-none" value={generatedRule?.schedule || "24/7"} readOnly>
+<select className="w-full bg-background border border-border-subtle rounded px-3 py-1.5 text-body-sm font-body-sm text-text-primary focus:outline-none focus:border-primary appearance-none" value={generatedRule?.schedule || "24/7"} disabled>
 <option value="24/7">항상 켜짐 (24/7)</option>
 <option value="night">야간 (22:00 - 06:00)</option>
 </select>

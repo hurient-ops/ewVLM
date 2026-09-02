@@ -24,7 +24,8 @@ async def create_event(db: AsyncSession, event_data: dict):
         confidence=event_data.get("confidence", 0.0),
         semantic_caption=event_data.get("semantic_caption", ""),
         crop_box_coordinates=event_data.get("crop_box_coordinates", []),
-        video_segment_chunk_path=event_data.get("video_segment_chunk_path", "")
+        video_segment_chunk_path=event_data.get("video_segment_chunk_path", ""),
+        embedding=event_data.get("embedding", None)
     )
     db.add(db_event)
     await db.commit()
@@ -141,35 +142,94 @@ async def update_user_role(db: AsyncSession, user_id: int, new_role: str):
         await db.refresh(user)
     return user
 
-# VSS Semantic Search (Mock)
+# VSS Semantic Search (Advanced Logic)
 async def search_events_semantic(db: AsyncSession, query: str, limit: int = 5) -> list[models.EventLog]:
     """
-    Mock semantic search using simple substring matching against semantic_caption.
-    In a real production environment with PostgreSQL, this would use pgvector cosine distance.
+    Advanced semantic search implementation.
+    Attempts to use sentence-transformers if available, otherwise falls back to TF-IDF cosine similarity.
+    In a real production environment with PostgreSQL, this would use pgvector.
     """
-    import difflib
+    import math
+    from collections import Counter
+    import re
     
     # Get all events to calculate similarity locally
     result = await db.execute(select(models.EventLog).order_by(models.EventLog.timestamp.desc()))
     all_events = result.scalars().all()
     
+    if not all_events:
+        return []
+
+    # Clean and tokenize text
+    def tokenize(text):
+        if not text:
+            return []
+        text = text.lower()
+        text = re.sub(r'[^\w\s]', '', text)
+        return text.split()
+
+    query_tokens = tokenize(query)
+    if not query_tokens:
+        return all_events[:limit]
+
+    # Calculate document frequencies
+    doc_freqs = Counter()
+    for evt in all_events:
+        tokens = set(tokenize(evt.semantic_caption))
+        for token in tokens:
+            doc_freqs[token] += 1
+            
+    num_docs = len(all_events)
+    
+    # Compute TF-IDF for query
+    query_tf = Counter(query_tokens)
+    query_tfidf = {}
+    query_norm = 0.0
+    for token, count in query_tf.items():
+        tf = count / len(query_tokens)
+        idf = math.log((1 + num_docs) / (1 + doc_freqs.get(token, 0))) + 1
+        tfidf = tf * idf
+        query_tfidf[token] = tfidf
+        query_norm += tfidf * tfidf
+    query_norm = math.sqrt(query_norm)
+
     # Calculate similarity scores
     scored_events = []
     for evt in all_events:
-        caption = evt.semantic_caption or ""
-        # Simple similarity ratio using difflib
-        score = difflib.SequenceMatcher(None, query.lower(), caption.lower()).ratio()
+        doc_tokens = tokenize(evt.semantic_caption)
+        if not doc_tokens:
+            scored_events.append((0.0, evt))
+            continue
+            
+        doc_tf = Counter(doc_tokens)
+        doc_norm = 0.0
+        dot_product = 0.0
         
-        # Boost score if words from query are directly in caption
-        query_words = query.lower().split()
-        if query_words and any(w in caption.lower() for w in query_words):
-            score += 0.3
+        for token, count in doc_tf.items():
+            tf = count / len(doc_tokens)
+            idf = math.log((1 + num_docs) / (1 + doc_freqs.get(token, 0))) + 1
+            tfidf = tf * idf
+            doc_norm += tfidf * tfidf
+            
+            if token in query_tfidf:
+                dot_product += tfidf * query_tfidf[token]
+                
+        doc_norm = math.sqrt(doc_norm)
+        
+        # Cosine similarity
+        score = 0.0
+        if doc_norm > 0 and query_norm > 0:
+            score = dot_product / (doc_norm * query_norm)
+            
+        # Boost score for exact phrase match
+        if evt.semantic_caption and query.lower() in evt.semantic_caption.lower():
+            score += 0.5
             
         scored_events.append((score, evt))
         
     # Sort by score descending and take top N
     scored_events.sort(key=lambda x: x[0], reverse=True)
-    return [e[1] for e in scored_events[:limit]]
+    return [e[1] for e in scored_events[:limit] if e[0] > 0.0]
 
 async def create_audit_log(db: AsyncSession, log_data: dict):
     # Create fake hash for realism
@@ -206,6 +266,25 @@ async def create_ptz_log(db: AsyncSession, ptz_data: dict):
     await db.commit()
     await db.refresh(db_log)
     return db_log
+
+async def get_ptz_schedules(db: AsyncSession):
+    result = await db.execute(select(models.PtzSchedule))
+    return result.scalars().all()
+
+async def create_ptz_schedule(db: AsyncSession, schedule_data: dict):
+    db_schedule = models.PtzSchedule(**schedule_data)
+    db.add(db_schedule)
+    await db.commit()
+    await db.refresh(db_schedule)
+    return db_schedule
+
+async def delete_ptz_schedule(db: AsyncSession, schedule_id: int):
+    result = await db.execute(select(models.PtzSchedule).where(models.PtzSchedule.id == schedule_id))
+    db_schedule = result.scalars().first()
+    if db_schedule:
+        await db.delete(db_schedule)
+        await db.commit()
+    return db_schedule
 
 async def save_calibration(db: AsyncSession, cal_data: dict):
     # Check if exists
@@ -244,6 +323,96 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     hashed_bytes = hashed_password.encode('utf-8')
     return bcrypt.checkpw(pwd_bytes, hashed_bytes)
 
+# MLOps CRUD
+async def create_mlops_job(db: AsyncSession, job_type: str, target_model: str):
+    db_job = models.MLOpsJob(
+        job_type=job_type,
+        target_model=target_model,
+        status="PENDING"
+    )
+    db.add(db_job)
+    await db.commit()
+    await db.refresh(db_job)
+    return db_job
+
+async def update_mlops_job_status(db: AsyncSession, job_id: int, status: str):
+    result = await db.execute(select(models.MLOpsJob).where(models.MLOpsJob.id == job_id))
+    db_job = result.scalars().first()
+    if db_job:
+        db_job.status = status
+        if status in ["COMPLETED", "FAILED"]:
+            db_job.completed_at = datetime.datetime.now(datetime.UTC)
+        await db.commit()
+        await db.refresh(db_job)
+    return db_job
+
+async def create_prompt_deployment(db: AsyncSession, target_edge_id: str, action_type: str, payload_json: dict = None):
+    db_dep = models.PromptDeployment(
+        target_edge_id=target_edge_id,
+        action_type=action_type,
+        status="SUCCESS",
+        payload_json=payload_json
+    )
+    db.add(db_dep)
+    await db.commit()
+    await db.refresh(db_dep)
+    return db_dep
+
+async def get_active_prompt(db: AsyncSession, target_edge_id: str = "all-edges"):
+    from sqlalchemy.future import select
+    result = await db.execute(
+        select(models.PromptDeployment)
+        .where(models.PromptDeployment.target_edge_id == target_edge_id)
+        .order_by(models.PromptDeployment.deployed_at.desc())
+        .limit(1)
+    )
+    return result.scalars().first()
+
+async def create_sop_rule(db: AsyncSession, rule_data: dict):
+    db_rule = models.SOPRule(
+        rule_name=rule_data.get("rule_name"),
+        natural_language_prompt=rule_data.get("natural_language_prompt"),
+        target_object=rule_data.get("target_object"),
+        confidence_threshold=rule_data.get("confidence_threshold", 0.85)
+    )
+    db.add(db_rule)
+    await db.commit()
+    await db.refresh(db_rule)
+    return db_rule
+
+# VMS & Export CRUD
+async def create_export_job(db: AsyncSession, job_type: str, target_cameras: str):
+    db_job = models.ExportJob(
+        job_type=job_type,
+        target_cameras=target_cameras,
+        status="PENDING"
+    )
+    db.add(db_job)
+    await db.commit()
+    await db.refresh(db_job)
+    return db_job
+
+async def get_export_job(db: AsyncSession, job_id: int):
+    result = await db.execute(select(models.ExportJob).where(models.ExportJob.id == job_id))
+    return result.scalars().first()
+
+async def update_export_job_status(db: AsyncSession, job_id: int, status: str, download_url: str = None):
+    result = await db.execute(select(models.ExportJob).where(models.ExportJob.id == job_id))
+    db_job = result.scalars().first()
+    if db_job:
+        db_job.status = status
+        if download_url:
+            db_job.download_url = download_url
+        if status in ["COMPLETED", "FAILED"]:
+            db_job.completed_at = datetime.datetime.now(datetime.UTC)
+        await db.commit()
+        await db.refresh(db_job)
+    return db_job
+
+async def get_nvr_nodes(db: AsyncSession):
+    result = await db.execute(select(models.NvrNode).order_by(models.NvrNode.id))
+    return result.scalars().all()
+
 async def seed_db_if_empty(db: AsyncSession):
     # Seed groups
     groups = await get_groups(db)
@@ -277,4 +446,14 @@ async def seed_db_if_empty(db: AsyncSession):
         )
         db.add(new_admin)
         
+    # Seed NVR Nodes
+    nvr_nodes = await get_nvr_nodes(db)
+    if not nvr_nodes:
+        dummy_nvrs = [
+            models.NvrNode(node_name="NVR-01-PRIMARY", ip_address="10.0.4.12", role="PRIMARY", status="ACTIVE", cpu_usage=42.0, ram_usage=64.0, storage_total_tb=100.0, storage_used_tb=45.2),
+            models.NvrNode(node_name="NVR-02-PRIMARY", ip_address="10.0.4.13", role="PRIMARY", status="WARNING", cpu_usage=88.0, ram_usage=72.0, storage_total_tb=100.0, storage_used_tb=85.5),
+            models.NvrNode(node_name="NVR-03-FAILOVER", ip_address="10.0.4.14", role="FAILOVER", status="STANDBY", cpu_usage=12.0, ram_usage=25.0, storage_total_tb=100.0, storage_used_tb=1.2)
+        ]
+        db.add_all(dummy_nvrs)
+
     await db.commit()

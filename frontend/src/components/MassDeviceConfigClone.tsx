@@ -23,7 +23,7 @@ export const MassDeviceConfigClone: React.FC = () => {
   };
 
   return ( <>
-<main className="h-full flex flex-col p-container-padding bg-[#070A13] relative">
+<main className="flex-1 w-full h-full flex flex-col p-container-padding bg-[#070A13] relative">
 {toastMessage && (
   <div className="absolute top-8 left-1/2 -translate-x-1/2 z-50 bg-primary-container border border-primary text-white px-6 py-3 rounded-lg shadow-2xl font-body-base text-body-base animate-pulse">
     {toastMessage}
@@ -67,18 +67,18 @@ export const MassDeviceConfigClone: React.FC = () => {
 <li>
 <div className="flex items-center gap-2 p-1 hover:bg-surface-container-high rounded cursor-pointer">
 <span className="material-symbols-outlined text-sm text-text-muted">keyboard_arrow_down</span>
-<input defaultChecked="" className="rounded border-border-subtle bg-surface text-primary-container focus:ring-primary-container focus:ring-offset-surface" type="checkbox"/>
+<input defaultChecked className="rounded border-border-subtle bg-surface text-primary-container focus:ring-primary-container focus:ring-offset-surface" type="checkbox"/>
 <span className="material-symbols-outlined text-sm text-secondary">domain</span>
 <span>Sector Alpha (120)</span>
 </div>
 <ul className="pl-6 space-y-1 mt-1 border-l border-border-subtle ml-3">
 <li className="flex items-center gap-2 p-1 hover:bg-surface-container-high rounded cursor-pointer bg-primary/5 border border-primary/20">
-<input defaultChecked="" className="rounded border-border-subtle bg-surface text-primary-container focus:ring-primary-container focus:ring-offset-surface" type="checkbox"/>
+<input defaultChecked className="rounded border-border-subtle bg-surface text-primary-container focus:ring-primary-container focus:ring-offset-surface" type="checkbox"/>
 <span className="material-symbols-outlined text-sm text-tertiary">videocam</span>
 <span>Perimeter P-01 to P-50</span>
 </li>
 <li className="flex items-center gap-2 p-1 hover:bg-surface-container-high rounded cursor-pointer">
-<input defaultChecked="" className="rounded border-border-subtle bg-surface text-primary-container focus:ring-primary-container focus:ring-offset-surface" type="checkbox"/>
+<input defaultChecked className="rounded border-border-subtle bg-surface text-primary-container focus:ring-primary-container focus:ring-offset-surface" type="checkbox"/>
 <span className="material-symbols-outlined text-sm text-tertiary">videocam</span>
 <span>Gate G-01 to G-20</span>
 </li>
@@ -114,7 +114,7 @@ export const MassDeviceConfigClone: React.FC = () => {
 <h3 className="text-label-caps font-label-caps text-on-surface">보안 자격 인증</h3>
 </div>
 <label className="flex items-center gap-2 text-sm">
-<input defaultChecked="" className="rounded border-border-subtle bg-surface text-primary-container focus:ring-primary-container" type="checkbox"/>
+<input defaultChecked className="rounded border-border-subtle bg-surface text-primary-container focus:ring-primary-container" type="checkbox"/>
 <span className="text-text-muted">재정의</span>
 </label>
 </div>
@@ -141,7 +141,7 @@ export const MassDeviceConfigClone: React.FC = () => {
 <h3 className="text-label-caps font-label-caps text-on-surface">스트림 및 압축</h3>
 </div>
 <label className="flex items-center gap-2 text-sm">
-<input defaultChecked="" className="rounded border-border-subtle bg-surface text-primary-container focus:ring-primary-container" type="checkbox"/>
+<input defaultChecked className="rounded border-border-subtle bg-surface text-primary-container focus:ring-primary-container" type="checkbox"/>
 <span className="text-text-muted">재정의</span>
 </label>
 </div>
@@ -149,7 +149,7 @@ export const MassDeviceConfigClone: React.FC = () => {
 <div className="flex items-center justify-between bg-surface-container p-2 rounded border border-border-subtle">
 <span className="text-sm font-medium">WiseStream III (AI)</span>
 <label className="relative inline-flex items-center cursor-pointer">
-<input defaultChecked="" className="sr-only peer" type="checkbox" value=""/>
+<input defaultChecked className="sr-only peer" type="checkbox" value=""/>
 <div className="w-9 h-5 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-container"></div>
 </label>
 </div>

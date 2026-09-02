@@ -172,9 +172,9 @@ export const MultiSiteAuthMatrix: React.FC = () => {
 <thead>
 <tr>
 <th className="sticky top-0 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle text-label-caps font-label-caps text-text-muted min-w-[150px]"> Role / Group </th>
-<th className="sticky top-0 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle border-l text-center text-label-caps font-label-caps text-on-surface bg-surface-container/50" colSpan="4"> Video Streams </th>
-<th className="sticky top-0 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle border-l text-center text-label-caps font-label-caps text-on-surface bg-surface-container/50" colSpan="3"> PTZ &amp; Controls </th>
-<th className="sticky top-0 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle border-l text-center text-label-caps font-label-caps text-on-surface bg-surface-container/50" colSpan="2"> Federation </th>
+<th className="sticky top-0 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle border-l text-center text-label-caps font-label-caps text-on-surface bg-surface-container/50" colSpan={4}> Video Streams </th>
+<th className="sticky top-0 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle border-l text-center text-label-caps font-label-caps text-on-surface bg-surface-container/50" colSpan={3}> PTZ &amp; Controls </th>
+<th className="sticky top-0 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle border-l text-center text-label-caps font-label-caps text-on-surface bg-surface-container/50" colSpan={2}> Federation </th>
 </tr>
 <tr>
 <th className="sticky top-8 bg-surface-container-lowest z-20 p-2 border-b border-border-subtle text-osd-label font-osd-label text-text-muted"></th>

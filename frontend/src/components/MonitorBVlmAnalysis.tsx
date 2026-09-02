@@ -15,7 +15,7 @@ export const MonitorBVlmAnalysis: React.FC = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  const handleChatSubmit = (e: React.FormEvent) => {
+  const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
 
@@ -24,15 +24,19 @@ export const MonitorBVlmAnalysis: React.FC = () => {
     setChatInput('');
     setIsTyping(true);
 
-    setTimeout(() => {
-      let mockReply = '요청하신 정보에 대한 VLM 분석 결과입니다.';
-      if (chatInput.includes('빨간')) mockReply = '빨간 옷을 입은 사람(대상자 ID: 824)이 [14:55:20]에 CAM-02(자재 창고)에서 포착되었으며, [15:01:10]에 CAM-05(지하 주차장) 방향으로 이동한 것이 확인되었습니다.';
-      if (chatInput.includes('침입')) mockReply = '보안 인가되지 않은 외부인이 남문 펜스를 넘는 장면이 감지되었습니다. 추적을 위해 인접 카메라를 활성화할까요?';
-      
-      const newAiMsg = { id: (Date.now()+1).toString(), role: 'ai', text: mockReply, timestamp: new Date().toLocaleTimeString('ko-KR', { hour12: false }).substring(0, 5) };
+    try {
+      // Find currently selected camera if any, or default
+      const selectedCam = selectedCameras.length > 0 ? selectedCameras[0] : undefined;
+      const res = await API.sendVlmChat(newUserMsg.text, selectedCam);
+      const newAiMsg = { id: (Date.now()+1).toString(), role: 'ai', text: res.reply, timestamp: new Date().toLocaleTimeString('ko-KR', { hour12: false }).substring(0, 5) };
       setMessages(prev => [...prev, newAiMsg]);
+    } catch (error) {
+      console.error('Failed to send VLM chat:', error);
+      const newAiMsg = { id: (Date.now()+1).toString(), role: 'ai', text: 'VLM 분석 서버와 통신 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.', timestamp: new Date().toLocaleTimeString('ko-KR', { hour12: false }).substring(0, 5) };
+      setMessages(prev => [...prev, newAiMsg]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
   
   return ( <>
@@ -193,7 +197,7 @@ export const MonitorBVlmAnalysis: React.FC = () => {
 </div>
 <div className="mb-4 flex-1">
 <span className="block text-label-caps font-label-caps text-text-muted mb-1">사건 요약 (VLM 생성)</span>
-<textarea className="w-full h-24 bg-surface-container border border-border-subtle rounded p-2 text-mono-data font-mono-data text-on-surface-variant focus:outline-none resize-none" readOnly="">노인 남성이 서쪽 계단을 내려가다 넘어짐. 30초 이상 움직임 없음. 자동 경보 발생. SOP 시작됨.</textarea>
+<textarea className="w-full h-24 bg-surface-container border border-border-subtle rounded p-2 text-mono-data font-mono-data text-on-surface-variant focus:outline-none resize-none" readOnly>노인 남성이 서쪽 계단을 내려가다 넘어짐. 30초 이상 움직임 없음. 자동 경보 발생. SOP 시작됨.</textarea>
 </div>
 <div className="mb-4">
 <span className="block text-label-caps font-label-caps text-text-muted mb-1">조치 사항</span>

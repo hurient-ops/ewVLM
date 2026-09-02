@@ -7,11 +7,20 @@ export const NetworkTopologyMonitor: React.FC = () => {
   const [selectedNodeId, setSelectedNodeId] = useState<string>('SW-01');
 
   useEffect(() => {
-    API.getTopology().then(res => {
-      if (res.status === 'SUCCESS') {
-        setNodes(res.nodes);
-      }
-    }).catch(err => console.error("Failed to fetch topology", err));
+    const fetchTopology = () => {
+      API.getTopology().then(res => {
+        if (res.status === 'SUCCESS') {
+          setNodes(res.nodes);
+        }
+      }).catch(err => console.error("Failed to fetch topology", err));
+    };
+    
+    // Initial fetch
+    fetchTopology();
+    
+    // Poll every 3 seconds for real-time SNMP updates
+    const intervalId = setInterval(fetchTopology, 3000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleNodeClick = (nodeId: string) => {
@@ -49,7 +58,7 @@ export const NetworkTopologyMonitor: React.FC = () => {
 <stop offset="100%" stop-color="#232C3F"></stop>
 </linearGradient>
 <filter height="140%" id="glow" width="140%" x="-20%" y="-20%">
-<feGaussianBlur result="blur" stddeviation="4"></feGaussianBlur>
+<feGaussianBlur result="blur" stdDeviation="4"></feGaussianBlur>
 <feComposite in="SourceGraphic" in2="blur" operator="over"></feComposite>
 </filter>
 </defs>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { API } from '../api/client';
 import { usePtzStore } from '../store/usePtzStore';
+import { WebRTCPlayer } from './WebRTCPlayer';
 
 export const PtzTargetHandover: React.FC = () => {
   const activeCameraId = usePtzStore(state => state.activeCameraId) || 'CAM_04_PTZ_NORTH';
@@ -39,7 +40,7 @@ export const PtzTargetHandover: React.FC = () => {
 <div className="flex flex-col gap-gutter bg-[#070A13] p-gutter">
 {/* Primary Target View */}
 <div className="video-feed active flex-1 relative">
-<img alt="Primary Feed" className="absolute inset-0 w-full h-full object-cover opacity-80" data-alt="A highly detailed, real-time surveillance camera feed showing an urban intersection at night. The scene is illuminated by harsh streetlights and neon signs, creating a gritty, industrial atmosphere. In the center, a dark-colored SUV is sharply in focus, highlighted as a tracking target. The overall color palette is dominated by deep navies, shadows, and cool technical blues, emphasizing the mission-critical, low-glare dark mode aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHAoccqrfyKzednbh-zXeN4cG13XK9dO5H3IM2DrprCnOxrU0motnRNLqSEn5scAHk2rKT1OlkkHCdtApnagz-gWDWarnSRGRRjwdfcsag6lFOfd52OqJsZvqRnTQS78fs9WWz6kRYtAKHaYpMJ-m4EnH2ZzMPsuro7Hg-L_8vyJ8qBoaGEa1M2nEk8stlo1ahErMahOFO3-SL6DANrJ96bznTqr4mH-jSo3mmE1-hWmtXaxi0A37TBQ"/>
+<WebRTCPlayer streamUrl={`http://localhost:8889/${(activeCameraId || 'cam-01').toLowerCase()}`} />
 {/* OSD Overlays */}
 <div className="osd-overlay inset-0">
 {/* Bounding Box */}
@@ -70,7 +71,7 @@ export const PtzTargetHandover: React.FC = () => {
 <div className="h-1/3 flex gap-gutter">
 <div className="video-feed w-1/3 relative">
 <div className="absolute inset-0 bg-surface-container-lowest flex items-center justify-center">
-<img alt="Previous Camera" className="absolute inset-0 w-full h-full object-cover opacity-40 grayscale" data-alt="A grayscale, low-resolution surveillance camera feed showing a vehicle exiting the frame to the left. The scene is an empty industrial alleyway at night. The lighting is sparse and dim, fitting a mission-critical, low-glare dark mode aesthetic. A subtle, faded red bounding box hints at a lost track." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpvVvVm1m08B4_CRnCE5hyDdk5U3OGiptERAi15tL79lJtPLWM9dyrLOlptS1Sfc3LyxJhZzXTKQla_51QRyLiqcLVdMaqf2V-bwqaMIrR9Mv67gdJo4f-AQ43Qnn5dkS1A0xA6UNNOn7OgBc7PUfT42rt65W2epdm9WVk4Voagx0uEXfZ1yMNqQU4F71HWqjmZ78bXMZ0Wiyj4_VA0wN0EXZWl2yThfHH_jvFWjolMlH5mSgwN7yCxw"/>
+<WebRTCPlayer streamUrl="http://localhost:8889/cam-03" />
 <div className="absolute top-osd-margin left-osd-margin bg-surface/80 text-text-muted font-mono-data text-mono-data px-2 py-0.5 rounded">CAM_03 (LOST)</div>
 </div>
 </div>
@@ -81,7 +82,7 @@ export const PtzTargetHandover: React.FC = () => {
 <div className="absolute top-osd-margin left-osd-margin bg-surface/80 text-primary font-mono-data text-mono-data px-2 py-0.5 rounded">HANDOVER IN PROGRESS</div>
 </div>
 <div className="video-feed w-1/3 relative">
-<img alt="Next Camera" className="absolute inset-0 w-full h-full object-cover opacity-60" data-alt="A wide-angle surveillance camera feed showing an empty highway stretch at night. The scene is illuminated by distant streetlights, maintaining a dark, high-contrast industrial aesthetic. A faint green vector graphic overlays the road, indicating a predicted trajectory path for an incoming vehicle. Low glare, mission-critical vibe." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_alObZfxJcMXeX8FUCpyGSutiXsBqzP8qkonphBxeCHv8VRybOq0HESbmbdmkBJiaNIEK9dKOZdXZpyeAy9Qg_4YRSo_tG_cQZJkrRld6xZCsswp5xnQ4LyxLSbgwv76v5EZsHjcufaorSEg2ZPWBBulMDr_FQ3oIHgJwis3tVLt-BIYbmAxkdrhQUsymOH5QLjSDBxKhJYNZo7SygcuaSJ77HIgYd4hiado6tVa50GhoDpHDiP0zGg"/>
+<WebRTCPlayer streamUrl="http://localhost:8889/cam-05" />
 <div className="absolute top-osd-margin left-osd-margin bg-surface/80 text-warning font-mono-data text-mono-data px-2 py-0.5 rounded">CAM_05 (PREDICTED)</div>
 {/* Predicted Path Overlay */}
 <div className="absolute inset-0 border-2 border-dashed border-warning/50 m-4 rounded pointer-events-none"></div>
@@ -114,15 +115,15 @@ export const PtzTargetHandover: React.FC = () => {
 <span className="material-symbols-outlined text-primary-container">gamepad</span>
 </div>
 {/* Directional Arrows */}
-<button className="jog-btn top-2 left-1/2 -translate-x-1/2" onClick={() => handlePtz('TILT_UP')}><span className="material-symbols-outlined">expand_less</span></button>
-<button className="jog-btn bottom-2 left-1/2 -translate-x-1/2" onClick={() => handlePtz('TILT_DOWN')}><span className="material-symbols-outlined">expand_more</span></button>
-<button className="jog-btn left-2 top-1/2 -translate-y-1/2" onClick={() => handlePtz('PAN_LEFT')}><span className="material-symbols-outlined">chevron_left</span></button>
-<button className="jog-btn right-2 top-1/2 -translate-y-1/2" onClick={() => handlePtz('PAN_RIGHT')}><span className="material-symbols-outlined">chevron_right</span></button>
+<button className="jog-btn top-2 left-1/2 -translate-x-1/2" onMouseDown={() => handlePtz('up')} onMouseUp={() => handlePtz('stop')} onMouseLeave={() => handlePtz('stop')}><span className="material-symbols-outlined">expand_less</span></button>
+<button className="jog-btn bottom-2 left-1/2 -translate-x-1/2" onMouseDown={() => handlePtz('down')} onMouseUp={() => handlePtz('stop')} onMouseLeave={() => handlePtz('stop')}><span className="material-symbols-outlined">expand_more</span></button>
+<button className="jog-btn left-2 top-1/2 -translate-y-1/2" onMouseDown={() => handlePtz('left')} onMouseUp={() => handlePtz('stop')} onMouseLeave={() => handlePtz('stop')}><span className="material-symbols-outlined">chevron_left</span></button>
+<button className="jog-btn right-2 top-1/2 -translate-y-1/2" onMouseDown={() => handlePtz('right')} onMouseUp={() => handlePtz('stop')} onMouseLeave={() => handlePtz('stop')}><span className="material-symbols-outlined">chevron_right</span></button>
 </div>
 <div className="flex gap-2 w-full">
-<button className="flex-1 bg-surface-container hover:bg-surface-container-high border border-border-subtle text-on-surface font-label-caps text-label-caps py-2 rounded transition-colors flex items-center justify-center gap-1" onClick={() => handlePtz('ZOOM_OUT')}>
+<button className="flex-1 bg-surface-container hover:bg-surface-container-high border border-border-subtle text-on-surface font-label-caps text-label-caps py-2 rounded transition-colors flex items-center justify-center gap-1" onMouseDown={() => handlePtz('zoom-out')} onMouseUp={() => handlePtz('stop')} onMouseLeave={() => handlePtz('stop')}>
 <span className="material-symbols-outlined text-[16px]">zoom_out</span> OUT </button>
-<button className="flex-1 bg-surface-container hover:bg-surface-container-high border border-border-subtle text-on-surface font-label-caps text-label-caps py-2 rounded transition-colors flex items-center justify-center gap-1" onClick={() => handlePtz('ZOOM_IN')}> IN <span className="material-symbols-outlined text-[16px]">zoom_in</span>
+<button className="flex-1 bg-surface-container hover:bg-surface-container-high border border-border-subtle text-on-surface font-label-caps text-label-caps py-2 rounded transition-colors flex items-center justify-center gap-1" onMouseDown={() => handlePtz('zoom-in')} onMouseUp={() => handlePtz('stop')} onMouseLeave={() => handlePtz('stop')}> IN <span className="material-symbols-outlined text-[16px]">zoom_in</span>
 </button>
 </div>
 </div>

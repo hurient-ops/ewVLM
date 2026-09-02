@@ -20,11 +20,23 @@ export const SystemAuditLogPortal: React.FC = () => {
     const fetchLogs = async () => {
       try {
         const response = await API.getAuditLogs(50);
-        if (response.status === 'SUCCESS') {
-          setLogs(response.data);
+        if (response.status === 'SUCCESS' && response.logs) {
+          const mappedLogs = response.logs.map((log: any) => ({
+            id: String(log.id),
+            timestamp: log.timestamp,
+            user: log.username,
+            action: log.action_type,
+            target: log.resource_query || 'System',
+            ip: log.tx_hash || 'localhost',
+            status: log.status || 'SUCCESS'
+          }));
+          setLogs(mappedLogs);
+        } else {
+          setLogs([]);
         }
       } catch (err) {
         console.error(err);
+        setLogs([]);
       } finally {
         setLoading(false);
       }
@@ -54,6 +66,7 @@ export const SystemAuditLogPortal: React.FC = () => {
             <option value="PTZ">PTZ 제어</option>
             <option value="EXPORT">영상 반출</option>
             <option value="DISPATCH">알람 디스패치</option>
+            <option value="ROLE_UPDATE">권한 변경</option>
           </select>
           <button className="px-4 py-2 bg-surface-container border border-border-subtle rounded hover:bg-surface-variant transition-colors flex items-center gap-1">
             <span className="material-symbols-outlined text-sm">download</span> CSV 다운로드

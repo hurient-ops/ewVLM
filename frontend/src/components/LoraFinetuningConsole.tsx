@@ -1,9 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { API } from '../api/client';
 
 export const LoraFinetuningConsole: React.FC = () => {
   const [isTraining, setIsTraining] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [epoch, setEpoch] = useState<number>(0);
+  const [totalEpochs, setTotalEpochs] = useState<number>(50);
+  const [loss, setLoss] = useState<string>('N/A');
+  const [versions, setVersions] = useState<any[]>([
+    { version: 'v4.1', status: 'Deployed', desc: 'FP Reduction: 18.4%', trained: '2d ago', active: true },
+    { version: 'v4.0', status: 'Stable', desc: 'FP Reduction: 12.1%', trained: '1w ago', active: false },
+    { version: 'v3.8', status: 'Archived', desc: 'FP Reduction: 9.5%', trained: '3w ago', active: false }
+  ]);
+
+  useEffect(() => {
+    const ws = new WebSocket('ws://localhost:8000/ws');
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'mlops_training_progress') {
+          setIsTraining(true);
+          setEpoch(data.payload.epoch);
+          setTotalEpochs(data.payload.total_epochs);
+          setLoss(data.payload.loss.toFixed(4));
+        } else if (data.type === 'mlops_training_completed') {
+          setIsTraining(false);
+          if (data.payload.status === 'SUCCESS') {
+            setToastMessage('✅ 훈련 완료! 새 버전이 배포 준비되었습니다.');
+            setVersions(prev => [
+              { version: `v4.${prev.length + 1}`, status: 'Staged', desc: `New LoRA Adapter`, trained: 'Just now', active: false },
+              ...prev
+            ]);
+          } else {
+            setToastMessage('❌ 훈련 실패: ' + data.payload.error);
+          }
+          setTimeout(() => setToastMessage(null), 5000);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    return () => ws.close();
+  }, []);
 
   const handleTrainingToggle = async () => {
     if (isTraining) {
@@ -118,8 +156,8 @@ export const LoraFinetuningConsole: React.FC = () => {
 )}
 </div>
 <div className="text-right">
-<span className="text-mono-data font-mono-data text-text-muted block">Epoch: {isTraining ? '14/50' : '0/50'}</span>
-<span className="text-mono-data font-mono-data text-text-muted block">Loss: {isTraining ? '0.2314' : 'N/A'} {isTraining && <span className="text-tertiary">↓</span>}</span>
+<span className="text-mono-data font-mono-data text-text-muted block">Epoch: {isTraining ? `${epoch}/${totalEpochs}` : '0/50'}</span>
+<span className="text-mono-data font-mono-data text-text-muted block">Loss: {isTraining ? loss : 'N/A'} {isTraining && <span className="text-tertiary">↓</span>}</span>
 </div>
 </div>
 <div className="flex-1 p-4 relative bg-surface-container-lowest">
@@ -152,8 +190,8 @@ export const LoraFinetuningConsole: React.FC = () => {
 <path className="opacity-60" d="M0,25 Q10,35 20,50 T40,70 T60,80 L80,82 L100,82" fill="none" stroke="#F59E0B" stroke-dasharray="4" strokeWidth="1.5"></path>
 </svg>
 {/* Current Epoch Marker */}
-<div className="absolute top-0 bottom-0 border-l border-primary opacity-50" style={{ left: "28%" }}></div>
-<div className="absolute w-2 h-2 rounded-full bg-primary" style={{ left: "calc(28% - 4px)", top: "62%" }}></div>
+<div className="absolute top-0 bottom-0 border-l border-primary opacity-50 transition-all duration-300" style={{ left: `${isTraining ? (epoch / totalEpochs) * 100 : 0}%` }}></div>
+<div className="absolute w-2 h-2 rounded-full bg-primary transition-all duration-300" style={{ left: `calc(${isTraining ? (epoch / totalEpochs) * 100 : 0}% - 4px)`, top: "62%" }}></div>
 </div>
 </div>
 </div>
@@ -166,48 +204,23 @@ export const LoraFinetuningConsole: React.FC = () => {
 </div>
 </div>
 <div className="flex-1 p-2 overflow-x-auto flex items-center gap-2">
-{/* Version Card 1 (Active) */}
-<div className="w-64 shrink-0 h-full bg-surface-container border border-primary rounded p-3 flex flex-col justify-between relative overflow-hidden">
-<div className="absolute top-0 right-0 w-16 h-16 bg-primary opacity-10 rounded-bl-full"></div>
-<div className="flex justify-between items-start">
-<span className="text-label-caps font-label-caps text-primary">v4.1 (Deployed)</span>
-<span className="status-dot active mt-1"></span>
-</div>
-<div className="mt-2 text-mono-data font-mono-data text-text-muted space-y-1">
-<p>FP Reduction: 18.4%</p>
-<p>Trained: 2d ago</p>
-</div>
-<div className="mt-3 flex gap-2">
-<button className="flex-1 bg-surface-variant text-text-muted text-[10px] font-bold py-1.5 rounded opacity-50 cursor-not-allowed">롤백</button>
-<button className="flex-1 border border-border-subtle text-on-surface text-[10px] font-bold py-1.5 rounded hover:bg-surface-container-high">상세 정보</button>
-</div>
-</div>
-{/* Version Card 2 */}
-<div className="w-64 shrink-0 h-full bg-surface-container-low border border-border-subtle rounded p-3 flex flex-col justify-between hover:border-outline-variant transition-colors">
-<div className="flex justify-between items-start">
-<span className="text-label-caps font-label-caps text-on-surface-variant">v4.0 (Stable)</span>
-</div>
-<div className="mt-2 text-mono-data font-mono-data text-text-muted space-y-1">
-<p>FP Reduction: 12.1%</p>
-<p>Trained: 1w ago</p>
-</div>
-<div className="mt-3 flex gap-2">
-<button className="flex-1 bg-surface-variant text-on-surface text-[10px] font-bold py-1.5 rounded hover:bg-warning hover:text-black transition-colors">롤백</button>
-</div>
-</div>
-{/* Version Card 3 */}
-<div className="w-64 shrink-0 h-full bg-surface-container-low border border-border-subtle rounded p-3 flex flex-col justify-between hover:border-outline-variant transition-colors opacity-70">
-<div className="flex justify-between items-start">
-<span className="text-label-caps font-label-caps text-on-surface-variant">v3.8 (Archived)</span>
-</div>
-<div className="mt-2 text-mono-data font-mono-data text-text-muted space-y-1">
-<p>FP Reduction: 9.5%</p>
-<p>Trained: 3w ago</p>
-</div>
-<div className="mt-3 flex gap-2">
-<button className="flex-1 bg-surface-container text-text-muted text-[10px] font-bold py-1.5 rounded border border-border-subtle hover:bg-surface-variant">VIEW LOGS</button>
-</div>
-</div>
+{versions.map((v, i) => (
+  <div key={i} className={`w-64 shrink-0 h-full ${v.active ? 'bg-surface-container border border-primary' : 'bg-surface-container-low border border-border-subtle'} rounded p-3 flex flex-col justify-between relative overflow-hidden transition-colors`}>
+    {v.active && <div className="absolute top-0 right-0 w-16 h-16 bg-primary opacity-10 rounded-bl-full"></div>}
+    <div className="flex justify-between items-start">
+      <span className={`text-label-caps font-label-caps ${v.active ? 'text-primary' : 'text-on-surface-variant'}`}>{v.version} ({v.status})</span>
+      {v.active && <span className="status-dot active mt-1"></span>}
+    </div>
+    <div className="mt-2 text-mono-data font-mono-data text-text-muted space-y-1">
+      <p>{v.desc}</p>
+      <p>Trained: {v.trained}</p>
+    </div>
+    <div className="mt-3 flex gap-2">
+      <button className={`flex-1 ${v.active ? 'bg-surface-variant text-text-muted opacity-50 cursor-not-allowed' : 'bg-surface-variant text-on-surface hover:bg-warning hover:text-black transition-colors'} text-[10px] font-bold py-1.5 rounded`}>{v.active ? '롤백' : '적용'}</button>
+      <button className="flex-1 border border-border-subtle text-on-surface text-[10px] font-bold py-1.5 rounded hover:bg-surface-container-high">상세 정보</button>
+    </div>
+  </div>
+))}
 </div>
 </div>
 </div>

@@ -26,22 +26,39 @@ export const PrivacyExportWorkshop: React.FC = () => {
       
       const data = await API.exportPrivacyVideo(config);
       
-      if (data.status === 'SUCCESS') {
-        alert(`${data.message}\n파일: ${data.file_name}\n크기: ${data.size}`);
-        // 모의: 다운로드 링크 시뮬레이션
-        const url = window.URL.createObjectURL(new Blob(["mock video data"], { type: encrypt ? 'application/zip' : 'video/mp4' }));
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = data.file_name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+      if (data.status === 'SUCCESS' && data.job_id) {
+        // Poll for completion
+        const pollInterval = setInterval(async () => {
+          try {
+            const job = await API.getExportJob(data.job_id);
+            if (job.status === 'COMPLETED') {
+              clearInterval(pollInterval);
+              setIsExporting(false);
+              alert(`반출 성공!\n다운로드 링크: ${job.download_url}`);
+              
+              // Download actual file from backend
+              const downloadUrl = `http://localhost:8000${job.download_url}`;
+              const a = document.createElement('a');
+              a.href = downloadUrl;
+              a.download = job.download_url.split('/').pop() || 'export.mp4';
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+            } else if (job.status === 'FAILED') {
+              clearInterval(pollInterval);
+              setIsExporting(false);
+              alert('반출 작업이 실패했습니다.');
+            }
+          } catch (e) {
+            console.error("Polling error", e);
+          }
+        }, 1000);
+      } else {
+        setIsExporting(false);
       }
     } catch (e) {
       console.error(e);
-      alert('반출 중 오류가 발생했습니다.');
-    } finally {
+      alert('반출 요청 중 오류가 발생했습니다.');
       setIsExporting(false);
     }
   };

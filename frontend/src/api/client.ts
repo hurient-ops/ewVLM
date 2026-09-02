@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { useEventLogStore } from '../store/useEventLogStore';
 import { useSopStore, SopAction } from '../store/useSopStore';
+import { useAuthStore } from '../store/useAuthStore';
 
 const API_BASE_URL = 'http://localhost:8000';
 const WS_BASE_URL = 'ws://localhost:8000';
@@ -12,9 +13,21 @@ export const apiClient = axios.create({
   },
 });
 
+apiClient.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().token;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export const API = {
   exportPrivacyVideo: async (config: any) => {
     const response = await apiClient.post('/api/v1/video/export/masking', config);
+    return response.data;
+  },
+  getExportJob: async (jobId: number) => {
+    const response = await apiClient.get(`/api/v1/video/export/jobs/${jobId}`);
     return response.data;
   },
   getBiStats: async () => {
@@ -75,8 +88,8 @@ export const API = {
     const response = await apiClient.post('/api/v1/mlops/train/lora', { action: 'START', target });
     return response.data;
   },
-  deployPrompt: async (target: string) => {
-    const response = await apiClient.post('/api/v1/mlops/deploy/prompt', { action: 'DEPLOY', target });
+  deployPrompt: async (target: string, payload?: any) => {
+    const response = await apiClient.post('/api/v1/mlops/deploy/prompt', { action: 'DEPLOY', target, payload });
     return response.data;
   },
   syncDeviceConfig: async (target: string = 'all') => {
@@ -91,12 +104,24 @@ export const API = {
     const response = await apiClient.post('/api/v1/records/export', { cameras, startTime, endTime, includeMetadata });
     return response.data;
   },
+  getVlmModels: async () => {
+    const response = await apiClient.get('/api/v1/vlm/models');
+    return response.data;
+  },
+  setVlmModel: async (modelNames: string[]) => {
+    const response = await apiClient.put('/api/v1/vlm/model', { model_names: modelNames });
+    return response.data;
+  },
   getAuditLogs: async (limit: number = 50) => {
     const response = await apiClient.get(`/api/v1/audit/logs?limit=${limit}`);
     return response.data;
   },
-  signup: async (username: string, password: string, role: string = 'user') => {
-    const response = await apiClient.post('/api/v1/auth/signup', { username, password, role });
+  sendVlmChat: async (message: string, cameraId?: string) => {
+    const response = await apiClient.post('/api/v1/vlm/chat', { message, camera_id: cameraId });
+    return response.data;
+  },
+  signup: async (username: string, password: string, role: string = 'user', name: string = '', phone: string = '') => {
+    const response = await apiClient.post('/api/v1/auth/signup', { username, password, role, name, phone });
     return response.data;
   },
   searchVss: async (query: string, limit: number = 5) => {
@@ -109,7 +134,7 @@ export const API = {
   },
   getUsers: async () => {
     const response = await apiClient.get('/api/v1/users');
-    return response.data;
+    return response.data.users || response.data;
   },
   updateUserRole: async (userId: number, role: string) => {
     const response = await apiClient.put(`/api/v1/users/${userId}/role`, { role });
@@ -142,18 +167,22 @@ export const API = {
     });
     return response.data;
   },
-  getUsers: async () => {
-    const response = await apiClient.get('/api/v1/users');
-    return response.data.users;
-  },
-  updateUserRole: async (userId: number, role: string) => {
-    const response = await apiClient.put(`/api/v1/users/${userId}/role`, { role });
+  getNvrStatus: async () => {
+    const response = await apiClient.get('/api/v1/nvr/status');
     return response.data;
   },
-  getAuditLogs: async (limit: number = 100) => {
-    const response = await apiClient.get('/api/v1/audit/logs', { params: { limit } });
-    return response.data.logs;
-  }
+  getCameras: async () => {
+    const response = await apiClient.get('/api/v1/cameras');
+    return response.data;
+  },
+  getPtzSchedules: async () => {
+    const response = await apiClient.get('/api/v1/ptz-schedules');
+    return response.data;
+  },
+  createPtzSchedule: async (payload: any) => {
+    const response = await apiClient.post('/api/v1/ptz-schedules', payload);
+    return response.data;
+  },
 };
 
 let ws: WebSocket | null = null;
