@@ -255,10 +255,10 @@ export const MonitorALiveControl: React.FC = () => {
                       <span className="font-bold">CH {String(slot.slotId).padStart(2, '0')} | {slot.cameraName}</span>
                     </div>
                   </div>
-                  {/* Mock PTZ Control overlay */}
+                  {/* PTZ Control overlay */}
                   <div className="absolute bottom-4 right-4 bg-[rgba(18,23,36,0.8)] backdrop-blur p-2 rounded-full flex gap-2 border border-[#232C3F]">
-                    <button className="p-1 text-gray-300 hover:text-white transition-colors"><span className="material-symbols-outlined text-[16px]">zoom_in</span></button>
-                    <button className="p-1 text-gray-300 hover:text-white transition-colors"><span className="material-symbols-outlined text-[16px]">zoom_out</span></button>
+                    <button onClick={() => API.controlPtz(slot.cameraId || 'CAM-01', 'zoom_in')} className="p-1 text-gray-300 hover:text-white transition-colors"><span className="material-symbols-outlined text-[16px]">zoom_in</span></button>
+                    <button onClick={() => API.controlPtz(slot.cameraId || 'CAM-01', 'zoom_out')} className="p-1 text-gray-300 hover:text-white transition-colors"><span className="material-symbols-outlined text-[16px]">zoom_out</span></button>
                     <button 
                       onClick={() => updateSlotStatus(slot.slotId, 'empty', { cameraId: null, cameraName: null })}
                       className="p-1 text-red-400 hover:text-red-300 transition-colors ml-2"

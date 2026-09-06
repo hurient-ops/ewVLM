@@ -38,6 +38,12 @@ async def get_recent_events(db: AsyncSession, limit: int = 50):
     )
     return result.scalars().all()
 
+async def get_event_by_escalation_id(db: AsyncSession, escalation_id: str):
+    result = await db.execute(
+        select(models.EventLog).where(models.EventLog.escalation_id == escalation_id)
+    )
+    return result.scalars().first()
+
 async def get_groups(db: AsyncSession):
     result = await db.execute(select(models.CameraGroup))
     return result.scalars().all()

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useEventLogStore } from '../store/useEventLogStore';
+import { API } from '../api/client';
 
 export const MonitorBVlmAnalysis: React.FC = () => { 
   const { logs } = useEventLogStore();
@@ -25,9 +26,7 @@ export const MonitorBVlmAnalysis: React.FC = () => {
     setIsTyping(true);
 
     try {
-      // Find currently selected camera if any, or default
-      const selectedCam = selectedCameras.length > 0 ? selectedCameras[0] : undefined;
-      const res = await API.sendVlmChat(newUserMsg.text, selectedCam);
+      const res = await API.sendVlmChat(newUserMsg.text, undefined);
       const newAiMsg = { id: (Date.now()+1).toString(), role: 'ai', text: res.reply, timestamp: new Date().toLocaleTimeString('ko-KR', { hour12: false }).substring(0, 5) };
       setMessages(prev => [...prev, newAiMsg]);
     } catch (error) {

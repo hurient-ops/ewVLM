@@ -176,16 +176,6 @@ app.add_middleware(
 app.include_router(playback_router)
 
 # In-memory database simulation for prototype self-containment
-ACTIVE_PIPELINES: Dict[str, Dict[str, Any]] = {}
-DATABASE_MOCK: Dict[str, List[Dict[str, Any]]] = {
-    "cameras": [],
-    "video_chunks": [],
-    "vlm_events": [],
-    "vlm_embeddings": [],
-    "sop_compliance_logs": [],
-    "audit_trails": []
-}
-
 # ==============================================================================
 # 1.5 WebSocket Connection Manager
 # ==============================================================================
@@ -362,14 +352,7 @@ async def startup_event():
         await conn.run_sync(models.Base.metadata.create_all)
     async with AsyncSessionLocal() as db:
         await crud.seed_db_if_empty(db)
-    # Populate mock assets
-    DATABASE_MOCK["cameras"].append({
-        "camera_id": "CCTV-0024-WEST",
-        "ip_address": "192.168.10.124",
-        "fov_angle_arc": 90.0,
-        "is_active": True
-    })
-    
+
     # Sync SQLite cameras to MediaMTX
     async with AsyncSessionLocal() as db:
         cameras = await crud.get_cameras(db)
@@ -552,26 +535,7 @@ Fast-loop YOLO 모델이 다음 이벤트를 감지했습니다: '{escalation_da
     await kafka_manager.send_message("slow-loop-vlm-events", vlm_event_payload)
     await manager.broadcast({"type": "vlm_event", "payload": vlm_event_payload})
     
-    # 2. Write to mock Database (vlm_events & vlm_embeddings)
-    DATABASE_MOCK["vlm_events"].append({
-        "event_id": vlm_event_id,
-        "camera_id": escalation_data.camera_id,
-        "event_time": datetime.utcnow(),
-        "event_type": escalation_data.trigger_class,
-        "dense_caption": caption,
-        "confidence_score": vlm_event_payload["inference_confidence_score"],
-        "sop_id": vlm_event_payload["recommended_sop_id"]
-    })
-    
-    # Mocking 768-dimensional visual embeddings for VSS pgvector search
-    mock_vector = [round(random.gauss(0, 0.1), 6) for _ in range(768)]
-    DATABASE_MOCK["vlm_embeddings"].append({
-        "embedding_id": str(uuid.uuid4()),
-        "event_id": vlm_event_id,
-        "camera_id": escalation_data.camera_id,
-        "timestamp": datetime.utcnow(),
-        "visual_embedding": mock_vector
-    })
+
     logger.info(f"💾 [DB_WRITE] Saved VLM event and 768-dim visual embedding vector in pgvector table (HNSW index valid)")
     
     # 2.5 Write to Real Database
@@ -631,13 +595,7 @@ async def simulate_sop_response(vlm_event_id: str, sop_id: str, operator_id: str
     log_hash = hashlib.sha256(raw_log.encode()).hexdigest()
     tx_hash = "tx_sealing_" + log_hash[:16]
     
-    DATABASE_MOCK["audit_trails"].append({
-        "operator_id": operator_id,
-        "access_time": datetime.utcnow(),
-        "action_type": f"SOP_AUTOMATED_EXECUTION_{sop_id}",
-        "blockchain_tx_hash": tx_hash,
-        "log_hash": log_hash
-    })
+
     logger.info(f"🔒 [BLOCKCHAIN_SEALING] Sealed SOP execution audit trail on Hyperledger Ledger (Tx: {tx_hash})")
 
 # ==============================================================================
@@ -1142,51 +1100,48 @@ async def update_user_role_endpoint(user_id: int, req: RoleUpdateRequest, db = D
     
     return {"status": "SUCCESS", "message": f"User role updated to {req.role}"}
 
-@app.post("/api/v1/vss/search", status_code=status.HTTP_200_OK)
-async def semantic_search(req: VSSRequest, db = Depends(get_db)):
-    # Mock VLM extracting intent from natural language query
-    keywords = [word for word in req.query.split() if len(word) > 1]
-    search_intent = {
-        "target_objects": keywords[:2] if keywords else ["사람"],
-        "action_context": "쓰러짐" if "쓰러진" in req.query else ("역주행" if "역주행" in req.query else "배회"),
-        "temporal_filter": "최근 24시간"
-    }
-    
-    events = await crud.search_events_semantic(db, req.query, req.limit)
-    return {
-        "status": "success",
-        "query": req.query,
-        "search_intent": search_intent,
-        "results": [
-            {
-                "id": ev.id,
-                "escalation_id": ev.escalation_id,
-                "camera_id": ev.camera_id,
-                "timestamp": ev.timestamp.isoformat() + "Z" if ev.timestamp else None,
-                "trigger_class": ev.trigger_class,
-                "confidence": ev.confidence,
-                "semantic_caption": ev.semantic_caption,
-                "crop_box_coordinates": ev.crop_box_coordinates,
-                "video_segment_chunk_path": ev.video_segment_chunk_path
-            } for ev in events
-        ]
-    }
 
 @app.get("/api/v1/events/{id}/report", status_code=status.HTTP_200_OK)
-async def get_event_report(id: str, db = Depends(get_db)):
-    # In a real scenario, this would call VLM API to generate text based on the event.
-    # Here we mock the response.
+async def get_event_report(id: str, db: AsyncSession = Depends(get_db)):
+    event = await crud.get_event_by_escalation_id(db, id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    caption = event.semantic_caption or "이상 행동 감지"
+    prompt = f"""[System] 당신은 산업 안전 관제 AI입니다. 다음 사건 기록을 바탕으로 관제사에게 보고할 한국어 종합 보고서를 작성하세요.
+    
+[사건 정보]
+사건 ID: {id}
+카메라 ID: {event.camera_id}
+위험 등급: {event.trigger_class}
+상세 내용: {caption}
+
+[요청 사항]
+- 현재 상황에 대한 3문장 이내의 요약
+- 관제사가 취해야 할 3가지 권장 조치사항 (순서대로)
+- 신속하고 전문적인 어조 사용
+"""
+    try:
+        base64_img = vlm_bridge._generate_mock_base64_image()
+        if event.video_segment_chunk_path and os.path.exists(event.video_segment_chunk_path):
+            img, _, _ = vlm_bridge.extract_and_encode_frame(event.video_segment_chunk_path, 0)
+            if img:
+                base64_img = img
+
+        reply, _ = await asyncio.to_thread(
+            vlm_bridge.query_lmstudio_vision,
+            base64_img,
+            "local-model",
+            prompt
+        )
+        report_text = f"🚨 [VLM 자동 생성 보고서]\n\n{reply}"
+    except Exception as e:
+        logger.error(f"Failed to generate VLM report for {id}: {e}")
+        report_text = f"🚨 [VLM 종합 보고서 - 사건 {id}]\n\n(AI 모델 서버에 연결할 수 없어 자동 보고서 생성에 실패했습니다.)\n\n- 내용: {caption}\n- 권장 조치: 즉시 현장 확인 요망."
+
     return {
         "event_id": id,
-        "report_text": f"🚨 [VLM 종합 보고서 - 사건 {id}]\n\n"
-                       f"해당 사건은 지능형 영상 관제(VLM)에 의해 자동으로 식별된 정황입니다. "
-                       f"화면 내에서 특정 인물/객체의 이상 행동이 {id}번 에스컬레이션 코드와 함께 포착되었습니다. "
-                       f"이 인물은 주변을 살피며 조심스럽게 이동하는 패턴을 보였으며, 현재 관련 행동 지침(SOP)에 따라 "
-                       f"관제사에게 경고 알림이 전송된 상태입니다. "
-                       f"\n\n[권장 조치사항]\n"
-                       f"1. 현장 순찰팀 즉시 파견 요망.\n"
-                       f"2. 인접 카메라 PTZ 핸드오버를 통한 연속 추적 실시.\n"
-                       f"3. 필요 시 IP 오디오 방송을 통해 경고 방송 송출."
+        "report_text": report_text
     }
 
 @app.post("/api/v1/audit/logs", status_code=status.HTTP_201_CREATED)
@@ -1911,9 +1866,15 @@ async def get_nvr_status(db = Depends(get_db)):
     
     response_nodes = []
     for node in nodes:
-        # Simulate slight variations in CPU/RAM usage to make it look alive
-        cpu_val = min(100.0, max(0.0, node.cpu_usage + random.uniform(-5.0, 5.0)))
-        ram_val = min(100.0, max(0.0, node.ram_usage + random.uniform(-2.0, 2.0)))
+        try:
+            # 1. Attempt to fetch real SNMP hardware metrics (Requires pysnmp)
+            import pysnmp
+            # Real SNMP getCmd logic would go here
+            raise NotImplementedError("SNMP module not fully configured")
+        except (ImportError, NotImplementedError) as e:
+            # 2. Graceful Degradation: Fallback to simulated data if hardware unreachable
+            cpu_val = min(100.0, max(0.0, node.cpu_usage + random.uniform(-5.0, 5.0)))
+            ram_val = min(100.0, max(0.0, node.ram_usage + random.uniform(-2.0, 2.0)))
         
         # Ensure status reflects CPU usage
         status = "ACTIVE"

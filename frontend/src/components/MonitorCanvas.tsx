@@ -296,7 +296,7 @@ export default function MonitorCanvas({
                 {isSlotActive && (
                   <div className="absolute inset-0 flex flex-col justify-between overflow-hidden">
                     <div className="absolute inset-0 bg-black flex items-center justify-center overflow-hidden">
-                      <WebRTCPlayer streamUrl={`http://localhost:8889/${slot.cameraId.toLowerCase()}`} />
+                      <WebRTCPlayer streamUrl={`http://localhost:8889/${(slot.cameraId || 'cam-01').toLowerCase()}`} />
                     </div>
                     <div className="absolute top-0 w-full flex justify-between items-start p-4 bg-gradient-to-b from-black/80 to-transparent z-10 pointer-events-none">
                       <span className="bg-black/60 px-2 py-0.5 rounded text-[10px] text-green-400 font-bold border border-green-500/40">
