@@ -369,11 +369,55 @@ async def startup_event():
 # ==============================================================================
 # 4. Background Workers: Simulated DeepStream, VLM, and Blockchain Pipelines
 # ==============================================================================
+async def extract_event_video_chunk(escalation_id: str) -> str:
+    """
+    Task 5: FFmpeg를 비동기로 호출하여 20초 구간 영상(Chunk)을 생성 및 저장합니다.
+    """
+    os.makedirs("downloads", exist_ok=True)
+    output_path = f"downloads/chunk_{escalation_id}.mp4"
+    
+    ffmpeg_exe = os.path.join(os.path.dirname(__file__), "ffmpeg.exe")
+    input_video = os.path.join(os.path.dirname(__file__), "sample_video.mp4")
+    
+    if not os.path.exists(ffmpeg_exe):
+        logger.error("ffmpeg.exe not found. Falling back to dummy video path.")
+        return "/downloads/mock_chunk.mp4"
+        
+    is_testsrc = False
+    if not os.path.exists(input_video):
+        input_video = "testsrc=duration=20:size=640x480:rate=30"
+        is_testsrc = True
+
+    cmd = [ffmpeg_exe, "-y"]
+    if is_testsrc:
+        cmd.extend(["-f", "lavfi", "-i", input_video])
+    else:
+        cmd.extend(["-ss", "00:00:05", "-i", input_video, "-t", "20", "-c", "copy"])
+        
+    cmd.append(output_path)
+    
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        await proc.communicate()
+        logger.info(f"🎬 [FFMPEG] Event chunk saved successfully: {output_path}")
+        return "/" + output_path
+    except Exception as e:
+        logger.error(f"Failed to generate chunk video: {e}")
+        return "/downloads/error_chunk.mp4"
+
 async def execute_vlm_inference_pipeline(escalation_data: EscalationRequest):
     """
     Executes actual Llama 3.2 11B Vision and Upstage Solar DocVLM processing,
     SlowFast Tokenizer compression, and database entries with pgvector.
     """
+    # [Task 5] 비디오 청크 동적 생성 및 매핑
+    chunk_path = await extract_event_video_chunk(escalation_data.escalation_id)
+    escalation_data.video_segment_chunk_path = chunk_path
+    
     logger.info(f"🧠 [VLM_SLOW_LOOP] Initiating Slow-Loop analysis on: {escalation_data.video_segment_chunk_path}")
     logger.info("🧠 [VLM_SLOW_LOOP] Applying SlowFast Token compression: 300 frames -> 45 compressed token embeddings")
     
@@ -973,16 +1017,52 @@ async def heal_infra_node(request: HealRequest):
 # ==========================================
 
 import psutil
+import time
+
+# 전역 변수로 이전 네트워크 상태와 시간 저장 (Gbps 계산용)
+last_net_io = psutil.net_io_counters().bytes_recv if hasattr(psutil, 'net_io_counters') else 0
+last_net_time = time.time()
 
 @app.get("/api/v1/system/health", status_code=status.HTTP_200_OK)
 async def get_system_health():
+    global last_net_io, last_net_time
+    
     cpu = psutil.cpu_percent(interval=None)
     ram = psutil.virtual_memory()
     disk = psutil.disk_usage('/')
     
-    # Mocking network traffic for demo
-    import random
-    net_rx = round(random.uniform(0.5, 2.5), 1)
+    # 1. Calculate real Network Gbps
+    current_time = time.time()
+    try:
+        current_net_io = psutil.net_io_counters().bytes_recv
+        time_diff = current_time - last_net_time
+        if time_diff > 0:
+            bytes_diff = current_net_io - last_net_io
+            # 바이트(Bytes)를 기가비트(Gbps)로 변환: (Bytes * 8) / 1,000,000,000 / 초
+            net_rx = round((bytes_diff * 8) / (1_000_000_000 * time_diff), 2)
+        else:
+            net_rx = 0.0
+            
+        last_net_io = current_net_io
+        last_net_time = current_time
+    except Exception:
+        net_rx = 0.0
+        
+    # 2. Get real GPU usage asynchronously
+    gpu_usage = 0.0
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader,nounits",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, _ = await proc.communicate()
+        if proc.returncode == 0 and stdout:
+            # 여러 개의 GPU가 있을 수 있으므로 첫 번째 라인만 파싱
+            gpu_usage = float(stdout.decode().strip().split('\n')[0])
+    except Exception:
+        # GPU가 없거나 nvidia-smi를 찾을 수 없는 경우 무시 (Fallback 0%)
+        pass
     
     return {
         "status": "SUCCESS",
@@ -991,6 +1071,7 @@ async def get_system_health():
             {"id": "ram", "label": "RAM", "value": round(ram.percent), "unit": "%"},
             {"id": "disk", "label": "DISK", "value": round(disk.percent), "unit": "%"},
             {"id": "net", "label": "NET Rx", "value": net_rx, "unit": "Gbps"},
+            {"id": "gpu", "label": "GPU", "value": gpu_usage, "unit": "%"},
         ]
     }
 
@@ -1272,40 +1353,70 @@ async def save_camera_calibration(camera_id: str, request: CalibrationRequest, d
 async def transform_coordinates(camera_id: str, request: TransformRequest):
     """Calculate approximate 3D ground distance based on 2D pixel input and calibration parameters."""
     import math
+    import numpy as np
     
-    # 간략화된 투영 변환 모델 (Ground Plane Assumption)
-    # y 픽셀 값이 이미지의 아래쪽(1080에 가까울수록) 카메라와 더 가깝다고 가정
-    img_height = 1080
-    img_width = 1920
+    # 이미지 중앙 좌표
+    img_width, img_height = 1920, 1080
+    cx, cy = img_width / 2, img_height / 2
     
-    # 중심점 기준 정규화
-    cx = img_width / 2
-    cy = img_height / 2
+    # 1. Intrinsic Matrix (K)
+    focal_length_px = float(request.focal_length)
+    if focal_length_px <= 0:
+        focal_length_px = 1000.0 # 기본값 안전 처리
+        
+    K = np.array([
+        [focal_length_px, 0, cx],
+        [0, focal_length_px, cy],
+        [0, 0, 1]
+    ], dtype=np.float32)
     
-    # Normalized coordinates
-    nx = (request.x - cx) / cx
-    ny = (request.y - cy) / cy
+    # 2. 픽셀 좌표 (u, v)
+    pixel_point = np.array([request.x, request.y, 1.0], dtype=np.float32).reshape(3, 1)
     
-    # 틸트 각도 보정 (라디안)
-    tilt_rad = math.radians(abs(request.tilt))
+    # 3. 카메라 레이 벡터
+    try:
+        K_inv = np.linalg.inv(K)
+    except:
+        return {"status": "error", "message": "Singular intrinsic matrix", "distance_m": float('inf')}
+    ray_cam = K_inv @ pixel_point
     
-    # 아주 대략적인 거리 계산 공식 (Mock)
-    # y 픽셀이 중심보다 아래에 있을수록 거리가 가까움
-    # y = 1080 (ny = 1) -> 거리가 고도와 비슷함
-    # y = 540 (ny = 0) -> 무한대에 가까워짐
-    if ny <= 0.1: # 지평선 너머이거나 너무 멀리 있음
+    # 4. 카메라 -> 월드 좌표계 기본 변환
+    R_cam2world_base = np.array([
+        [1, 0, 0],
+        [0, 0, 1],
+        [0, -1, 0]
+    ], dtype=np.float32)
+    
+    # 5. 틸트 다운 회전 변환 (절대값을 음수로 처리하여 아래를 보도록 함)
+    tilt_rad = -math.radians(abs(request.tilt))
+    R_tilt = np.array([
+        [1, 0, 0],
+        [0, math.cos(tilt_rad), -math.sin(tilt_rad)],
+        [0, math.sin(tilt_rad), math.cos(tilt_rad)]
+    ], dtype=np.float32)
+    
+    # 6. 월드 레이 벡터
+    R_cam2world = R_tilt @ R_cam2world_base
+    ray_world = R_cam2world @ ray_cam
+    
+    # 7. Ray-Plane Intersection (지면 평면 Z_w = 0)
+    altitude_m = float(request.altitude)
+    C = np.array([0, 0, altitude_m], dtype=np.float32)
+    
+    # 하늘을 향하는 경우
+    if ray_world[2] >= 0:
         distance_m = float('inf')
+        offset_x_m = float('inf')
     else:
-        # 간단한 삼각함수 비례식 적용
-        distance_m = request.altitude / math.tan(tilt_rad + ny * (request.focal_length / 10))
-    
-    # 좌우 오프셋 계산 (x 거리)
-    offset_x_m = nx * distance_m * (request.focal_length / 10)
+        t = -altitude_m / ray_world[2]
+        intersection = C + t * ray_world.flatten()
+        distance_m = float(math.sqrt(intersection[0]**2 + intersection[1]**2))
+        offset_x_m = float(intersection[0]) # X축 이동량이 즉 카메라 기준 좌우 오프셋
     
     return {
         "status": "SUCCESS",
         "distance_m": round(abs(distance_m), 2) if distance_m != float('inf') else -1,
-        "offset_x_m": round(offset_x_m, 2),
+        "offset_x_m": round(offset_x_m, 2) if offset_x_m != float('inf') else -1,
         "camera_id": camera_id
     }
 
@@ -1337,19 +1448,48 @@ class NLRuleRequest(BaseModel):
 @app.post("/api/v1/sop/rules/generate", status_code=status.HTTP_200_OK)
 async def generate_sop_rule(req: NLRuleRequest, db = Depends(get_db)):
     """API Endpoint to parse natural language into structured VLM detection rule and save to DB."""
-    logger.info(f"🧠 [VLM_COPILOT] Parsing rule: {req.natural_language_prompt}")
+    import httpx
+    import json
     
-    # Simulate VLM processing delay
-    await asyncio.sleep(1.5)
+    logger.info(f"🧠 [VLM_COPILOT] Parsing rule via AI: {req.natural_language_prompt}")
     
-    # Mock generated rule based on basic keyword matching
-    trigger_class = "person"
-    if "차량" in req.natural_language_prompt or "트럭" in req.natural_language_prompt:
-        trigger_class = "vehicle"
-    elif "화재" in req.natural_language_prompt or "불" in req.natural_language_prompt:
-        trigger_class = "fire"
-    elif "무기" in req.natural_language_prompt or "총" in req.natural_language_prompt or "칼" in req.natural_language_prompt:
-        trigger_class = "weapon"
+    trigger_class = "person" # default fallback
+    
+    system_prompt = '''You are a strict JSON parser for an AI surveillance system.
+Extract the target object to detect from the user's natural language input.
+Possible target classes: "person", "vehicle", "fire", "weapon".
+If the input mentions car, truck, or vehicle, return "vehicle". If knife or gun, return "weapon".
+Return ONLY valid JSON with no markdown and no other text: {"trigger_class": "detected_class"}'''
+
+    payload = {
+        "model": "llama3.2",
+        "format": "json",
+        "stream": False,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": req.natural_language_prompt}
+        ]
+    }
+    
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.post("http://localhost:11434/api/chat", json=payload)
+            if response.status_code == 200:
+                content = response.json().get("message", {}).get("content", "")
+                parsed = json.loads(content)
+                trigger_class = parsed.get("trigger_class", "person")
+                logger.info(f"✅ [VLM_COPILOT] LLM Parsed Result: {trigger_class}")
+            else:
+                raise ValueError(f"HTTP {response.status_code}")
+    except Exception as e:
+        logger.warning(f"⚠️ [VLM_COPILOT] LLM Parsing Failed ({e}). Falling back to Keyword Matching.")
+        # Fallback to Mock generated rule based on basic keyword matching
+        if "차량" in req.natural_language_prompt or "트럭" in req.natural_language_prompt:
+            trigger_class = "vehicle"
+        elif "화재" in req.natural_language_prompt or "불" in req.natural_language_prompt:
+            trigger_class = "fire"
+        elif "무기" in req.natural_language_prompt or "총" in req.natural_language_prompt or "칼" in req.natural_language_prompt:
+            trigger_class = "weapon"
         
     rule_name = f"AI_Rule_{int(time.time())}"
     
