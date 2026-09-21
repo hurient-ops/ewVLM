@@ -88,8 +88,7 @@ class LMStudioVLMBridge:
         """
         url = f"{self.lmstudio_url}/v1/chat/completions"
         payload = {
-            "model": model_name,
-            "response_format": {"type": "json_object"},
+            "model": "local-model",
             "messages": [
                 {
                     "role": "user",
@@ -127,17 +126,8 @@ class LMStudioVLMBridge:
                 result = response.json()
                 caption = result.get("choices", [{}])[0].get("message", {}).get("content", "응답 캡션 없음")
                 
-                # [Fix] Some LLaVA versions return empty strings depending on the prompt
                 if not caption or caption.strip() == "":
                     caption = f"[VLM 자동 분석] {prompt.split('.')[0]}에 대한 정황 분석이 완료되었습니다. (상세 내용은 수동 검토 필요)"
-                else:
-                    # [Translation] Moondream 2 etc. default to English. Auto-translate to Korean.
-                    try:
-                        from deep_translator import GoogleTranslator
-                        caption = GoogleTranslator(source='auto', target='ko').translate(caption)
-                        caption = f"[VLM번역] {caption}"
-                    except Exception as e:
-                        print(f"[WARN] 번역 실패: {e}")
                     
                 return caption, latency_ms
             else:

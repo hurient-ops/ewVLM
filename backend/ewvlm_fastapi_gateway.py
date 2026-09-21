@@ -48,10 +48,10 @@ except ImportError:
     embedding_model = None
     logger.warning("⚠️ [SEMANTIC_SEARCH] sentence-transformers not found. Search API will return mock vectors.")
 
-def get_text_embedding(text: str) -> list:
+async def get_text_embedding(text: str) -> list:
     if not embedding_model:
         return [0.0] * 384
-    return embedding_model.encode(text).tolist()
+    return await asyncio.to_thread(lambda t: embedding_model.encode(t).tolist(), text)
 
 # Third-party imports (Ensure graceful degradation if not in environment)
 try:
@@ -404,10 +404,10 @@ async def extract_event_video_chunk(escalation_id: str) -> str:
         )
         await proc.communicate()
         logger.info(f"🎬 [FFMPEG] Event chunk saved successfully: {output_path}")
-        return "/" + output_path
+        return output_path
     except Exception as e:
         logger.error(f"Failed to generate chunk video: {e}")
-        return "/downloads/error_chunk.mp4"
+        return "downloads/error_chunk.mp4"
 
 async def execute_vlm_inference_pipeline(escalation_data: EscalationRequest):
     """
@@ -468,9 +468,24 @@ Fast-loop YOLO 모델이 다음 이벤트를 감지했습니다: '{escalation_da
 }}
 ```"""
     
-    active_vlm_models = getattr(app.state, "active_vlm_models", ["Llama 3.2 11B Vision Instruct"])
+    
+    active_vlm_models = getattr(app.state, "active_vlm_models", [])
+    
+    # [Fix] LM Studio에서 실제로 로드된 모델 이름을 동적으로 확인
+    try:
+        import requests
+        models_res = requests.get("http://localhost:1234/v1/models", timeout=2).json()
+        if models_res.get("data"):
+            active_vlm_models = [models_res["data"][0]["id"]]
+    except Exception:
+        pass
+        
     if not active_vlm_models:
         active_vlm_models = ["Llama 3.2 11B Vision Instruct"]
+        
+    # [Fix] moondream 등 소형 모델은 복잡한 한국어 프롬프트와 JSON 형식을 인지하지 못하므로 매우 단순화된 영문 프롬프트로 강제 전환
+    if "moondream" in active_vlm_models[0].lower():
+        prompt = "What is the person doing in this image? Answer in one short sentence."
         
     try:
         if len(active_vlm_models) == 1:
@@ -549,6 +564,23 @@ Fast-loop YOLO 모델이 다음 이벤트를 감지했습니다: '{escalation_da
             logger.info(f"🟢 [VLM_FILTERED] Text Fallback: VLM 분석 결과 안전 판별.")
             return
 
+    # 번역 로직 추가: VLM 결과가 영어일 경우 한국어로 번역 (JSON 성공 및 Fallback 모두 적용)
+    try:
+        from deep_translator import GoogleTranslator
+        
+        def safe_translate(text):
+            if not text or len(text) < 2: return text
+            # 간단한 휴리스틱: 한글이 거의 포함되지 않았다면 번역 시도
+            korean_chars = sum(1 for c in text if '\uac00' <= c <= '\ud7a3')
+            if korean_chars < len(text) * 0.1: 
+                return GoogleTranslator(source='auto', target='ko').translate(text)
+            return text
+
+        vlm_summary = safe_translate(vlm_summary)
+        vlm_action = safe_translate(vlm_action)
+    except Exception as e:
+        logger.warning(f"VLM JSON 필드 번역 실패: {e}")
+
     structured_caption = f"[위협: {detected_actions[-1]}] {vlm_summary} | 권장조치: {vlm_action}"
 
     vlm_event_id = f"vlm_evt_{int(time.time()*1000)}"
@@ -593,7 +625,7 @@ Fast-loop YOLO 모델이 다음 이벤트를 감지했습니다: '{escalation_da
             "semantic_caption": vlm_event_payload["semantic_caption"],
             "crop_box_coordinates": escalation_data.crop_box_coordinates,
             "video_segment_chunk_path": escalation_data.video_segment_chunk_path,
-            "embedding": get_text_embedding(structured_caption)
+            "embedding": await get_text_embedding(structured_caption)
         })
     
     # 3. Trigger SOP Compliance Steps and Blockchain Sealing
