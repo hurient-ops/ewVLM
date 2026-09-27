@@ -18,13 +18,16 @@ import database
 from sqlalchemy.future import select
 from database import engine, get_db, AsyncSessionLocal
 from ewvlm_lmstudio_bridge import LMStudioVLMBridge
+from multicloud_vlm_bridge import query_multicloud_vision
 from onvif_controller import get_controller
 from playback_service import playback_router
 from snmp_controller import SNMPController
 from ssh_agent_controller import EdgeAgentController
 from video_export_processor import generate_privacy_video
 from mlops_lora_trainer import run_lora_finetuning
+from dotenv import load_dotenv
 
+load_dotenv()
 vlm_bridge = LMStudioVLMBridge()
 
 # Create upload dir
@@ -358,13 +361,21 @@ async def startup_event():
         cameras = await crud.get_cameras(db)
         for cam in cameras:
             if cam.rtsp_url:
-                try:
-                    async with httpx.AsyncClient() as client:
-                        mediamtx_url = f"http://localhost:9997/v3/config/paths/add/{cam.camera_id}"
-                        payload = {"source": cam.rtsp_url}
-                        await client.post(mediamtx_url, json=payload, timeout=3.0)
-                except Exception as e:
-                    logger.error(f"Failed to sync {cam.camera_id} to MediaMTX on startup: {e}")
+                max_retries = 5
+                for attempt in range(max_retries):
+                    try:
+                        async with httpx.AsyncClient() as client:
+                            mediamtx_url = f"http://localhost:9997/v3/config/paths/add/{cam.camera_id}"
+                            payload = {"source": cam.rtsp_url}
+                            resp = await client.post(mediamtx_url, json=payload, timeout=3.0)
+                            resp.raise_for_status()
+                            break
+                    except Exception as e:
+                        if attempt < max_retries - 1:
+                            logger.warning(f"Failed to sync {cam.camera_id} to MediaMTX on startup, retrying in 2s... ({attempt+1}/{max_retries})")
+                            await asyncio.sleep(2)
+                        else:
+                            logger.error(f"Failed to sync {cam.camera_id} to MediaMTX on startup: All connection attempts failed")
 
 # ==============================================================================
 # 4. Background Workers: Simulated DeepStream, VLM, and Blockchain Pipelines
@@ -414,16 +425,6 @@ async def execute_vlm_inference_pipeline(escalation_data: EscalationRequest):
     Executes actual Llama 3.2 11B Vision and Upstage Solar DocVLM processing,
     SlowFast Tokenizer compression, and database entries with pgvector.
     """
-    # [Task 5] 비디오 청크 동적 생성 및 매핑
-    chunk_path = await extract_event_video_chunk(escalation_data.escalation_id)
-    escalation_data.video_segment_chunk_path = chunk_path
-    
-    logger.info(f"🧠 [VLM_SLOW_LOOP] Initiating Slow-Loop analysis on: {escalation_data.video_segment_chunk_path}")
-    logger.info("🧠 [VLM_SLOW_LOOP] Applying SlowFast Token compression: 300 frames -> 45 compressed token embeddings")
-    
-    # Simulate GPU inference delay (Qwen/Llama inference latency)
-    # await asyncio.sleep(1.2)
-    
     # 1. Grab frame and query Ollama/LM Studio
     async with database.AsyncSessionLocal() as db:
         result = await db.execute(select(models.Camera).where(models.Camera.camera_id == escalation_data.camera_id))
@@ -431,7 +432,13 @@ async def execute_vlm_inference_pipeline(escalation_data: EscalationRequest):
         active_prompt = await crud.get_active_prompt(db, "all-edges")
     
     # 7차 고도화: RTSP 실시간 단일 프레임 추출 우회 로직을 삭제하고, fast_loop가 전달한 4프레임 병합 그리드를 항상 사용합니다.
-    video_path = escalation_data.video_segment_chunk_path
+    # [Fix] preserve original temp_path from YOLO fast loop for VLM before overwriting video_segment_chunk_path
+    video_path = escalation_data.video_segment_chunk_path 
+    
+    # [Task 5] 비디오 청크 동적 생성 및 매핑 (Frontend playback용)
+    chunk_path = await extract_event_video_chunk(escalation_data.escalation_id)
+    escalation_data.video_segment_chunk_path = chunk_path
+    
     logger.info(f"🧠 [VLM_SLOW_LOOP] Using 4-frame temporal grid image from fast_loop: {video_path}")
 
     base64_img, _, _ = vlm_bridge.extract_and_encode_frame(video_path, 0)
@@ -442,7 +449,7 @@ async def execute_vlm_inference_pipeline(escalation_data: EscalationRequest):
         sys_p = p_json.get("system_prompt", "[System] 당신은 산업 안전 및 보안 관제 AI(ewVLM)입니다.")
         user_p = p_json.get("user_prompt_template", "").replace("{{camera_id}}", escalation_data.camera_id).replace("{{sector}}", "Sector-1")
         prompt = f"""{sys_p}
-Fast-loop YOLO 모델이 다음 이벤트를 감지했습니다: '{escalation_data.trigger_class}'.
+Fast-loop YOLOv11 모델이 다음 이벤트를 감지했습니다: '{escalation_data.trigger_class}'.
 주어진 이미지는 시간 순서(T-2.5s, T-1.6s, T-0.8s, T-0.0s)대로 배열된 4컷의 2x2 그리드 영상 프레임입니다.
 {user_p}
 영상의 시간적 맥락(Temporal Context)을 분석하여 아래의 JSON 규격으로만 절대적으로 응답하십시오. 다른 부연 설명은 포함하지 마십시오.
@@ -454,51 +461,77 @@ Fast-loop YOLO 모델이 다음 이벤트를 감지했습니다: '{escalation_da
   "action": "즉각적인 권장 대응 조치(SOP)"
 }}
 ```"""
+    trigger = escalation_data.trigger_class
+    if trigger == "unauthorized_entry":
+        event_desc = "사람 객체(Person) 출현"
+    elif trigger == "vehicle_detected":
+        event_desc = "차량 객체(Vehicle) 출현"
     else:
-        prompt = f"""[System] 당신은 산업 안전 및 보안 관제 AI(ewVLM)입니다.
-Fast-loop YOLO 모델이 다음 이벤트를 감지했습니다: '{escalation_data.trigger_class}'.
+        event_desc = trigger
+
+    prompt = f"""[System] 당신은 산업 안전 및 보안 관제 AI(ewVLM)입니다.
+Fast-loop YOLOv11 모델이 다음 이벤트를 1차적으로 감지했습니다: '{event_desc}'.
 주어진 이미지는 시간 순서(T-2.5s, T-1.6s, T-0.8s, T-0.0s)대로 배열된 4컷의 2x2 그리드 영상 프레임입니다.
+당신의 역할은 이 이미지를 객관적으로 분석하여 해당 상황이 실제로 위험한 상황(예: 보안 구역 무단 침입, 쓰러짐, 폭력 등)인지, 아니면 안전한 일상적 상황(예: 인가된 구역의 정상적인 보행)인지 판별하는 것입니다.
+
 영상의 시간적 맥락(Temporal Context)을 분석하여 아래의 JSON 규격으로만 절대적으로 응답하십시오. 다른 부연 설명은 포함하지 마십시오.
 
 ```json
 {{
   "threat_level": "critical_danger" | "safety_warning" | "safe",
-  "summary": "현재 보이는 4컷의 시계열 상황 1~2줄 요약",
-  "action": "즉각적인 권장 대응 조치(SOP)"
+  "summary": "현재 보이는 4컷의 시계열 상황에 대한 아주 객관적인 1~2줄 요약 (거짓으로 상황을 꾸며내지 마세요)",
+  "action": "즉각적인 권장 대응 조치(SOP) - 만약 safe라면 '조치 불필요'라고 작성"
 }}
 ```"""
     
     
     active_vlm_models = getattr(app.state, "active_vlm_models", [])
     
-    # [Fix] LM Studio에서 실제로 로드된 모델 이름을 동적으로 확인
-    try:
-        import requests
-        models_res = requests.get("http://localhost:1234/v1/models", timeout=2).json()
-        if models_res.get("data"):
-            active_vlm_models = [models_res["data"][0]["id"]]
-    except Exception:
-        pass
-        
-    if not active_vlm_models:
-        active_vlm_models = ["Llama 3.2 11B Vision Instruct"]
-        
+    use_local_vlm = os.getenv("USE_LOCAL_VLM", "false").lower() == "true"
+    
+    # [Fix] LM Studio에서 실제로 로드된 모델 이름을 동적으로 확인 (로컬 모드일 때만)
+    if use_local_vlm:
+        try:
+            import requests
+            models_res = requests.get("http://localhost:1234/v1/models", timeout=2).json()
+            if models_res.get("data"):
+                active_vlm_models = [models_res["data"][0]["id"]]
+        except Exception:
+            pass
+            
+        if not active_vlm_models:
+            active_vlm_models = ["Llama 3.2 11B Vision Instruct"]
+    else:
+        if not active_vlm_models:
+            active_vlm_models = ["Groq", "Upstage", "HF PaliGemma"]
+
     # [Fix] moondream 등 소형 모델은 복잡한 한국어 프롬프트와 JSON 형식을 인지하지 못하므로 매우 단순화된 영문 프롬프트로 강제 전환
-    if "moondream" in active_vlm_models[0].lower():
+    if active_vlm_models and "moondream" in active_vlm_models[0].lower():
         prompt = "What is the person doing in this image? Answer in one short sentence."
         
     try:
         if len(active_vlm_models) == 1:
-            caption, latency_ms = await asyncio.to_thread(
-                vlm_bridge.query_lmstudio_vision, base64_img, active_vlm_models[0], prompt
-            )
+            if use_local_vlm:
+                caption, latency_ms = await asyncio.to_thread(
+                    vlm_bridge.query_lmstudio_vision, base64_img, active_vlm_models[0], prompt
+                )
+            else:
+                caption, latency_ms = await asyncio.to_thread(
+                    query_multicloud_vision, base64_img, active_vlm_models[0], prompt
+                )
             vlm_model_engine = active_vlm_models[0]
             confidence_score = round(random.uniform(0.91, 0.98), 4)
         else:
-            tasks = [
-                asyncio.to_thread(vlm_bridge.query_lmstudio_vision, base64_img, model, prompt)
-                for model in active_vlm_models
-            ]
+            if use_local_vlm:
+                tasks = [
+                    asyncio.to_thread(vlm_bridge.query_lmstudio_vision, base64_img, model, prompt)
+                    for model in active_vlm_models
+                ]
+            else:
+                tasks = [
+                    asyncio.to_thread(query_multicloud_vision, base64_img, model, prompt)
+                    for model in active_vlm_models
+                ]
             results = await asyncio.gather(*tasks, return_exceptions=True)
             
             combined_captions = []
@@ -506,7 +539,7 @@ Fast-loop YOLO 모델이 다음 이벤트를 감지했습니다: '{escalation_da
             for i, res in enumerate(results):
                 model_name = active_vlm_models[i]
                 if isinstance(res, Exception):
-                    logger.error(f"LM Studio inference failed for {model_name}: {res}")
+                    logger.error(f"VLM inference failed for {model_name}: {res}")
                     combined_captions.append(f"[{model_name} 분석 실패]")
                 else:
                     combined_captions.append(f"[{model_name} 분석]\n{res[0]}")
@@ -537,13 +570,33 @@ Fast-loop YOLO 모델이 다음 이벤트를 감지했습니다: '{escalation_da
     vlm_action = "조치 필요"
     
     try:
-        # JSON 블록 정규식 추출
-        json_match = re.search(r'\{.*\}', caption, re.DOTALL)
-        if json_match:
-            parsed_json = json.loads(json_match.group(0))
-            threat = parsed_json.get("threat_level", "safe")
-            vlm_summary = parsed_json.get("summary", caption)
-            vlm_action = parsed_json.get("action", "조치 필요")
+        # 모든 JSON 블록 추출 (비탐욕적)
+        json_matches = re.findall(r'\{.*?\}', caption, re.DOTALL)
+        if json_matches:
+            parsed_jsons = []
+            for j in json_matches:
+                try:
+                    parsed_jsons.append(json.loads(j))
+                except:
+                    pass
+            
+            if not parsed_jsons:
+                raise ValueError("No valid JSON blocks found.")
+                
+            # 앙상블 결과 통합: 하나라도 safe가 있으면 오탐 방지를 위해 safe로 간주 (Groq 등 환각 방지)
+            threats = [pj.get("threat_level", "safe") for pj in parsed_jsons]
+            if "safe" in threats:
+                threat = "safe"
+                best_json = next(pj for pj in parsed_jsons if pj.get("threat_level") == "safe")
+            elif "critical_danger" in threats:
+                threat = "critical_danger"
+                best_json = next(pj for pj in parsed_jsons if pj.get("threat_level") == "critical_danger")
+            else:
+                threat = "safety_warning"
+                best_json = parsed_jsons[0]
+
+            vlm_summary = best_json.get("summary", caption)
+            vlm_action = best_json.get("action", "조치 필요")
             
             if threat == "critical_danger":
                 detected_actions.append("critical_danger")
@@ -984,7 +1037,10 @@ async def get_vlm_models():
             "moondream2",
             "llava-v1.5-13b",
             "qwen-vl-chat",
-            "solar-10.7b-instruct"
+            "solar-10.7b-instruct",
+            "Groq (Llama-3.2-11B-Vision)",
+            "Upstage (Solar-Chat)",
+            "HuggingFace (PaliGemma-3B)"
         ]
     }
 

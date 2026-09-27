@@ -1,0 +1,25 @@
+                    async def validate_and_escalate(captured_frame, payload):
+                        # [Optimization] Serialize VQA requests to LM Studio to prevent VRAM explosion
+                        async with vlm_lock:
+                            is_real_threat = await asyncio.to_thread(edge_validator.verify_detection, captured_frame, trigger_reason)
+                            
+                            if not is_real_threat:
+                                print(f" ? [{payload['camera_id']}] Edge Validation rejected the detection (False Positive).")
+                                return
+                                
+                            try:
+                                # use aiohttp instead of requests to prevent blocking
+                                async with aiohttp.ClientSession() as session:
+                                    async with session.post(API_GATEWAY_URL, json=payload, timeout=2) as res:
+                                        if res.status == 202:
+                                            print(f" ??[{payload['camera_id']}] Successfully escalated to Slow-Loop VLM!")
+                            except Exception as e:
+                                print(f" ?️ [{payload['camera_id']}] Failed to reach API Gateway: {e}")
+                    
+                    # Run it in the background so the video NEVER pauses!
+                    asyncio.create_task(validate_and_escalate(frame.copy(), req_payload))
+
+            # Sleep to maintain TARGET_FPS
+            await asyncio.sleep(1.0 / TARGET_FPS)
+
+    except asyncio.CancelledError:

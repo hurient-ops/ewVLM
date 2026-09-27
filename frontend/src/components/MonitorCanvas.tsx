@@ -30,7 +30,7 @@ export default function MonitorCanvas({
   const [slots, setSlots] = useState<MonitorSlot[]>([
     {
       id: 1,
-      cameraId: "CAM-REAL-1787557630",
+      cameraId: "cam-01",
       cameraName: "외곽 1구역 펜스 북부",
       status: "active",
       fps: 30,
@@ -38,7 +38,7 @@ export default function MonitorCanvas({
     },
     {
       id: 2,
-      cameraId: "CAM-REAL-1787579299",
+      cameraId: "cam-02",
       cameraName: "자재 창고 출입구",
       status: "active",
       fps: 29.8,
@@ -111,13 +111,13 @@ export default function MonitorCanvas({
             ...slot,
             cameraId: cameraId,
             cameraName:
-              cameraId === "CAM-REAL-1787557630"
+              cameraId === "cam-01"
                 ? "외곽 1구역 펜스 북부"
-                : cameraId === "CAM-REAL-1787579299"
+                : cameraId === "cam-02"
                   ? "자재 창고 출입구"
-                  : cameraId === "CAM-03"
+                  : cameraId === "cam-03"
                     ? "중앙 변전실 내부"
-                    : cameraId === "CAM-04"
+                    : cameraId === "cam-04"
                       ? "본관 메인 로비"
                       : "하역장 차량 진입로",
             status: "linking",
@@ -296,7 +296,11 @@ export default function MonitorCanvas({
                 {isSlotActive && (
                   <div className="absolute inset-0 flex flex-col justify-between overflow-hidden">
                     <div className="absolute inset-0 bg-black flex items-center justify-center overflow-hidden">
-                      <WebRTCPlayer streamUrl={`http://localhost:8890/webrtc/${(slot.cameraId || 'cam-01')}`} />
+                      <img 
+                        src={`http://localhost:8001/stream/${(slot.cameraId || 'cam-01')}`}
+                        alt="YOLOv11 Stream"
+                        className="w-full h-full object-fill"
+                      />
                     </div>
                     <div className="absolute top-0 w-full flex justify-between items-start p-4 bg-gradient-to-b from-black/80 to-transparent z-10 pointer-events-none">
                       <span className="bg-black/60 px-2 py-0.5 rounded text-[10px] text-green-400 font-bold border border-green-500/40">

@@ -14,6 +14,12 @@ echo.
 echo [*] Working directory: %CD%
 echo.
 
+:: Step 0: MediaMTX Streaming Server
+echo [0/4] Starting MediaMTX Streaming Server...
+start "ewVLM - MediaMTX Video Server (Port: 8889)" cmd /k "cd backend\mediamtx_v1.20.0_windows_amd64 && mediamtx.exe"
+
+timeout /t 3 /nobreak >nul
+
 :: Step 1: FastAPI Backend
 echo [1/4] Starting FastAPI Backend Gateway...
 start "ewVLM - Backend API Gateway (Port: 8000)" cmd /k "cd backend && (if exist .venv\Scripts\activate.bat (call .venv\Scripts\activate.bat) else (if exist venv\Scripts\activate.bat (call venv\Scripts\activate.bat))) && python ewvlm_fastapi_gateway.py"
@@ -26,15 +32,15 @@ start "ewVLM - Frontend UI Canvas (Port: 5174)" cmd /k "cd frontend && npm run d
 
 timeout /t 3 /nobreak >nul
 
-:: Step 3: YOLO11 Fast Loop
-echo [3/4] Starting YOLO11 Fast-Loop...
-start "ewVLM - YOLO11 Fast Loop" cmd /k "cd backend && (if exist .venv\Scripts\activate.bat (call .venv\Scripts\activate.bat) else (if exist venv\Scripts\activate.bat (call venv\Scripts\activate.bat))) && python fast_loop.py"
+:: Step 3: YOLOv11 Fast Loop
+echo [3/4] Starting YOLOv11 Fast-Loop...
+start "ewVLM - YOLOv11 Fast Loop" cmd /k "cd backend && (if exist .venv\Scripts\activate.bat (call .venv\Scripts\activate.bat) else (if exist venv\Scripts\activate.bat (call venv\Scripts\activate.bat))) && python fast_loop.py"
 
 timeout /t 3 /nobreak >nul
 
-:: Step 4: LM Studio VLM Bridge
-echo [4/4] Starting LM Studio VLM Bridge...
-start "ewVLM - LM Studio VLM Bridge" cmd /k "cd backend && (if exist .venv\Scripts\activate.bat (call .venv\Scripts\activate.bat) else (if exist venv\Scripts\activate.bat (call venv\Scripts\activate.bat))) && python ewvlm_lmstudio_bridge.py"
+:: Step 4: Local VLM Standby Bridge (LM Studio / Ollama)
+echo [4/4] Starting Local VLM Standby Bridge...
+start "ewVLM - [STANDBY] Local VLM Bridge" cmd /k "echo [STANDBY MODE] ewVLM is currently running on Multi-Cloud VLM (Groq/Upstage/HF). This terminal is reserved for future high-performance local AI servers (LM Studio/Ollama). To switch to local, enable USE_LOCAL_VLM in env. && cd backend && (if exist .venv\Scripts\activate.bat (call .venv\Scripts\activate.bat) else (if exist venv\Scripts\activate.bat (call venv\Scripts\activate.bat)))"
 
 echo.
 echo ==============================================================================
@@ -42,7 +48,7 @@ echo [SUCCESS] ewVLM Platform components have been started!
 echo.
 echo  - Backend Server : http://localhost:8000
 echo  - Frontend UI    : http://localhost:5174
-echo  - AI Engine      : Ollama Local VLM
+echo  - AI Engine      : Hybrid VLM (Groq, Upstage, HF PaliGemma) [Local Standby]
 echo.
 echo You can close this window.
 echo ==============================================================================

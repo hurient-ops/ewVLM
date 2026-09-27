@@ -78,9 +78,11 @@ class PaligemmaEdgeValidator:
                         # yes/no 판별 불가 시 안전 우선 통과
                         return True
                 else:
-                    print(f"[EDGE_WARN] LM Studio 응답 에러 ({response.status_code}): {response.text}")
+                    if response.status_code == 400 and "No models loaded" in response.text:
+                        print(f" 🛡️ [PaliGemma Edge] LM Studio에 모델이 로드되지 않았습니다. (엣지 검증 생략 및 VLM으로 바로 이관)")
+                    else:
+                        print(f"[EDGE_WARN] LM Studio 응답 에러 ({response.status_code}): {response.text}")
                     return True
-                    
             except requests.exceptions.RequestException as e:
                 print(f"[EDGE_WARN] LM Studio 타임아웃 또는 연결 실패: {e}")
                 return True # LM Studio가 꺼져있을 수 있으므로 기본 YOLO 결과 신뢰

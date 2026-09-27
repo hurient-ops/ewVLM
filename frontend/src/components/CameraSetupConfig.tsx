@@ -8,7 +8,7 @@ export const CameraSetupConfig: React.FC = () => {
   const [scanMessage, setScanMessage] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
-    id: `CAM-REAL-${Math.floor(Date.now() / 1000)}`,
+    id: `cam-0${Math.floor(Math.random() * 4) + 1}`,
     name: '신규 카메라',
     ipAddress: '192.168.10.155',
     streamProfile: 'profile2',
@@ -250,7 +250,7 @@ export const CameraSetupConfig: React.FC = () => {
 <div className="flex items-center justify-between pb-4 border-b border-border-subtle mb-4">
 <div>
 <h4 className="text-body-sm font-body-sm text-text-primary">VLM 활성 (Edge AI 분석)</h4>
-<p className="text-mono-data font-mono-data text-text-muted">실시간 YOLO 파이프라인 및 VLM 이벤트 연동 활성화</p>
+<p className="text-mono-data font-mono-data text-text-muted">실시간 YOLOv11 파이프라인 및 VLM 이벤트 연동 활성화</p>
 </div>
 <button type="button" onClick={() => setFormData({...formData, vlmEnabled: !formData.vlmEnabled})} className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${formData.vlmEnabled ? 'bg-primary' : 'bg-surface-variant'}`}>
 <span aria-hidden="true" className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${formData.vlmEnabled ? 'translate-x-5' : 'translate-x-0'}`}/>

@@ -105,7 +105,7 @@ export const MonitorALiveControl: React.FC = () => {
           cameraId,
           cameraName,
           level: 'info',
-          message: `[Edge AI] ${cameraId} 채널 실시간 YOLO11 분석 파이프라인 활성화`,
+          message: `[Edge AI] ${cameraId} 채널 실시간 YOLOv11 분석 파이프라인 활성화`,
           confidence: 1.0
         });
       }, 800);
@@ -247,7 +247,11 @@ export const MonitorALiveControl: React.FC = () => {
               {slot.cameraId ? (
                 <>
                   <div className="absolute inset-0 bg-black flex items-center justify-center overflow-hidden">
-                    <WebRTCPlayer streamUrl={`http://localhost:8890/webrtc/${slot.cameraId}`} />
+                    <img 
+                      src={`http://localhost:8001/stream/${slot.cameraId || 'cam-01'}`}
+                      alt="YOLOv11 Stream"
+                      className="w-full h-full object-fill"
+                    />
                   </div>
                   <div className="absolute top-2 left-2 bg-[rgba(18,23,36,0.8)] px-2 py-1 rounded text-[12px] text-white z-10 flex flex-col gap-1">
                     <div className="flex items-center gap-2">

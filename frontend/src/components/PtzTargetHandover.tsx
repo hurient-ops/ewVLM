@@ -40,7 +40,7 @@ export const PtzTargetHandover: React.FC = () => {
 <div className="flex flex-col gap-gutter bg-[#070A13] p-gutter">
 {/* Primary Target View */}
 <div className="video-feed active flex-1 relative">
-<WebRTCPlayer streamUrl={`http://localhost:8890/webrtc/${(activeCameraId || 'cam-01')}`} />
+<img src={`http://localhost:8001/stream/${(activeCameraId || 'cam-01')}`} alt="YOLOv11 Stream" className="w-full h-full object-fill" />
 {/* OSD Overlays */}
 <div className="osd-overlay inset-0">
 {/* Bounding Box */}
@@ -71,7 +71,7 @@ export const PtzTargetHandover: React.FC = () => {
 <div className="h-1/3 flex gap-gutter">
 <div className="video-feed w-1/3 relative">
 <div className="absolute inset-0 bg-surface-container-lowest flex items-center justify-center">
-<WebRTCPlayer streamUrl="http://localhost:8890/webrtc/cam-03" />
+<img src={`http://localhost:8001/stream/cam-03`} alt="YOLOv11 Stream" className="w-full h-full object-fill" />
 <div className="absolute top-osd-margin left-osd-margin bg-surface/80 text-text-muted font-mono-data text-mono-data px-2 py-0.5 rounded">CAM_03 (LOST)</div>
 </div>
 </div>
@@ -82,7 +82,7 @@ export const PtzTargetHandover: React.FC = () => {
 <div className="absolute top-osd-margin left-osd-margin bg-surface/80 text-primary font-mono-data text-mono-data px-2 py-0.5 rounded">HANDOVER IN PROGRESS</div>
 </div>
 <div className="video-feed w-1/3 relative">
-<WebRTCPlayer streamUrl="http://localhost:8890/webrtc/cam-05" />
+<img src={`http://localhost:8001/stream/cam-05`} alt="YOLOv11 Stream" className="w-full h-full object-fill" />
 <div className="absolute top-osd-margin left-osd-margin bg-surface/80 text-warning font-mono-data text-mono-data px-2 py-0.5 rounded">CAM_05 (PREDICTED)</div>
 {/* Predicted Path Overlay */}
 <div className="absolute inset-0 border-2 border-dashed border-warning/50 m-4 rounded pointer-events-none"></div>

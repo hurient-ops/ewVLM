@@ -62,7 +62,9 @@ export const MonitorBVlmAnalysis: React.FC = () => {
           </div>
           <p className="text-body-base font-body-base text-on-surface">{log.message}</p>
           <div className="mt-2 flex gap-2">
-            <button className="bg-surface-container-highest hover:bg-surface-variant border border-border-subtle text-body-sm font-body-sm px-2 py-1 rounded transition-colors flex items-center">
+            <button 
+              onClick={() => window.location.href='/event-review'}
+              className="bg-surface-container-highest hover:bg-surface-variant border border-border-subtle text-body-sm font-body-sm px-2 py-1 rounded transition-colors flex items-center">
               <span className="material-symbols-outlined text-sm mr-1" data-icon="play_circle">play_circle</span> 재생 </button>
             <button className="bg-surface-container-highest hover:bg-surface-variant border border-border-subtle text-body-sm font-body-sm px-2 py-1 rounded transition-colors flex items-center">
               <span className="material-symbols-outlined text-sm mr-1" data-icon="center_focus_strong">center_focus_strong</span> PTZ 집중 </button>
