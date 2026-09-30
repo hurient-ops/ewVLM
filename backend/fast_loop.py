@@ -760,9 +760,9 @@ async def main():
 
         else:
 
-            print(f"?좑툘 {mock_path} and RTSP not found. Falling back to sample_video.mp4")
+            print(f"?좑툘 {mock_path} and RTSP not found. Falling back to mock_videos/cam-01.mp4")
 
-            video_source = "sample_video.mp4"
+            video_source = "mock_videos/cam-01.mp4"
 
         
 

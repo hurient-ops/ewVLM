@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useEventLogStore } from '../store/useEventLogStore';
+import { useSopStore } from '../store/useSopStore';
 import { API } from '../api/client';
 
 export const MonitorBVlmAnalysis: React.FC = () => { 
   const { logs } = useEventLogStore();
+  const { ruleTitle, actions, isSopActive, toggleAction } = useSopStore();
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState([
@@ -94,26 +96,37 @@ export const MonitorBVlmAnalysis: React.FC = () => {
 <div className="px-3 py-2 bg-surface-container-low border-b border-border-subtle">
 <h2 className="text-[14px] font-title-sm text-on-surface uppercase tracking-wider flex items-center whitespace-nowrap">
 <span className="material-symbols-outlined mr-2 text-primary" data-icon="assignment_turned_in">assignment_turned_in</span> SOP 준수 가이드 </h2>
-<p className="text-body-sm font-body-sm text-text-muted mt-1">활성 프로토콜: 노인 낙상 대응</p>
+<p className="text-body-sm font-body-sm text-text-muted mt-1">활성 프로토콜: {isSopActive ? ruleTitle : '대기 중 (위협 요소 없음)'}</p>
 </div>
 <div className="flex-1 p-4 flex flex-col justify-between">
 <ul className="space-y-3">
-<li className="flex items-center text-body-base font-body-base">
-<span className="material-symbols-outlined text-tertiary mr-3" data-icon="check_box">check_box</span>
-<span className="text-on-surface opacity-50 line-through">1. 119 출동</span>
-</li>
-<li className="flex items-center text-body-base font-body-base bg-surface-container-highest p-2 rounded border-l-2 border-primary">
-<span className="material-symbols-outlined text-primary mr-3 animate-pulse" data-icon="radio_button_checked">radio_button_checked</span>
-<span className="text-on-surface font-semibold">2. IP 오디오 방송</span>
-<span className="ml-auto text-label-caps font-label-caps text-primary bg-primary/10 px-2 py-0.5 rounded">활성</span>
-</li>
-<li className="flex items-center text-body-base font-body-base mt-1">
-<span className="material-symbols-outlined text-tertiary mr-3" data-icon="check_box">check_box</span>
-<span className="text-on-surface opacity-50 line-through">3. 순찰 앱 푸시</span>
-</li>
+  {!isSopActive || actions.length === 0 ? (
+    <div className="flex flex-col items-center justify-center h-full text-text-muted opacity-50 py-4">
+      <span className="material-symbols-outlined text-4xl mb-2" data-icon="check_circle">check_circle</span>
+      <p className="text-body-sm">진행 중인 대응 절차가 없습니다.</p>
+    </div>
+  ) : (
+    actions.map((action, index) => (
+      <li 
+        key={index}
+        onClick={() => toggleAction(index)}
+        className={`flex items-center text-body-base font-body-base p-2 rounded cursor-pointer transition-colors ${action.isCompleted ? '' : 'bg-surface-container-highest border-l-2 border-primary hover:bg-surface-variant'}`}
+      >
+        <span className={`material-symbols-outlined mr-3 ${action.isCompleted ? 'text-tertiary' : 'text-primary animate-pulse'}`} data-icon={action.isCompleted ? "check_box" : "radio_button_checked"}>
+          {action.isCompleted ? "check_box" : "radio_button_checked"}
+        </span>
+        <span className={`text-on-surface ${action.isCompleted ? 'opacity-50 line-through' : 'font-semibold'}`}>
+          {index + 1}. {action.description}
+        </span>
+        {!action.isCompleted && (
+          <span className="ml-auto text-label-caps font-label-caps text-primary bg-primary/10 px-2 py-0.5 rounded">활성</span>
+        )}
+      </li>
+    ))
+  )}
 </ul>
-<button className="mt-4 w-full bg-surface-container border border-border-subtle hover:bg-surface-variant text-on-surface font-title-sm text-[14px] py-3 rounded flex items-center justify-center transition-colors group">
-<span className="material-symbols-outlined mr-2 text-text-muted group-hover:text-primary transition-colors" data-icon="mic">mic</span> 마이크 방송 유지 </button>
+<button className={`mt-4 w-full border font-title-sm text-[14px] py-3 rounded flex items-center justify-center transition-colors group ${isSopActive ? 'bg-danger/10 border-danger text-danger hover:bg-danger hover:text-white' : 'bg-surface-container border-border-subtle hover:bg-surface-variant text-text-muted cursor-not-allowed'}`}>
+<span className="material-symbols-outlined mr-2 transition-colors" data-icon="mic">mic</span> 마이크 방송 유지 </button>
 </div>
 </div>
 </section>
@@ -185,8 +198,8 @@ export const MonitorBVlmAnalysis: React.FC = () => {
 <span className="material-symbols-outlined mr-2 text-primary" data-icon="description">description</span> 사건 보고서 (자동 초안) </h2>
 <span className="text-label-caps font-label-caps bg-surface-container-highest px-2 py-1 rounded text-text-muted border border-border-subtle whitespace-nowrap ml-2">ID: RPT-8832</span>
 </div>
-<div className="flex-1 p-4 flex flex-col">
-<div className="grid grid-cols-2 gap-4 mb-4">
+<div className="flex-1 p-3 flex flex-col">
+<div className="grid grid-cols-2 gap-3 mb-2">
 <div>
 <span className="block text-label-caps font-label-caps text-text-muted mb-1">사건 발생 시간</span>
 <span className="text-mono-data font-mono-data text-on-surface bg-surface-container px-2 py-1 rounded block border border-border-subtle">2023-10-27 15:02:40</span>
@@ -196,18 +209,18 @@ export const MonitorBVlmAnalysis: React.FC = () => {
 <span className="text-mono-data font-mono-data text-on-surface bg-surface-container px-2 py-1 rounded block border border-border-subtle">서쪽 계단, L2</span>
 </div>
 </div>
-<div className="mb-4 flex-1">
+<div className="mb-2 flex-1 flex flex-col">
 <span className="block text-label-caps font-label-caps text-text-muted mb-1">사건 요약 (VLM 생성)</span>
-<textarea className="w-full h-24 bg-surface-container border border-border-subtle rounded p-2 text-mono-data font-mono-data text-on-surface-variant focus:outline-none resize-none" readOnly>노인 남성이 서쪽 계단을 내려가다 넘어짐. 30초 이상 움직임 없음. 자동 경보 발생. SOP 시작됨.</textarea>
+<textarea className="w-full flex-1 bg-surface-container border border-border-subtle rounded p-2 text-mono-data font-mono-data text-on-surface-variant focus:outline-none resize-none min-h-[60px]" readOnly>노인 남성이 서쪽 계단을 내려가다 넘어짐. 30초 이상 움직임 없음. 자동 경보 발생. SOP 시작됨.</textarea>
 </div>
-<div className="mb-4">
+<div className="mb-3">
 <span className="block text-label-caps font-label-caps text-text-muted mb-1">조치 사항</span>
 <div className="flex gap-2">
 <span className="text-[10px] font-mono-data bg-surface-container-highest text-on-surface px-2 py-1 rounded border border-border-subtle">119 출동</span>
 <span className="text-[10px] font-mono-data bg-surface-container-highest text-on-surface px-2 py-1 rounded border border-border-subtle">오디오 방송</span>
 </div>
 </div>
-<button className="w-full bg-primary-container text-white font-title-sm text-[14px] py-2 rounded flex items-center justify-center transition-all hover:bg-inverse-primary shadow-[0_0_15px_rgba(124,58,237,0.4)] hover:shadow-[0_0_20px_rgba(124,58,237,0.6)] mt-auto whitespace-nowrap"> 승인 요청 <span className="material-symbols-outlined ml-2 text-sm" data-icon="upload">upload</span>
+<button className="w-full shrink-0 bg-primary-container text-white font-title-sm text-[14px] py-2 rounded flex items-center justify-center transition-all hover:bg-inverse-primary shadow-[0_0_15px_rgba(124,58,237,0.4)] hover:shadow-[0_0_20px_rgba(124,58,237,0.6)] mt-auto whitespace-nowrap"> 승인 요청 <span className="material-symbols-outlined ml-2 text-sm" data-icon="upload">upload</span>
 </button>
 </div>
 </div>

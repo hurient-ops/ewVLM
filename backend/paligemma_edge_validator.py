@@ -22,6 +22,18 @@ class PaligemmaEdgeValidator:
         진짜 위협(True Positive)인지 가짜 알람(False Positive)인지 반환합니다.
         """
         try:
+            # Check loaded model dynamically to avoid blocking heavy Slow-Loop VLMs
+            try:
+                models_res = requests.get(f"{self.lmstudio_url}/v1/models", timeout=1).json()
+                if models_res.get("data"):
+                    loaded_model = models_res["data"][0]["id"].lower()
+                    self.model_name = loaded_model
+                    if "paligemma" not in loaded_model and "moondream" not in loaded_model and "edge" not in loaded_model:
+                        print(f" 🛡️ [PaliGemma Edge] 무거운 모델({loaded_model}) 감지됨. 엣지 검증 생략 및 VLM으로 바로 이관.")
+                        return True
+            except Exception:
+                pass
+
             # 1. 이미지 인코딩
             if isinstance(image_path_or_frame, str):
                 frame = cv2.imread(image_path_or_frame)

@@ -318,8 +318,7 @@ export default function MonitorCanvas({
                     </span>{" "}
                     <span className="text-[11px] text-gray-400 text-center mt-1 leading-relaxed">
                       {" "}
-                      Llama 3.2 11B 및 Upstage Solar 비동기 추론 엔진 실시간
-                      추적 중{" "}
+                      VLM 비동기 추론 엔진 실시간 추적 중{" "}
                     </span>{" "}
                   </div>
                 )}{" "}

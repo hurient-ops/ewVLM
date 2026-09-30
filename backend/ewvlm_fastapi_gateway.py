@@ -139,13 +139,6 @@ class CameraGroupCreate(BaseModel):
     id: str
     name: str
     description: Optional[str] = None
-    name: str
-    ip_address: str
-    rtsp_url: Optional[str] = None
-    group_id: Optional[str] = None
-    vlm_enabled: bool = True
-    latitude: float = 0.0
-    longitude: float = 0.0
 
 class VideoRecordCreate(BaseModel):
     camera_id: str
@@ -170,7 +163,7 @@ app.mount("/downloads", StaticFiles(directory="downloads"), name="downloads")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5174", "http://127.0.0.1:5174", "http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -357,25 +350,28 @@ async def startup_event():
         await crud.seed_db_if_empty(db)
 
     # Sync SQLite cameras to MediaMTX
-    async with AsyncSessionLocal() as db:
-        cameras = await crud.get_cameras(db)
-        for cam in cameras:
-            if cam.rtsp_url:
-                max_retries = 5
-                for attempt in range(max_retries):
-                    try:
-                        async with httpx.AsyncClient() as client:
-                            mediamtx_url = f"http://localhost:9997/v3/config/paths/add/{cam.camera_id}"
-                            payload = {"source": cam.rtsp_url}
-                            resp = await client.post(mediamtx_url, json=payload, timeout=3.0)
-                            resp.raise_for_status()
-                            break
-                    except Exception as e:
-                        if attempt < max_retries - 1:
-                            logger.warning(f"Failed to sync {cam.camera_id} to MediaMTX on startup, retrying in 2s... ({attempt+1}/{max_retries})")
-                            await asyncio.sleep(2)
-                        else:
-                            logger.error(f"Failed to sync {cam.camera_id} to MediaMTX on startup: All connection attempts failed")
+    async def sync_cameras_to_mediamtx():
+        async with AsyncSessionLocal() as db:
+            cameras = await crud.get_cameras(db)
+            for cam in cameras:
+                if cam.rtsp_url:
+                    max_retries = 5
+                    for attempt in range(max_retries):
+                        try:
+                            async with httpx.AsyncClient() as client:
+                                mediamtx_url = f"http://localhost:9997/v3/config/paths/add/{cam.camera_id}"
+                                payload = {"source": cam.rtsp_url}
+                                resp = await client.post(mediamtx_url, json=payload, timeout=3.0)
+                                resp.raise_for_status()
+                                break
+                        except Exception as e:
+                            if attempt < max_retries - 1:
+                                logger.warning(f"Failed to sync {cam.camera_id} to MediaMTX on startup, retrying in 2s... ({attempt+1}/{max_retries})")
+                                await asyncio.sleep(2)
+                            else:
+                                logger.error(f"Failed to sync {cam.camera_id} to MediaMTX on startup: All connection attempts failed")
+    
+    asyncio.create_task(sync_cameras_to_mediamtx())
 
 # ==============================================================================
 # 4. Background Workers: Simulated DeepStream, VLM, and Blockchain Pipelines
@@ -388,7 +384,7 @@ async def extract_event_video_chunk(escalation_id: str) -> str:
     output_path = f"downloads/chunk_{escalation_id}.mp4"
     
     ffmpeg_exe = os.path.join(os.path.dirname(__file__), "ffmpeg.exe")
-    input_video = os.path.join(os.path.dirname(__file__), "sample_video.mp4")
+    input_video = os.path.join(os.path.dirname(__file__), "mock_videos/cam-01.mp4")
     
     if not os.path.exists(ffmpeg_exe):
         logger.error("ffmpeg.exe not found. Falling back to dummy video path.")
@@ -493,7 +489,8 @@ Fast-loop YOLOv11 모델이 다음 이벤트를 1차적으로 감지했습니다
     if use_local_vlm:
         try:
             import requests
-            models_res = requests.get("http://localhost:1234/v1/models", timeout=2).json()
+            models_res = await asyncio.to_thread(requests.get, "http://localhost:1234/v1/models", timeout=2)
+            models_res = models_res.json()
             if models_res.get("data"):
                 active_vlm_models = [models_res["data"][0]["id"]]
         except Exception:
@@ -571,14 +568,24 @@ Fast-loop YOLOv11 모델이 다음 이벤트를 1차적으로 감지했습니다
     
     try:
         # 모든 JSON 블록 추출 (비탐욕적)
+        import ast
         json_matches = re.findall(r'\{.*?\}', caption, re.DOTALL)
         if json_matches:
             parsed_jsons = []
             for j in json_matches:
                 try:
-                    parsed_jsons.append(json.loads(j))
+                    # Sanitize unescaped newlines
+                    sanitized_j = re.sub(r'(?<!\\)\n', r'\\n', j)
+                    parsed_jsons.append(json.loads(sanitized_j, strict=False))
                 except:
-                    pass
+                    try:
+                        parsed_jsons.append(json.loads(j, strict=False))
+                    except:
+                        try:
+                            # Fallback to ast.literal_eval for single quotes
+                            parsed_jsons.append(ast.literal_eval(j))
+                        except:
+                            pass
             
             if not parsed_jsons:
                 raise ValueError("No valid JSON blocks found.")
@@ -604,7 +611,7 @@ Fast-loop YOLOv11 모델이 다음 이벤트를 1차적으로 감지했습니다
                 detected_actions.append("safety_warning")
             elif threat == "safe":
                 logger.info(f"🟢 [VLM_FILTERED] VLM 분석 결과 안전 판별 (Reason: {vlm_summary})")
-                return
+                detected_actions.append("safe")
         else:
             raise ValueError("No JSON block found in VLM response.")
     except Exception as e:
@@ -613,9 +620,9 @@ Fast-loop YOLOv11 모델이 다음 이벤트를 1차적으로 감지했습니다
             detected_actions.append("critical_danger")
         elif "safety_warning" in caption or "위협 수준] 경고" in caption:
             detected_actions.append("safety_warning")
-        elif "safe" in caption or "위협 수준] 안전" in caption:
-            logger.info(f"🟢 [VLM_FILTERED] Text Fallback: VLM 분석 결과 안전 판별.")
-            return
+        else:
+            logger.info(f"🟢 [VLM_FILTERED] Text Fallback: VLM 분석 결과 안전 판별 (기본값).")
+            detected_actions.append("safe")
 
     # 번역 로직 추가: VLM 결과가 영어일 경우 한국어로 번역 (JSON 성공 및 Fallback 모두 적용)
     try:
@@ -1025,14 +1032,27 @@ async def broadcast_audio(req: BroadcastRequest):
 @app.get("/api/v1/vlm/models", status_code=status.HTTP_200_OK)
 async def get_vlm_models():
     """List available VLM models"""
-    # Migration: fallback to list if string is found
-    active = getattr(app.state, "active_vlm_models", ["Llama 3.2 11B Vision Instruct"])
+    use_local_vlm = os.getenv("USE_LOCAL_VLM", "false").lower() == "true"
+    active = getattr(app.state, "active_vlm_models", [])
     if isinstance(active, str):
         active = [active]
-    
-    return {
-        "active": active,
-        "available": [
+        
+    available = []
+    if use_local_vlm:
+        try:
+            import requests
+            models_res = await asyncio.to_thread(requests.get, "http://localhost:1234/v1/models", timeout=2)
+            models_res = models_res.json()
+            if models_res.get("data"):
+                available = [m["id"] for m in models_res["data"]]
+                if not active:
+                    active = [available[0]]
+        except Exception:
+            available = ["LM Studio Not Found"]
+            if not active:
+                active = available
+    else:
+        available = [
             "Llama 3.2 11B Vision Instruct",
             "moondream2",
             "llava-v1.5-13b",
@@ -1042,6 +1062,15 @@ async def get_vlm_models():
             "Upstage (Solar-Chat)",
             "HuggingFace (PaliGemma-3B)"
         ]
+        if not active:
+            active = ["Llama 3.2 11B Vision Instruct"]
+    
+    # Update app state so it persists
+    app.state.active_vlm_models = active
+    
+    return {
+        "active": active,
+        "available": available
     }
 
 class VLMModelUpdate(BaseModel):
@@ -2024,7 +2053,7 @@ async def get_vlm_models():
     """Fetch available models from LM Studio or fallback to mocks."""
     try:
         import requests
-        response = requests.get("http://127.0.0.1:1234/v1/models", timeout=2)
+        response = await asyncio.to_thread(requests.get, "http://127.0.0.1:1234/v1/models", timeout=2)
         if response.status_code == 200:
             models_data = response.json().get("data", [])
             available_models = [{"id": m["id"], "name": m["id"]} for m in models_data]
@@ -2064,7 +2093,7 @@ class VLMChatReq(BaseModel):
 
 @app.post("/api/v1/vlm/chat")
 async def vlm_chat(req: VLMChatReq):
-    video_path = "sample_video.mp4" # Default fallback
+    video_path = "mock_videos/cam-01.mp4" # Default fallback
     if req.camera_id:
         req_id_lower = req.camera_id.lower()
         if "01" in req_id_lower: video_path = "mock_videos/cam-01.mp4"

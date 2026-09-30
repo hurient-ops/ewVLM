@@ -24,14 +24,16 @@ let wsInstance: WebSocket | null = null;
 
 export const useEventLogStore = create<EventLogState>((set, get) => ({
   logs: [
-    { id: '1', timestamp: '17:00:00', cameraId: 'SYSTEM', cameraName: '중앙 통제실', level: 'info', message: 'ewVLM 통합관제 콕핏 로컬 가동 시작', confidence: 1.0 }
+    { id: '1', timestamp: '09:00:00', cameraId: 'SYSTEM', cameraName: '중앙 통제실', level: 'info', message: 'ewVLM 통합관제 콕핏 로컬 가동 시작', confidence: 1.0 }
   ],
   unreadAlertCount: 0,
   addLog: (log) => set((state) => {
+    const now = new Date();
+    const formattedTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     const newLog: EventLog = {
       ...log,
       id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-      timestamp: new Date().toLocaleTimeString('ko-KR', { hour12: false })
+      timestamp: formattedTime
     };
     return {
       logs: [newLog, ...state.logs].slice(0, 1000),
@@ -61,10 +63,11 @@ export const useEventLogStore = create<EventLogState>((set, get) => ({
         const data = JSON.parse(event.data);
         if (data.type === 'vlm_event') {
           const payload = data.payload;
+          const isSafe = payload.detected_dangerous_actions && payload.detected_dangerous_actions.includes('safe');
           get().addLog({
             cameraId: payload.camera_id,
             cameraName: '자동 연동 카메라',
-            level: 'critical',
+            level: isSafe ? 'info' : 'critical',
             message: payload.semantic_caption,
             confidence: payload.inference_confidence_score
           });

@@ -73,7 +73,7 @@ export const CameraListManager: React.FC = () => {
             <ul className="space-y-1">
               {isCreatingGroup && (
                 <li className="px-2 py-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-2">
                     <input 
                       type="text" 
                       value={newGroupName} 
@@ -92,6 +92,29 @@ export const CameraListManager: React.FC = () => {
                         }
                       }}
                     />
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => {
+                          setNewGroupName('');
+                          setIsCreatingGroup(false);
+                        }}
+                        className="px-2 py-1 text-[11px] text-text-muted hover:text-text-primary transition-colors"
+                      >
+                        취소
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (newGroupName.trim()) {
+                            addGroup({ id: `group-${Date.now()}`, name: newGroupName.trim(), description: '' });
+                            setNewGroupName('');
+                            setIsCreatingGroup(false);
+                          }
+                        }}
+                        className="px-2 py-1 text-[11px] bg-primary text-on-primary rounded hover:bg-primary/90 transition-colors"
+                      >
+                        저장
+                      </button>
+                    </div>
                   </div>
                 </li>
               )}

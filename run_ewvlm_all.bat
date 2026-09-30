@@ -39,8 +39,8 @@ start "ewVLM - YOLOv11 Fast Loop" cmd /k "cd backend && (if exist .venv\Scripts\
 timeout /t 3 /nobreak >nul
 
 :: Step 4: Local VLM Standby Bridge (LM Studio / Ollama)
-echo [4/4] Starting Local VLM Standby Bridge...
-start "ewVLM - [STANDBY] Local VLM Bridge" cmd /k "echo [STANDBY MODE] ewVLM is currently running on Multi-Cloud VLM (Groq/Upstage/HF). This terminal is reserved for future high-performance local AI servers (LM Studio/Ollama). To switch to local, enable USE_LOCAL_VLM in env. && cd backend && (if exist .venv\Scripts\activate.bat (call .venv\Scripts\activate.bat) else (if exist venv\Scripts\activate.bat (call venv\Scripts\activate.bat)))"
+echo [4/4] LM Studio Local VLM Connected
+start "ewVLM - Local VLM Bridge (LM Studio)" cmd /k "echo [LOCAL MODE] ewVLM is currently connected to LM Studio on port 1234 for high-performance local AI inference. && cd backend && (if exist .venv\Scripts\activate.bat (call .venv\Scripts\activate.bat) else (if exist venv\Scripts\activate.bat (call venv\Scripts\activate.bat)))"
 
 echo.
 echo ==============================================================================
@@ -48,7 +48,7 @@ echo [SUCCESS] ewVLM Platform components have been started!
 echo.
 echo  - Backend Server : http://localhost:8000
 echo  - Frontend UI    : http://localhost:5174
-echo  - AI Engine      : Hybrid VLM (Groq, Upstage, HF PaliGemma) [Local Standby]
+echo  - AI Engine      : Local VLM (LM Studio - qwen2-vl-7b-instruct)
 echo.
 echo You can close this window.
 echo ==============================================================================

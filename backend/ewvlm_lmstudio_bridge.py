@@ -88,7 +88,7 @@ class LMStudioVLMBridge:
         """
         url = f"{self.lmstudio_url}/v1/chat/completions"
         payload = {
-            "model": "local-model",
+            "model": model_name,
             "messages": [
                 {
                     "role": "user",
@@ -101,8 +101,9 @@ class LMStudioVLMBridge:
             "temperature": 0.2,
             "max_tokens": 512,
             "top_p": 0.9,
-            "frequency_penalty": 0.3,
-            "presence_penalty": 0.3,
+            "repeat_penalty": 1.2,
+            "frequency_penalty": 1.0,
+            "presence_penalty": 1.0,
             "stream": False
         }
 

@@ -212,10 +212,12 @@ export const initWebSocket = () => {
 
       if (data.type === 'vlm_event') {
         const payload = data.payload;
+        const isSafe = payload.detected_dangerous_actions && payload.detected_dangerous_actions.includes('safe');
+        
         useEventLogStore.getState().addLog({
           cameraId: payload.camera_id,
           cameraName: `Camera ${payload.camera_id}`,
-          level: 'critical',
+          level: isSafe ? 'info' : 'critical',
           message: payload.semantic_caption,
           confidence: payload.inference_confidence_score
         });
