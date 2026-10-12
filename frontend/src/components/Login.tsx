@@ -10,24 +10,33 @@ export default function Login() {
   const login = useAuthStore((state) => state.login);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    username: '',
-    password: '',
-    rememberMe: false
+    username: 'admin',
+    password: 'admin123!',
+    rememberMe: true
   });
   const [errorMsg, setErrorMsg] = useState('');
 
   const from = location.state?.from?.pathname || '/monitor-a';
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const executeLogin = async (u: string, p: string) => {
     setErrorMsg('');
     try {
-      const data = await API.login(formData.username, formData.password);
+      const data = await API.login(u, p);
       login(data.access_token, data.user);
       navigate(from, { replace: true });
     } catch (err: any) {
       setErrorMsg(err.response?.data?.detail || '로그인에 실패했습니다.');
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await executeLogin(formData.username, formData.password);
+  };
+
+  const handleQuickAdminLogin = async () => {
+    setFormData({ username: 'admin', password: 'admin123!', rememberMe: true });
+    await executeLogin('admin', 'admin123!');
   };
 
   return (
@@ -38,6 +47,27 @@ export default function Login() {
         </div>
         <h2 className="text-2xl font-bold text-[#E2E8F0] mb-2">시스템 로그인</h2>
         <p className="text-sm text-[#7D8D9F]">보안 접근을 위한 계정 정보를 입력하십시오.</p>
+
+        {/* 개발/테스트용 계정 안내 배너 */}
+        <div className="mt-4 w-full bg-primary/10 border border-primary/30 rounded-lg p-3 text-left">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs font-bold text-primary flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span> 개발 모드 자동 입력 활성화
+            </span>
+            <span className="text-[10px] text-text-muted font-mono">Dev Quick-Pass</span>
+          </div>
+          <p className="text-xs text-gray-300 font-mono">
+            아이디: <strong className="text-white bg-black/40 px-1.5 py-0.5 rounded">admin</strong> &nbsp;|&nbsp; 
+            비밀번호: <strong className="text-white bg-black/40 px-1.5 py-0.5 rounded">admin123!</strong>
+          </p>
+          <button
+            type="button"
+            onClick={handleQuickAdminLogin}
+            className="mt-2.5 w-full bg-primary-container text-on-primary-container hover:bg-inverse-primary py-1.5 px-3 rounded text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 glow-active"
+          >
+            ⚡ 관리자(admin) 원클릭 바로 로그인
+          </button>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="p-6 space-y-5 flex flex-col">

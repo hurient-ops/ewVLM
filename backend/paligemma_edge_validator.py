@@ -47,7 +47,7 @@ class PaligemmaEdgeValidator:
             base64_img = base64.b64encode(buffer).decode('utf-8')
 
             # 2. VQA 프롬프트 구성
-            if trigger_class == "unauthorized_entry" or trigger_class == "person_collapsed":
+            if trigger_class in ["unauthorized_entry", "person_detected", "person_collapsed"]:
                 prompt = "Is there a real person in this image? Answer only 'yes' or 'no'."
             else:
                 prompt = f"Is there a {trigger_class} in this image? Answer only 'yes' or 'no'."

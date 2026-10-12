@@ -166,7 +166,21 @@ async def mjpeg_handler(request):
 
     return response
 
-
+async def snapshot_handler(request):
+    camera_id = request.match_info.get('camera_id', 'cam-01').lower()
+    frame = latest_frames.get(camera_id)
+    if frame is None:
+        # fallback to any active camera
+        for k, v in latest_frames.items():
+            if v is not None:
+                frame = v
+                break
+    if frame is None:
+        frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        cv2.putText(frame, f"Live Frame Standby ({camera_id})", (40, 240), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 85]
+    ret, buffer = await asyncio.to_thread(cv2.imencode, '.jpg', frame, encode_param)
+    return web.Response(body=buffer.tobytes(), content_type='image/jpeg', headers={'Access-Control-Allow-Origin': '*'})
 
 class CameraStreamTrack(VideoStreamTrack):
 
@@ -412,8 +426,7 @@ async def camera_loop(camera_id, model, video_source):
 
 
             if detected_objects:
-
-                trigger_reason = "unauthorized_entry" if any(o['class_label'] == 'person' for o in detected_objects) else "vehicle_detected"
+                trigger_reason = "person_detected" if any(o['class_label'] == 'person' for o in detected_objects) else "vehicle_detected"
 
                 
 

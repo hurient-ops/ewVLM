@@ -439,44 +439,112 @@ async def execute_vlm_inference_pipeline(escalation_data: EscalationRequest):
 
     base64_img, _, _ = vlm_bridge.extract_and_encode_frame(video_path, 0)
     
-    # 9차 고도화: DB에서 활성화된 프롬프트를 가져와 동적으로 주입합니다.
+    # 9차 고도화: DB에서 활성화된 프롬프트를 가져와 동적으로 주입하거나, 트리거 사유에 특화된 8대 관제 시나리오 가이드를 적용합니다.
+    anti_hallucination_rule = """[🚨 오탐 및 과잉 해석(환각) 방지 절대 규칙]
+1. 상황을 침입이나 월담으로 절대 예단하지 마십시오. 화면에 보이는 시각적 사실만 객관적으로 판독하십시오.
+2. 사람이 도로, 인도, 통로, 마당 등에서 정상적으로 걷거나(Walking), 서 있거나, 이동 중인 경우 ➔ 100% "safe" (안전)로 판정하십시오.
+3. 사람이 손과 발로 펜스/담장을 물리적으로 딛고 기어오르거나(실제 월담), 펜스를 절단하는 명백한 행위가 4컷 중 확실히 확인될 때만 "critical_danger"를 부여하십시오.
+4. 명백한 물리적 훼손이나 월담 행위가 없는 단순 보행은 어떠한 경우에도 침입으로 과장하지 말고 반드시 "safe"로 응답하십시오."""
+
     if active_prompt and active_prompt.payload_json:
         p_json = active_prompt.payload_json
-        sys_p = p_json.get("system_prompt", "[System] 당신은 산업 안전 및 보안 관제 AI(ewVLM)입니다.")
+        sys_p = p_json.get("system_prompt", "[System] 당신은 산업 안전 및 공공 보안 관제 전문 시각 언어 모델(ewVLM)입니다.")
         user_p = p_json.get("user_prompt_template", "").replace("{{camera_id}}", escalation_data.camera_id).replace("{{sector}}", "Sector-1")
+        scenario_title = p_json.get("korean_title") or p_json.get("name", "지정 관제 시나리오")
+        logger.info(f"🎯 [VLM_PROMPT_DEPLOYED] 활성화된 배포 템플릿 적용: {scenario_title} ({p_json.get('template_id', 'custom')})")
         prompt = f"""{sys_p}
-Fast-loop YOLOv11 모델이 다음 이벤트를 감지했습니다: '{escalation_data.trigger_class}'.
+
+[활성 관제 시나리오: {scenario_title}]
+Fast-loop YOLOv11 모델이 다음 객체를 1차 감지했습니다: '{escalation_data.trigger_class}'.
 주어진 이미지는 시간 순서(T-2.5s, T-1.6s, T-0.8s, T-0.0s)대로 배열된 4컷의 2x2 그리드 영상 프레임입니다.
+
+[시나리오 특화 분석 지침]
 {user_p}
+
+{anti_hallucination_rule}
+
 영상의 시간적 맥락(Temporal Context)을 분석하여 아래의 JSON 규격으로만 절대적으로 응답하십시오. 다른 부연 설명은 포함하지 마십시오.
 
 ```json
 {{
   "threat_level": "critical_danger" | "safety_warning" | "safe",
-  "summary": "현재 보이는 4컷의 시계열 상황 1~2줄 요약",
-  "action": "즉각적인 권장 대응 조치(SOP)"
+  "summary": "현재 보이는 4컷의 시계열 상황에 대한 아주 객관적이고 사실에 기반한 1~2줄 요약",
+  "action": "즉각적인 권장 대응 조치(SOP) - safe라면 반드시 '조치 불필요'로 작성"
 }}
 ```"""
-    trigger = escalation_data.trigger_class
-    if trigger == "unauthorized_entry":
-        event_desc = "사람 객체(Person) 출현"
-    elif trigger == "vehicle_detected":
-        event_desc = "차량 객체(Vehicle) 출현"
     else:
-        event_desc = trigger
+        # 트리거 클래스별 8대 도메인 특화 관제 가이드라인 매핑
+        trigger_guide_map = {
+            "person_detected": (
+                "인물/보행자 감지 (정상 보행 여부 객관적 검증)",
+                "사람 객체가 감지되었습니다. 절대로 상황을 침입이나 월담으로 예단하지 마십시오.\n"
+                "- 정상 보행, 통로 통과, 일상적 이동인 경우 ➔ 반드시 'safe' 판정\n"
+                "- 손과 발로 펜스를 기어오르는 명백한 물리적 월담이 4컷 중 입증될 때만 ➔ 'critical_danger' 판정\n"
+                "- 확실하지 않거나 단순 보행일 경우 무조건 'safe'로 판정하십시오."
+            ),
+            "unauthorized_entry": (
+                "인물/보행자 감지 (정상 보행 여부 객관적 검증)",
+                "사람 객체가 감지되었습니다. 절대로 상황을 침입이나 월담으로 예단하지 마십시오.\n"
+                "- 정상 보행, 통로 통과, 일상적 이동인 경우 ➔ 반드시 'safe' 판정\n"
+                "- 손과 발로 펜스를 기어오르는 명백한 물리적 월담이 4컷 중 입증될 때만 ➔ 'critical_danger' 판정\n"
+                "- 확실하지 않거나 단순 보행일 경우 무조건 'safe'로 판정하십시오."
+            ),
+            "vehicle_detected": (
+                "차량 객체 감지",
+                "비상 구역 불법 주정차나 위험 배회가 아닌, 정상적인 도로 주행이나 일시 정차인 경우 반드시 'safe'로 판별하십시오."
+            ),
+            "person_collapsed": (
+                "작업자/인원 급작 쓰러짐(낙상) 의심",
+                "사람이 바닥에 쓰러져 30초 이상 움직임이 없는 응급 상황인지, 단순 작업 자세나 앉아 있는 휴식인지 엄격히 구분하여, 의식이 있고 움직임이 있다면 'safe'로 판별하십시오."
+            ),
+            "fall_detected": (
+                "작업자/인원 급작 쓰러짐(낙상) 의심",
+                "사람이 바닥에 쓰러져 30초 이상 움직임이 없는 응급 상황인지, 단순 작업 자세나 앉아 있는 휴식인지 엄격히 구분하여, 의식이 있고 움직임이 있다면 'safe'로 판별하십시오."
+            ),
+            "fire_smoke": (
+                "화재 초기 전조(연기/불꽃) 의심",
+                "실제 화염 불꽃이나 상승 연기가 아닌 자동차 배기가스, 수증기, 먼지 등은 반드시 'safe'로 판별하십시오."
+            ),
+            "ppe_violation": (
+                "산업 안전보호구(안전모·조끼) 미착용 의심",
+                "보호구 착용이 면제된 안전 구역이거나 안전모를 정상 착용하고 있다면 'safe'로 판별하십시오."
+            ),
+            "hazard_zone_intrusion": (
+                "중장비/위험 설비 반경 무단 접근 의심",
+                "중장비와 안전거리를 유지하고 있거나 장비가 정지 상태라면 'safe'로 판별하십시오."
+            ),
+            "violence_detected": (
+                "이상 물리적 충돌 및 폭력 행위 의심",
+                "친밀한 인사, 장난, 일반적 대화 등 정상적인 상호작용은 반드시 'safe'로 판별하십시오."
+            ),
+            "crowd_density": (
+                "군중 과밀집 및 병목 정체 의심",
+                "정상적인 보행 흐름이 유지되는 군중 이동은 'safe'로 판별하십시오."
+            )
+        }
+        
+        trigger = escalation_data.trigger_class
+        event_label, event_guide = trigger_guide_map.get(
+            trigger, 
+            (f"{trigger} 객체 감지", "영상을 객관적으로 분석하여 확실한 위험 징후가 없다면 반드시 'safe'로 판별하십시오.")
+        )
 
-    prompt = f"""[System] 당신은 산업 안전 및 보안 관제 AI(ewVLM)입니다.
-Fast-loop YOLOv11 모델이 다음 이벤트를 1차적으로 감지했습니다: '{event_desc}'.
+        prompt = f"""[System] 당신은 산업 안전 및 공공 보안 관제 전문 시각 언어 모델(ewVLM)입니다.
+Fast-loop YOLOv11 모델이 다음 객체를 1차적으로 감지했습니다: '{event_label}'.
 주어진 이미지는 시간 순서(T-2.5s, T-1.6s, T-0.8s, T-0.0s)대로 배열된 4컷의 2x2 그리드 영상 프레임입니다.
-당신의 역할은 이 이미지를 객관적으로 분석하여 해당 상황이 실제로 위험한 상황(예: 보안 구역 무단 침입, 쓰러짐, 폭력 등)인지, 아니면 안전한 일상적 상황(예: 인가된 구역의 정상적인 보행)인지 판별하는 것입니다.
+
+[상황별 판별 지침]
+{event_guide}
+
+{anti_hallucination_rule}
 
 영상의 시간적 맥락(Temporal Context)을 분석하여 아래의 JSON 규격으로만 절대적으로 응답하십시오. 다른 부연 설명은 포함하지 마십시오.
 
 ```json
 {{
   "threat_level": "critical_danger" | "safety_warning" | "safe",
-  "summary": "현재 보이는 4컷의 시계열 상황에 대한 아주 객관적인 1~2줄 요약 (거짓으로 상황을 꾸며내지 마세요)",
-  "action": "즉각적인 권장 대응 조치(SOP) - 만약 safe라면 '조치 불필요'라고 작성"
+  "summary": "현재 보이는 4컷의 시계열 상황에 대한 아주 객관적이고 사실에 기반한 1~2줄 요약 (거짓으로 꾸며내지 마세요)",
+  "action": "즉각적인 권장 대응 조치(SOP) - safe라면 반드시 '조치 불필요'로 작성"
 }}
 ```"""
     
