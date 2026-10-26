@@ -1,0 +1,7 @@
+{
+  "adapter_name": "ewvlm_intrusion_v1_lora",
+  "path": "E:\\projects\\ewVLM\\models\\lora_adapters\\ewvlm_intrusion_v1_lora",
+  "activated_at": "2026-10-24T23:30:30.544535",
+  "status": "HOT_LOADED",
+  "device": "cuda:0"
+}

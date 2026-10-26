@@ -11,6 +11,9 @@ import asyncio
 from datetime import datetime
 
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 import tempfile
 
@@ -29,6 +32,19 @@ from av import VideoFrame
 # Create global instance of Edge Validator
 
 edge_validator = PaligemmaEdgeValidator()
+
+# LoRA Active Adapter Info Path for Air-Gapped Hot-Swap
+ADAPTER_INFO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "models", "lora_adapters", "active_adapter_info.json"))
+
+def get_current_active_adapter_name() -> str:
+    try:
+        if os.path.exists(ADAPTER_INFO_PATH):
+            with open(ADAPTER_INFO_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data.get("adapter_name", "Base Only")
+    except Exception:
+        pass
+    return "Base Only"
 
 
 
@@ -91,77 +107,52 @@ vlm_lock = asyncio.Semaphore(1)
 
 
 async def mjpeg_handler(request):
-
     camera_id = request.match_info.get('camera_id', 'cam-01')
-
     camera_id = camera_id.lower()
 
-    
-
-    if camera_id not in latest_frames:
-
+    if camera_id not in latest_frames and "cam-01" in latest_frames:
         camera_id = "cam-01"
-
-
+    elif camera_id not in latest_frames and latest_frames:
+        camera_id = next(iter(latest_frames.keys()))
 
     boundary = "frame"
-
     response = web.StreamResponse(
-
         status=200,
-
         reason='OK',
-
         headers={
-
             'Content-Type': f'multipart/x-mixed-replace;boundary={boundary}',
-
             'Access-Control-Allow-Origin': '*'
-
         }
-
     )
-
     await response.prepare(request)
 
-    
-
+    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
     while True:
-
-        frame = latest_frames[camera_id]
-
-        if frame is not None:
-
-            # [Optimization] Drop JPEG quality to 70% for massive bandwidth savings
-
-            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
-
-            # Offload synchronous OpenCV imencode to prevent Event Loop blocking
-
-            ret, buffer = await asyncio.to_thread(cv2.imencode, '.jpg', frame, encode_param)
-
-            if ret:
-
-                frame_data = buffer.tobytes()
-
-                try:
-
-                    await response.write(
-
-                        b'--' + boundary.encode() + b'\r\n'
-
-                        b'Content-Type: image/jpeg\r\n'
-
-                        b'Content-Length: ' + str(len(frame_data)).encode() + b'\r\n\r\n' +
-
-                        frame_data + b'\r\n'
-
-                    )
-
-                except BaseException:
-
+        frame = latest_frames.get(camera_id)
+        if frame is None:
+            # Fallback to any active frame
+            for v in latest_frames.values():
+                if v is not None:
+                    frame = v
                     break
+        if frame is None:
+            # Generate standby frame
+            frame = np.zeros((480, 640, 3), dtype=np.uint8)
+            cv2.putText(frame, f"Connecting Live Stream ({camera_id})...", (30, 240), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 200), 2)
 
+        # Offload synchronous OpenCV imencode to prevent Event Loop blocking
+        ret, buffer = await asyncio.to_thread(cv2.imencode, '.jpg', frame, encode_param)
+        if ret:
+            frame_data = buffer.tobytes()
+            try:
+                await response.write(
+                    b'--' + boundary.encode() + b'\r\n'
+                    b'Content-Type: image/jpeg\r\n'
+                    b'Content-Length: ' + str(len(frame_data)).encode() + b'\r\n\r\n' +
+                    frame_data + b'\r\n'
+                )
+            except BaseException:
+                break
         await asyncio.sleep(0.05)
 
     return response
@@ -367,6 +358,19 @@ async def camera_loop(camera_id, model, video_source):
 
                     plotted = cv2.resize(plotted, (int(w * scale), 720))
 
+                # Real-Time OSD Overlay: Camera ID + Active VLM (Qwen2-VL 7B) & LoRA Adapter Badge
+                active_adapter = get_current_active_adapter_name()
+                vlm_model_display = "Qwen2-VL-7B"
+                if hasattr(edge_validator, "model_name") and edge_validator.model_name and edge_validator.model_name != "local-model":
+                    vlm_model_display = edge_validator.model_name.split('/')[-1]
+                badge_text = f"CAM: {camera_id.upper()} | AI: {vlm_model_display} [LoRA: {active_adapter}]"
+                badge_w = len(badge_text) * 9 + 25
+                cv2.rectangle(plotted, (10, 10), (10 + badge_w, 38), (14, 18, 28), -1)
+                cv2.rectangle(plotted, (10, 10), (10 + badge_w, 38), (0, 220, 180), 1)
+                indicator_color = (0, 255, 128) if active_adapter != "Base Only" else (0, 190, 255)
+                cv2.circle(plotted, (22, 24), 4, indicator_color, -1)
+                cv2.putText(plotted, badge_text, (32, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (230, 245, 255), 1, cv2.LINE_AA)
+
                 return plotted
 
                 
@@ -550,7 +554,9 @@ async def camera_loop(camera_id, model, video_source):
 
                         "crop_box_coordinates": detected_objects[0]["bbox_coordinates_xyxy"][:4],
 
-                        "video_segment_chunk_path": temp_path
+                        "video_segment_chunk_path": temp_path,
+
+                        "active_lora_adapter": get_current_active_adapter_name()
 
                     }
 
@@ -623,8 +629,9 @@ async def main():
     
 
     # We load YOLO once, and share it across all camera loops
-
-    model = YOLO("yolo11n.pt")
+    yolo_model_name = os.getenv("YOLO_MODEL", "yolo11n.pt")
+    print(f"Loading YOLO model: {yolo_model_name}...")
+    model = YOLO(yolo_model_name)
 
     
 
@@ -657,17 +664,17 @@ async def main():
     
 
     # New route supports dynamic camera ID
-
     route = app.router.add_get('/stream/{camera_id}', mjpeg_handler)
-
     cors.add(route)
 
-
+    # Snapshot routes for single live frame capture
+    route_snapshot = app.router.add_get('/snapshot/{camera_id}', snapshot_handler)
+    cors.add(route_snapshot)
+    route_snapshot_default = app.router.add_get('/snapshot', snapshot_handler)
+    cors.add(route_snapshot_default)
 
     # WebRTC WHEP route
-
     route_webrtc = app.router.add_post('/webrtc/{camera_id}/whep', whep_handler)
-
     cors.add(route_webrtc)
 
     

@@ -1,0 +1,10 @@
+{
+  "ewvlm_cctv_vision": {
+    "file_name": "ewvlm_vision_data.json",
+    "formatting": "sharegpt",
+    "columns": {
+      "messages": "messages",
+      "images": "images"
+    }
+  }
+}

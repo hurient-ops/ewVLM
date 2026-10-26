@@ -101,14 +101,25 @@ return ( <>
 </div>
 </div>
 {/* PTZ Preview Mini */}
-<div className="glass-panel rounded-lg h-48 p-2 flex flex-col relative overflow-hidden">
-<span className="absolute top-4 left-4 z-20 text-osd-label font-osd-label text-neon-gold bg-black/50 px-1 rounded">CAM-42 LIVE</span>
-<div className="absolute inset-0 bg-surface-container-lowest z-0">
-<img alt="Camera Feed Preview" className="w-full h-full object-cover opacity-60" data-alt="A simulated security camera feed looking out over an industrial perimeter fence at dusk. The scene is grainy, with high-contrast shadows and harsh industrial spotlights. A subtle violet bounding box is overlaid on a distant object, emphasizing the analytical nature of the UI. Industrial, mission-critical vibe." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBL52UxDto4NWtUtxwDvVLMgOIy8hN90RW_YaiPzkmUR_AfrCFoxn5jOVrd0UaBiiZLBYXqJRDTdtvicSIClgzrrJyvcZyp2ZWH5f5dnSLHEyCJu9YHtuHQuGu0l9gvHkZL-ZFONQnSHE-INZFwrRqoUdbcSqJWpgcnDtSew9IJw6SeuXocc37q5zxDeZG9_DEVZod2tYEZX4fwaN3tNTWq2O6s91FEbLV0sq9MaHHSFm9Hc_e7xXq2ag"/>
+<div className="glass-panel rounded-lg h-56 p-2 flex flex-col relative overflow-hidden bg-black border border-primary/40">
+<span className="absolute top-3 left-3 z-20 text-osd-label font-osd-label text-white bg-black/70 backdrop-blur px-2 py-0.5 rounded border border-border-subtle flex items-center gap-1.5">
+  <span className="w-2 h-2 rounded-full bg-danger animate-pulse"></span>
+  {(activeCameraId || 'CAM-01').toUpperCase()} PTZ LIVE
+</span>
+<div className="absolute inset-0 bg-surface-container-lowest z-0 flex items-center justify-center">
+<img 
+  alt="Camera Feed Preview" 
+  className="w-full h-full object-cover" 
+  src={`http://localhost:8001/stream/${activeCameraId || 'cam-01'}`}
+  onError={(e) => {
+    const target = e.target as HTMLImageElement;
+    target.src = `http://localhost:8001/snapshot/${activeCameraId || 'cam-01'}`;
+  }}
+/>
 </div>
 {/* Jog Shuttle Overlay */}
-<div className="absolute bottom-2 right-2 w-16 h-16 rounded-full bg-surface-container/80 border border-border-subtle flex items-center justify-center backdrop-blur-sm z-10 shadow-lg">
-<span className="material-symbols-outlined text-on-surface text-xl">control_camera</span>
+<div className="absolute bottom-3 right-3 w-14 h-14 rounded-full bg-black/70 border border-primary/50 flex items-center justify-center backdrop-blur-md z-10 shadow-lg cursor-pointer hover:scale-105 transition-transform">
+<span className="material-symbols-outlined text-primary text-xl">control_camera</span>
 </div>
 </div>
 </div>

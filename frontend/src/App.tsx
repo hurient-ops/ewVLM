@@ -8,6 +8,7 @@ import Signup from './components/Signup';
 // Layouts
 import { BaseLayout } from './layouts/BaseLayout';
 import { MonitorBLayout } from './layouts/MonitorBLayout';
+import { MlOpsLayout } from './layouts/MlOpsLayout';
 import { GuestLayout } from './layouts/GuestLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
@@ -23,16 +24,19 @@ import { EdgeAiOrchestration } from './components/EdgeAiOrchestration';
 import { PrivacyExportWorkshop } from './components/PrivacyExportWorkshop';
 import { AlertCenterDashboard } from './components/AlertCenterDashboard';
 
-// Monitor B Group
+// Monitor B Group (VLM Investigation & War Room)
 import { MonitorBVlmAnalysis } from './components/MonitorBVlmAnalysis';
 import { EventReviewCenter } from './components/EventReviewCenter';
 import { DisasterVirtualWarRoom } from './components/DisasterVirtualWarRoom';
 import { RealtimeBiDashboard } from './components/RealtimeBiDashboard';
 import { VssSemanticSearch } from './components/VssSemanticSearch';
 import { NaturalLanguageRuleCopilot } from './components/NaturalLanguageRuleCopilot';
+
+// AI MLOps Group (Dedicated Air-Gapped Training Center)
+import { LoraFinetuningConsole } from './components/LoraFinetuningConsole';
+import { DatasetManagementPortal } from './components/DatasetManagementPortal';
 import { SemanticVectorPortal } from './components/SemanticVectorPortal';
 import { PromptGatewayDeploy } from './components/PromptGatewayDeploy';
-import { LoraFinetuningConsole } from './components/LoraFinetuningConsole';
 
 // Common / Misc
 import { GisSmartMap } from './components/gis/GisSmartMap';
@@ -54,7 +58,7 @@ export default function App() {
   useEffect(() => {
     initWebSocket();
 
-    // 遺紐?李?Monitor A)???ロ엳嫄곕굹 ?덈줈怨좎묠????遺꾨━??李?Monitor B)???④퍡 媛뺤젣 醫낅즺
+    // 부모 창(Monitor A)이 닫히거나 새로고침될 때 분리된 창(Monitor B)도 함께 강제 종료
     const handleBeforeUnload = () => {
       const bc = new BroadcastChannel('vlm_monitor_b_sync');
       bc.postMessage('force_close_detached');
@@ -82,7 +86,7 @@ export default function App() {
           <Route path="/" element={<BaseLayout />}>
             <Route index element={<Navigate to="/monitor-a" replace />} />
           
-          {/* ----- Monitor A Domain ----- */}
+          {/* ----- 1. Monitor A Domain (Realtime Surveillance) ----- */}
           <Route path="/monitor-a" element={<MonitorALiveControl />} />
           <Route path="/ptz-patrol" element={<PtzPatrolSchedule />} />
           <Route path="/ptz-target-handover" element={<PtzTargetHandover />} />
@@ -90,11 +94,10 @@ export default function App() {
           <Route path="/ip-audio" element={<IpAudioBroadcastConsole />} />
           <Route path="/hw-self-healing" element={<HardwareSelfHealingShell />} />
           <Route path="/mass-device-config" element={<MassDeviceConfigClone />} />
-          <Route path="/edge-ai" element={<EdgeAiOrchestration />} />
           <Route path="/privacy-export" element={<PrivacyExportWorkshop />} />
           <Route path="/alert-center" element={<AlertCenterDashboard />} />
           
-          {/* ----- Monitor B Domain (Uses specific Layout for Sidebar) ----- */}
+          {/* ----- 2. Monitor B Domain (VLM Investigation & War Room) ----- */}
           <Route element={<MonitorBLayout />}>
             <Route path="/monitor-b" element={<MonitorBVlmAnalysis />} />
             <Route path="/event-review" element={<EventReviewCenter />} />
@@ -102,10 +105,24 @@ export default function App() {
             <Route path="/realtime-bi" element={<RealtimeBiDashboard />} />
             <Route path="/vss-semantic-search" element={<VssSemanticSearch />} />
             <Route path="/nl-rule-copilot" element={<NaturalLanguageRuleCopilot />} />
-            <Route path="/semantic-vector" element={<SemanticVectorPortal />} />
-            <Route path="/prompt-gateway" element={<PromptGatewayDeploy />} />
-            <Route path="/lora-finetuning" element={<LoraFinetuningConsole />} />
           </Route>
+
+          {/* ----- 3. AI MLOps Domain (Air-Gapped Local In-House Training) ----- */}
+          <Route element={<MlOpsLayout />}>
+            <Route path="/mlops" element={<Navigate to="/mlops/lora-finetuning" replace />} />
+            <Route path="/mlops/lora-finetuning" element={<LoraFinetuningConsole />} />
+            <Route path="/mlops/dataset" element={<DatasetManagementPortal />} />
+            <Route path="/mlops/semantic-vector" element={<SemanticVectorPortal />} />
+            <Route path="/mlops/prompt-gateway" element={<PromptGatewayDeploy />} />
+            <Route path="/mlops/edge-ai" element={<EdgeAiOrchestration />} />
+          </Route>
+
+          {/* Legacy Route Redirects for Compatibility */}
+          <Route path="/lora-finetuning" element={<Navigate to="/mlops/lora-finetuning" replace />} />
+          <Route path="/semantic-vector" element={<Navigate to="/mlops/semantic-vector" replace />} />
+          <Route path="/prompt-gateway" element={<Navigate to="/mlops/prompt-gateway" replace />} />
+          <Route path="/edge-ai" element={<Navigate to="/mlops/edge-ai" replace />} />
+
 
           {/* ----- Common / Playback ----- */}
           <Route path="/gis-map" element={<GisSmartMap />} />

@@ -14,6 +14,12 @@ echo.
 echo [*] Working directory: %CD%
 echo.
 
+:: Ensure Python 3.13 with AI packages (NumPy, PyTorch, YOLOv11) has highest PATH priority
+if exist "C:\Users\COMPANY\AppData\Local\Programs\Python\Python313\python.exe" (
+    set "PATH=C:\Users\COMPANY\AppData\Local\Programs\Python\Python313;C:\Users\COMPANY\AppData\Local\Programs\Python\Python313\Scripts;%PATH%"
+    echo [*] Configured AI Python Runtime priority: Python 3.13
+)
+
 :: Step 0: MediaMTX Streaming Server
 echo [0/4] Starting MediaMTX Streaming Server...
 start "ewVLM - MediaMTX Video Server (Port: 8889)" cmd /k "cd backend\mediamtx_v1.20.0_windows_amd64 && mediamtx.exe"
@@ -48,6 +54,7 @@ echo [SUCCESS] ewVLM Platform components have been started!
 echo.
 echo  - Backend Server : http://localhost:8000
 echo  - Frontend UI    : http://localhost:5174
+echo  - Fast-Loop AI   : http://localhost:8001
 echo  - AI Engine      : Local VLM (LM Studio - qwen2-vl-7b-instruct)
 echo.
 echo You can close this window.

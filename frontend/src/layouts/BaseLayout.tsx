@@ -72,11 +72,15 @@ export const BaseLayout: React.FC = () => {
 
   // Helper to determine active top tab
   const getActiveTab = () => {
+    if (location.pathname.startsWith('/mlops')) {
+      return 'MLOPS';
+    }
     if (location.pathname.startsWith('/monitor-b') || 
         location.pathname.startsWith('/vss-semantic-search') || 
         location.pathname.startsWith('/event-review') || 
         location.pathname.startsWith('/disaster-war-room') || 
-        location.pathname.startsWith('/realtime-bi')) {
+        location.pathname.startsWith('/realtime-bi') ||
+        location.pathname.startsWith('/nl-rule-copilot')) {
       return 'B';
     }
     if (location.pathname.startsWith('/multi-channel-sync')) {
@@ -148,6 +152,14 @@ export const BaseLayout: React.FC = () => {
               {isDetachedMode && (
                 <span className="material-symbols-outlined text-[16px] text-[#d2bbff]" title="새 창에서 실행 중">open_in_new</span>
               )}
+            </button>
+            <button 
+              onClick={() => navigate('/mlops/lora-finetuning')}
+              className={`h-full px-6 flex items-center justify-center gap-2 font-bold text-[15px] border-b-2 transition-colors ${activeTab === 'MLOPS' ? 'border-[#818cf8] text-[#818cf8]' : 'border-transparent text-gray-400 hover:text-white hover:bg-[#31343f]/50'}`}
+            >
+              <span className="material-symbols-outlined text-[20px]">precision_manufacturing</span>
+              AI MLOps
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-900/80 text-indigo-200 border border-indigo-500/40 font-mono">로컬</span>
             </button>
           </div>
         </div>

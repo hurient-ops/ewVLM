@@ -127,15 +127,12 @@ export const MonitorBLayout: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
           <nav className="flex flex-col gap-1.5">
             {[
-              { path: '/monitor-b', name: '실시간 VLM 분석', icon: 'psychology' },
+              { path: '/monitor-b', name: '실시간 VLM 지능형 분석', icon: 'psychology' },
+              { path: '/event-review', name: '이벤트 리뷰 센터 (포렌식)', icon: 'history' },
+              { path: '/disaster-war-room', name: '대화형 재난 가상 워룸', icon: 'warning' },
               { path: '/vss-semantic-search', name: '자연어 기반 영상 검색 (VSS)', icon: 'youtube_searched_for' },
-              { path: '/event-review', name: '이벤트 리뷰 센터', icon: 'history' },
-              { path: '/disaster-war-room', name: '대화형 재난 워룸', icon: 'warning' },
-              { path: '/realtime-bi', name: '실시간 분석 대시보드', icon: 'bar_chart' },
-              { path: '/nl-rule-copilot', name: '자연어 규칙 코파일럿', icon: 'chat' },
-              { path: '/semantic-vector', name: '시맨틱 벡터 포탈', icon: 'hub' },
-              { path: '/prompt-gateway', name: '프롬프트 게이트웨이', icon: 'settings_ethernet' },
-              { path: '/lora-finetuning', name: 'LoRA 파인튜닝', icon: 'model_training' },
+              { path: '/realtime-bi', name: '실시간 관제 BI 통계', icon: 'bar_chart' },
+              { path: '/nl-rule-copilot', name: '자연어 룰 생성 코파일럿', icon: 'chat' },
             ].map(screen => {
               const isActive = location.pathname === screen.path;
               return (
@@ -144,7 +141,7 @@ export const MonitorBLayout: React.FC = () => {
                   to={screen.path}
                   className={`px-3 py-2.5 text-sm rounded transition-colors flex items-center gap-3 ${
                     isActive
-                      ? 'bg-[#7c3aed]/20 text-[#d2bbff] border border-[#7c3aed]/30 font-semibold'
+                      ? 'bg-[#7c3aed]/20 text-[#d2bbff] border border-[#7c3aed]/30 font-semibold shadow-[0_0_10px_rgba(124,58,237,0.2)]'
                       : 'text-gray-400 hover:bg-[#31343f] hover:text-gray-200'
                   }`}
                 >

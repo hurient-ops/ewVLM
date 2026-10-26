@@ -1,5 +1,17 @@
 import os
+import sys
 import time
+
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+if hasattr(sys.stderr, 'reconfigure'):
+    try:
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
 import base64
 import json
 import argparse
@@ -107,8 +119,11 @@ class LMStudioVLMBridge:
             "stream": False
         }
 
-        print(f"\n[LM_STUDIO_VSS] LM Studio 멀티모달 추론 요청 시작 (모델: {model_name})")
-        print(f" └─ 프롬프트 질의: \"{prompt}\"")
+        try:
+            print(f"\n[LM_STUDIO_VSS] LM Studio 멀티모달 추론 요청 시작 (모델: {model_name})")
+            print(f" └─ 프롬프트 질의: \"{prompt[:100]}...\"")
+        except Exception:
+            pass
 
         start_time = time.time()
         

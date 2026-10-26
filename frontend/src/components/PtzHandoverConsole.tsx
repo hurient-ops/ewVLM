@@ -171,11 +171,21 @@ export const PtzHandoverConsole: React.FC = () => {
                <span className="text-title-sm font-title-sm text-on-surface">?꾩옱 異붿쟻 ?붾㈃</span>
                <span className="text-mono-data font-mono-data text-[10px] bg-primary text-on-primary px-2 py-0.5 rounded">LOCK-ON</span>
              </div>
-             <div className="flex-1 relative bg-black">
-                <div className="absolute inset-0 bg-cover bg-center opacity-80" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuD4SEbi8Lygn02Z88X6mtD1HAHuf_3NcNxHPgYmsRd9n_y-fDSnhjKsiq8xViD6-jfibHOHCgN02lyOmP-Wq6YzdKyDg4G2OX42HWg8Tbb_zA7sWdVfFQmwZ4BL8_gntjC_vt0ol7wK_8NyTuCruZ8l0jvAJYVitOx0c9f6sWMHncQc52XQ0CdsyTB0rC2EI1g3iwPKFqJBl7HRKVLVhgnSxsFklkKEuTOi3wAE9YCWVLGIFF1rXBIv0A')" }}></div>
+             <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
+                <img
+                  src={`http://localhost:8001/stream/${(cameras.find(c => c.isTracking)?.id || 'cam-01').toLowerCase()}`}
+                  alt="PTZ Tracking Stream"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = `http://localhost:8001/snapshot/${(cameras.find(c => c.isTracking)?.id || 'cam-01').toLowerCase()}`;
+                  }}
+                />
                 <div className="absolute inset-0 pointer-events-none">
-                  <div className="absolute top-[30%] left-[40%] w-[100px] h-[180px] border-[2px] border-primary bg-primary/10">
-                    <div className="absolute -top-[20px] left-[-2px] bg-primary text-on-primary px-1 text-[10px] font-mono-data h-[20px] flex items-center"> {activeTarget} </div>
+                  <div className="absolute top-[30%] left-[40%] w-[100px] h-[180px] border-[2px] border-primary bg-primary/10 rounded shadow-[0_0_12px_rgba(124,58,237,0.5)] animate-pulse">
+                    <div className="absolute -top-[20px] left-[-2px] bg-primary text-black font-bold px-1.5 text-[10px] font-mono-data h-[20px] flex items-center rounded-t">
+                      LOCK-ON: {activeTarget}
+                    </div>
                   </div>
                 </div>
              </div>

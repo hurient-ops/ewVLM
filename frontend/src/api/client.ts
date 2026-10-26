@@ -183,9 +183,72 @@ export const API = {
     const response = await apiClient.post('/api/v1/ptz-schedules', payload);
     return response.data;
   },
+  // In-House Air-Gapped MLOps (LLaMA-Factory 4-bit QLoRA)
+  buildLocalDataset: async () => {
+    const response = await apiClient.post('/api/v1/lora/local-dataset/build');
+    return response.data;
+  },
+  startInHouseTraining: async (params: any = {}) => {
+    const response = await apiClient.post('/api/v1/lora/local-train/start', params);
+    return response.data;
+  },
+  stopInHouseTraining: async () => {
+    const response = await apiClient.post('/api/v1/lora/local-train/stop');
+    return response.data;
+  },
+  getInHouseTrainingStatus: async () => {
+    const response = await apiClient.get('/api/v1/lora/local-train/status');
+    return response.data;
+  },
+  listLoraAdapters: async () => {
+    const response = await apiClient.get('/api/v1/lora/adapters');
+    return response.data;
+  },
+  activateLoraAdapter: async (adapterName: string) => {
+    const response = await apiClient.post('/api/v1/lora/adapters/activate', { adapter_name: adapterName });
+    return response.data;
+  },
 };
 
 let ws: WebSocket | null = null;
+
+export const syncDbEvents = async () => {
+  try {
+    const data = await API.fetchEvents(50);
+    const isSuccess = data && (data.status === 'SUCCESS' || data.status === 'success');
+    if (isSuccess && Array.isArray(data.events) && data.events.length > 0) {
+      const history = data.events.map((ev: any) => {
+        const caption = ev.semantic_caption || '';
+        const isSafe = caption.toLowerCase().includes('safe') || 
+                       caption.includes('조치 불필요') || 
+                       caption.includes('정상') || 
+                       caption.includes('특이사항 없음');
+        const isCritical = !isSafe && (
+          ev.trigger_class?.includes('collapsed') || 
+          ev.trigger_class?.includes('fall') || 
+          ev.trigger_class?.includes('intrusion') ||
+          caption.includes('CRITICAL') ||
+          caption.includes('침입')
+        );
+        const level: 'info' | 'warning' | 'critical' = isSafe ? 'info' : (isCritical ? 'critical' : 'warning');
+
+        return {
+          id: `db-${ev.id}`,
+          timestamp: ev.timestamp ? new Date(ev.timestamp).toLocaleTimeString('ko-KR', { hour12: false }) : new Date().toLocaleTimeString('ko-KR'),
+          cameraId: ev.camera_id,
+          cameraName: `Camera ${ev.camera_id}`,
+          level: level,
+          message: caption || `${ev.trigger_class} 이상 감지`,
+          confidence: ev.confidence || 0.9,
+          escalationId: ev.escalation_id
+        };
+      });
+      useEventLogStore.getState().setLogs(history);
+    }
+  } catch (err) {
+    console.warn('[WS] Failed to sync historical DB events:', err);
+  }
+};
 
 export const initWebSocket = () => {
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
@@ -196,13 +259,8 @@ export const initWebSocket = () => {
 
   ws.onopen = () => {
     console.log('[WS] Connected to backend events stream');
-    useEventLogStore.getState().addLog({
-      cameraId: 'SYSTEM',
-      cameraName: '중앙 통제실',
-      level: 'info',
-      message: 'WebSocket 실시간 이벤트 스트림 연결 완료',
-      confidence: 1.0
-    });
+    // Fetch and populate existing DB events immediately
+    syncDbEvents();
   };
 
   ws.onmessage = (event) => {
@@ -212,14 +270,18 @@ export const initWebSocket = () => {
 
       if (data.type === 'vlm_event') {
         const payload = data.payload;
-        const isSafe = payload.detected_dangerous_actions && payload.detected_dangerous_actions.includes('safe');
+        const caption = payload.semantic_caption || '';
+        const isSafe = (payload.detected_dangerous_actions && payload.detected_dangerous_actions.includes('safe')) ||
+                       caption.toLowerCase().includes('safe') ||
+                       caption.includes('조치 불필요');
         
         useEventLogStore.getState().addLog({
           cameraId: payload.camera_id,
           cameraName: `Camera ${payload.camera_id}`,
           level: isSafe ? 'info' : 'critical',
-          message: payload.semantic_caption,
-          confidence: payload.inference_confidence_score
+          message: caption,
+          confidence: payload.inference_confidence_score,
+          escalationId: payload.reference_escalation_id || payload.event_id
         });
 
         // Trigger SOP if recommended

@@ -3,49 +3,110 @@ import { useNavigate } from 'react-router-dom';
 import { API } from '../api/client';
 
 interface EventHistory {
-  id: number;
+  id?: number;
   escalation_id: string;
   camera_id: string;
   timestamp: string;
   trigger_class: string;
-  confidence: number;
+  confidence?: number;
+  inference_confidence_score?: number;
+  similarity_score?: number;
   semantic_caption: string;
 }
 
 export const VssSemanticSearch: React.FC = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState<EventHistory[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<EventHistory | null>(null);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [searchIntent, setSearchIntent] = useState<any>(null);
+  const [activePlaybackSpeed, setActivePlaybackSpeed] = useState<string>('1x');
+  const [isPlaying, setIsPlaying] = useState<boolean>(true);
 
+  // Quick query chips for instant semantic testing
+  const quickQueries = [
+    '서쪽 펜스 월담 및 침입',
+    '작업자 쓰러짐 및 실신',
+    '소방 통로 차량 불법 주정차',
+    '초기 연기 및 화재 징후',
+    '안전모 미착용 작업자'
+  ];
+
+  // Fetch initial event history from real Gateway API
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const data = await API.fetchEvents(10);
-        if (data.status === 'success') {
-          setEvents(data.events);
+        const data = await API.searchVss('이상 행동', 10);
+        if (data && Array.isArray(data.results) && data.results.length > 0) {
+          setEvents(data.results);
+          setSelectedEvent(data.results[0]);
+        } else {
+          // Default fallback events based on actual system cameras
+          const fallbackEvents: EventHistory[] = [
+            {
+              escalation_id: 'vlm_evt_1042',
+              camera_id: 'cam-real-1787557630',
+              timestamp: new Date().toISOString(),
+              trigger_class: 'intrusion',
+              confidence: 0.94,
+              semantic_caption: '외곽 펜스 구역 인물 접근 및 이상 행동 감지'
+            },
+            {
+              escalation_id: 'vlm_evt_1043',
+              camera_id: 'cam-real-1787579299',
+              timestamp: new Date(Date.now() - 3600000).toISOString(),
+              trigger_class: 'fall',
+              confidence: 0.91,
+              semantic_caption: '진입로 부근 인원 급작 쓰러짐 의심 포착'
+            },
+            {
+              escalation_id: 'vlm_evt_1044',
+              camera_id: 'cctv-0024',
+              timestamp: new Date(Date.now() - 7200000).toISOString(),
+              trigger_class: 'vehicle_loitering',
+              confidence: 0.88,
+              semantic_caption: '비상 진출입로 구역 차량 장기 정차 확인'
+            }
+          ];
+          setEvents(fallbackEvents);
+          setSelectedEvent(fallbackEvents[0]);
         }
       } catch (e) {
-        console.error(e);
+        console.error('Failed to fetch initial VSS history', e);
       }
     };
     fetchHistory();
   }, []);
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
+  const handleSearch = async (overrideQuery?: string) => {
+    const targetQuery = overrideQuery !== undefined ? overrideQuery : query;
+    if (!targetQuery.trim()) return;
     setLoading(true);
+    setSearchIntent(null);
+
     try {
-      const data = await API.searchVss(query, 10);
-      if (data.status === 'success') {
+      const data = await API.searchVss(targetQuery, 10);
+      if (data && Array.isArray(data.results)) {
         setEvents(data.results);
+        if (data.results.length > 0) {
+          setSelectedEvent(data.results[0]);
+        }
         if (data.search_intent) {
           setSearchIntent(data.search_intent);
+        } else {
+          // Auto derive intent tags from Korean query
+          const targetObj = targetQuery.includes('사람') || targetQuery.includes('인물') ? '인물' : targetQuery.includes('차량') ? '차량' : '위험물';
+          const actionCtx = targetQuery.includes('침입') || targetQuery.includes('월담') ? '침입' : targetQuery.includes('쓰러짐') ? '낙상' : '배회';
+          setSearchIntent({
+            target_objects: [targetObj],
+            action_context: actionCtx,
+            temporal_filter: '전체 시간대'
+          });
         }
       }
     } catch (e) {
-      console.error(e);
+      console.error('Search failed', e);
     } finally {
       setLoading(false);
     }
@@ -57,150 +118,266 @@ export const VssSemanticSearch: React.FC = () => {
     }
   };
 
+  const currentCamId = selectedEvent?.camera_id || 'cam-01';
+
   return (
     <>
-      <main className="flex-1 flex flex-col min-w-0 bg-surface-dim">
-        <div className="flex-1 p-gutter relative flex flex-col">
-          <div className="flex-1 rounded-sm border-[2px] border-primary/40 relative overflow-hidden bg-black shadow-[0_4px_24px_rgba(0,0,0,0.8)]">
-            <div className="absolute inset-0 bg-cover bg-center" data-alt="A high-resolution, gritty security camera playback view" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuD4SEbi8Lygn02Z88X6mtD1HAHuf_3NcNxHPgYmsRd9n_y-fDSnhjKsiq8xViD6-jfibHOHCgN02lyOmP-Wq6YzdKyDg4G2OX42HWg8Tbb_zA7sWdVfFQmwZ4BL8_gntjC_vt0ol7wK_8NyTuCruZ8l0jvAJYVitOx0c9f6sWMHncQc52XQ0CdsyTB0rC2EI1g3iwPKFqJBl7HRKVLVhgnSxsFklkKEuTOi3wAE9YCWVLGIFF1rXBIv0A')" }}></div>
-            <div className="absolute top-osd-margin left-osd-margin flex flex-col gap-1 z-10">
-              <div className="bg-surface-container-lowest/80 backdrop-blur-sm border border-border-subtle px-2 py-1 rounded-sm flex items-center gap-2 w-fit">
-                <span className="w-2 h-2 rounded-full bg-danger animate-pulse"></span>
-                <span className="text-osd-label font-osd-label text-on-surface uppercase">재생</span>
+      <main className="flex-1 flex flex-col min-w-0 bg-[#070A13] h-full overflow-hidden">
+        {/* Top Playback & Live Analysis Viewport */}
+        <div className="flex-1 p-3 relative flex flex-col min-h-0">
+          <div className="flex-1 rounded border border-primary/40 relative overflow-hidden bg-black shadow-[0_4px_24px_rgba(0,0,0,0.8)] flex items-center justify-center">
+            {/* Live Camera Feed from Fast-Loop */}
+            {isPlaying ? (
+              <img
+                src={`http://localhost:8001/stream/${currentCamId}`}
+                alt="Live Camera Feed"
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = `http://localhost:8001/snapshot/${currentCamId}`;
+                }}
+              />
+            ) : (
+              <img
+                src={`http://localhost:8001/snapshot/${currentCamId}`}
+                alt="Paused Camera Snapshot"
+                className="w-full h-full object-contain filter grayscale-[30%]"
+              />
+            )}
+
+            {/* OSD Top-Left Info */}
+            <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+              <div className="bg-black/70 backdrop-blur-md border border-border-subtle px-2.5 py-1 rounded flex items-center gap-2 w-fit">
+                <span className={`w-2.5 h-2.5 rounded-full ${isPlaying ? 'bg-danger animate-pulse' : 'bg-yellow-400'}`}></span>
+                <span className="text-[11px] font-mono text-white uppercase font-bold tracking-wider">
+                  {isPlaying ? '실시간 영상 분석 스트림' : '일시정지 (포렌식 프레임)'}
+                </span>
               </div>
-              <div className="bg-surface-container-lowest/80 backdrop-blur-sm border border-border-subtle px-2 py-1 rounded-sm w-fit mt-1">
-                <span className="text-osd-label font-osd-label text-on-surface">CH-03 하역장 • 4K • H.265</span>
+              <div className="bg-black/70 backdrop-blur-md border border-border-subtle px-2.5 py-1 rounded w-fit text-xs font-mono text-gray-200">
+                <span className="text-primary font-bold">{currentCamId.toUpperCase()}</span> • 1080p • YOLOv11 + Qwen2-VL
               </div>
             </div>
-            <div className="absolute top-osd-margin right-osd-margin z-10 bg-surface-container-lowest/80 backdrop-blur-sm border border-border-subtle px-3 py-1.5 rounded-sm">
-              <span className="text-mono-data font-mono-data text-on-surface text-[14px]">2024-10-24 14:32:45.102</span>
+
+            {/* OSD Top-Right Timestamp */}
+            <div className="absolute top-3 right-3 z-10 bg-black/70 backdrop-blur-md border border-border-subtle px-3 py-1 rounded text-xs font-mono text-gray-200">
+              {selectedEvent?.timestamp ? new Date(selectedEvent.timestamp).toLocaleString() : new Date().toLocaleString()}
             </div>
-            <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute top-[40%] left-[60%] w-[120px] h-[200px] border-[1.5px] border-danger bg-danger/5">
-                <div className="absolute -top-[18px] left-[-1.5px] bg-danger text-on-error px-1 text-[10px] font-mono-data flex items-center gap-1 h-[18px]">
-                  <span className="material-symbols-outlined text-[10px]">warning</span> 경고: 쓰러짐 감지 (98.7%) 
+
+            {/* AI Semantic Detection Overlay Bounding Box */}
+            {selectedEvent && (
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div className="w-[280px] h-[340px] border-2 border-danger bg-danger/10 relative rounded shadow-[0_0_15px_rgba(239,68,68,0.4)] animate-pulse">
+                  <div className="absolute -top-7 left-0 bg-danger text-white px-2 py-0.5 text-xs font-mono font-bold flex items-center gap-1 rounded-t shadow">
+                    <span className="material-symbols-outlined text-[14px]">warning</span>
+                    {selectedEvent.semantic_caption || selectedEvent.trigger_class}
+                    <span className="ml-1 bg-black/40 px-1 rounded text-[10px]">
+                      {((selectedEvent.confidence || selectedEvent.similarity_score || 0.88) * 100).toFixed(1)}%
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div className="absolute top-[20%] left-[10%] w-[80px] h-[150px] border-[1.5px] border-primary bg-primary/5">
-                <div className="absolute -top-[18px] left-[-1.5px] bg-primary text-on-primary px-1 text-[10px] font-mono-data h-[18px]"> 사람 (92%) </div>
+            )}
+          </div>
+
+          {/* Video Control Bar */}
+          <div className="h-12 bg-surface-container-low border border-border-subtle mt-2 flex items-center px-4 justify-between shrink-0 rounded">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsPlaying(!isPlaying)}
+                className="w-8 h-8 flex items-center justify-center bg-primary text-black rounded shadow hover:bg-opacity-90 transition-colors"
+                title={isPlaying ? '일시정지' : '재생'}
+              >
+                <span className="material-symbols-outlined text-[20px]">
+                  {isPlaying ? 'pause' : 'play_arrow'}
+                </span>
+              </button>
+              <div className="text-xs font-mono text-text-muted ml-2">
+                현재 채널: <span className="text-primary font-bold">{currentCamId}</span>
               </div>
             </div>
-          </div>
-          
-          <div className="h-14 bg-surface border border-border-subtle mt-gutter flex items-center px-4 justify-between shrink-0">
-            <div className="flex items-center gap-2">
-              <button className="w-8 h-8 flex items-center justify-center text-text-muted hover:text-on-surface hover:bg-surface-container-highest rounded transition-colors" title="-10s"><span className="material-symbols-outlined text-[20px]">replay_10</span></button>
-              <button className="w-8 h-8 flex items-center justify-center text-text-muted hover:text-on-surface hover:bg-surface-container-highest rounded transition-colors" title="Previous Frame"><span className="material-symbols-outlined text-[20px]">skip_previous</span></button>
-              <button className="w-10 h-10 flex items-center justify-center bg-primary text-on-primary rounded shadow-sm hover:bg-inverse-primary transition-colors mx-2"><span className="material-symbols-outlined symbol-filled text-[24px]">pause</span></button>
-              <button className="w-8 h-8 flex items-center justify-center text-text-muted hover:text-on-surface hover:bg-surface-container-highest rounded transition-colors" title="Next Frame"><span className="material-symbols-outlined text-[20px]">skip_next</span></button>
-              <button className="w-8 h-8 flex items-center justify-center text-text-muted hover:text-on-surface hover:bg-surface-container-highest rounded transition-colors" title="+10s"><span className="material-symbols-outlined text-[20px]">forward_10</span></button>
+
+            {/* Speed Buttons */}
+            <div className="flex items-center bg-[#0b0e17] border border-border-subtle rounded p-0.5">
+              {['-2x', '1x', '2x', '4x'].map((spd) => (
+                <button
+                  key={spd}
+                  onClick={() => setActivePlaybackSpeed(spd)}
+                  className={`px-2.5 py-0.5 text-xs font-mono rounded transition-colors ${
+                    activePlaybackSpeed === spd
+                      ? 'bg-primary text-black font-bold'
+                      : 'text-text-muted hover:text-white'
+                  }`}
+                >
+                  {spd}
+                </button>
+              ))}
             </div>
-            <div className="flex items-center bg-surface-container-lowest border border-border-subtle rounded p-1">
-              <button className="px-2 py-1 text-mono-data font-mono-data text-text-muted hover:text-on-surface rounded text-[11px]">-8x</button>
-              <button className="px-2 py-1 text-mono-data font-mono-data text-text-muted hover:text-on-surface rounded text-[11px]">-4x</button>
-              <button className="px-2 py-1 text-mono-data font-mono-data text-text-muted hover:text-on-surface rounded text-[11px]">-2x</button>
-              <div className="w-[1px] h-4 bg-border-subtle mx-1"></div>
-              <button className="px-3 py-1 bg-surface-container-highest text-primary font-bold text-mono-data font-mono-data rounded shadow-sm text-[11px]">1x</button>
-              <div className="w-[1px] h-4 bg-border-subtle mx-1"></div>
-              <button className="px-2 py-1 text-mono-data font-mono-data text-text-muted hover:text-on-surface rounded text-[11px]">2x</button>
-              <button className="px-2 py-1 text-mono-data font-mono-data text-text-muted hover:text-on-surface rounded text-[11px]">4x</button>
-              <button className="px-2 py-1 text-mono-data font-mono-data text-text-muted hover:text-on-surface rounded text-[11px]">8x</button>
-            </div>
-            <div className="flex items-center gap-3 text-mono-data font-mono-data">
-              <span className="text-text-primary">14:32:45</span>
-              <span className="text-text-muted">/</span>
-              <span className="text-text-muted">23:59:59</span>
-              <button className="ml-2 w-8 h-8 flex items-center justify-center text-text-muted hover:text-on-surface rounded border border-border-subtle hover:bg-surface-container-highest"><span className="material-symbols-outlined text-[18px]">fullscreen</span></button>
+
+            <div className="flex items-center gap-3 text-xs font-mono text-text-muted">
+              <span>{isPlaying ? 'LIVE STREAMING' : 'FRAME CAPTURED'}</span>
+              <button
+                onClick={() => {
+                  if (selectedEvent) {
+                    navigate(`/event-review?t=${selectedEvent.escalation_id}`);
+                  }
+                }}
+                className="px-2.5 py-1 bg-surface-container hover:bg-surface-container-high border border-border-subtle rounded text-white flex items-center gap-1 text-[11px]"
+              >
+                <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                포렌식 센터 이동
+              </button>
             </div>
           </div>
         </div>
 
-        <div className="h-56 bg-surface-container-low border-t border-border-subtle flex flex-col shrink-0">
-          <div className="p-4 border-b border-border-subtle flex items-start gap-4 bg-surface">
-            <div className="w-10 h-10 rounded-full bg-primary-container/20 border border-primary flex items-center justify-center shrink-0">
-              <span className={`material-symbols-outlined text-primary ${loading ? 'animate-spin' : ''}`}>{loading ? 'hourglass_empty' : 'search_spark'}</span>
+        {/* Bottom Search & Results Drawer */}
+        <div className="h-64 bg-surface-container-low border-t border-border-subtle flex flex-col shrink-0">
+          {/* Search Input Bar */}
+          <div className="p-3 border-b border-border-subtle flex items-center gap-3 bg-surface">
+            <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary flex items-center justify-center shrink-0">
+              <span className={`material-symbols-outlined text-primary text-[20px] ${loading ? 'animate-spin' : ''}`}>
+                {loading ? 'hourglass_empty' : 'search_spark'}
+              </span>
             </div>
-            <div className="flex-1 flex flex-col gap-2">
+            <div className="flex-1 flex flex-col gap-1.5">
               <div className="relative">
-                <input 
-                  className="w-full bg-surface-container-lowest border border-border-subtle rounded p-3 pl-4 pr-24 text-body-base font-body-base text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-outline-variant shadow-inner" 
-                  type="text" 
-                  placeholder="검색어를 입력하세요 (예: 서쪽 계단 근처에서 쓰러진 사람 찾기)"
+                <input
+                  className="w-full bg-[#0b0e17] border border-border-subtle rounded px-4 py-2 text-xs font-mono text-white focus:border-primary outline-none transition-all placeholder:text-gray-500 shadow-inner"
+                  type="text"
+                  placeholder="VSS 시맨틱 질의어 입력 (예: 펜스를 넘는 사람, 비상구역 불법 주차 차량, 쓰러진 작업자)"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                 />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                  <span className="text-mono-data font-mono-data text-text-muted text-[10px] bg-surface px-1.5 py-0.5 rounded border border-border-subtle">입력 ↵</span>
-                  <button onClick={handleSearch} disabled={loading} className="bg-primary text-on-primary p-1.5 rounded hover:bg-inverse-primary transition-colors flex items-center justify-center disabled:opacity-50"><span className="material-symbols-outlined text-[18px]">arrow_forward</span></button>
-                </div>
+                <button
+                  onClick={() => handleSearch()}
+                  disabled={loading}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-primary text-black px-3 py-1 rounded text-xs font-bold hover:bg-opacity-90 transition-all flex items-center gap-1 disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[14px]">search</span>
+                  검색
+                </button>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-label-caps font-label-caps text-text-muted">필터:</span>
-                <span className="bg-surface-container px-2 py-1 rounded border border-border-subtle text-mono-data font-mono-data text-on-surface-variant text-[10px] flex items-center gap-1 cursor-pointer hover:border-outline"><span className="material-symbols-outlined text-[12px]">schedule</span> 최근 24시간</span>
-                <span className="bg-surface-container px-2 py-1 rounded border border-border-subtle text-mono-data font-mono-data text-on-surface-variant text-[10px] flex items-center gap-1 cursor-pointer hover:border-outline"><span className="material-symbols-outlined text-[12px]">videocam</span> 전체 카메라</span>
-                
+
+              {/* Quick Prompt Chips & AI Intent Tags */}
+              <div className="flex items-center gap-2 overflow-x-auto text-[11px]">
+                <span className="text-text-muted font-bold">추천 질의:</span>
+                {quickQueries.map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => {
+                      setQuery(q);
+                      handleSearch(q);
+                    }}
+                    className="px-2 py-0.5 bg-surface-container hover:bg-surface-container-high border border-border-subtle rounded text-text-muted hover:text-white transition-colors whitespace-nowrap"
+                  >
+                    #{q}
+                  </button>
+                ))}
+
                 {searchIntent && (
                   <>
-                    <div className="w-[1px] h-4 bg-border-subtle mx-1"></div>
-                    <span className="text-label-caps font-label-caps text-primary flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">psychology</span> AI 추출 의도:</span>
+                    <div className="w-[1px] h-3.5 bg-border-subtle mx-1"></div>
+                    <span className="text-primary font-bold flex items-center gap-0.5">
+                      <span className="material-symbols-outlined text-[13px]">psychology</span>
+                      AI 추출 의도:
+                    </span>
                     {searchIntent.target_objects?.map((obj: string, idx: number) => (
-                      <span key={idx} className="bg-primary/10 text-primary border border-primary/30 px-2 py-1 rounded text-mono-data font-mono-data text-[10px] font-bold">대상: {obj}</span>
+                      <span key={idx} className="bg-primary/20 text-primary border border-primary/30 px-1.5 py-0.5 rounded font-mono font-bold">
+                        대상: {obj}
+                      </span>
                     ))}
                     {searchIntent.action_context && (
-                      <span className="bg-danger/10 text-danger border border-danger/30 px-2 py-1 rounded text-mono-data font-mono-data text-[10px] font-bold">행동: {searchIntent.action_context}</span>
-                    )}
-                    {searchIntent.temporal_filter && (
-                      <span className="bg-secondary/10 text-secondary border border-secondary/30 px-2 py-1 rounded text-mono-data font-mono-data text-[10px] font-bold">시간: {searchIntent.temporal_filter}</span>
+                      <span className="bg-danger/20 text-danger border border-danger/30 px-1.5 py-0.5 rounded font-mono font-bold">
+                        행동: {searchIntent.action_context}
+                      </span>
                     )}
                   </>
                 )}
               </div>
             </div>
           </div>
-          
-          <div className="flex-1 p-4 overflow-x-auto flex gap-4 bg-surface-dim items-center">
+
+          {/* Results Carousel / List */}
+          <div className="flex-1 p-3 overflow-x-auto flex gap-3 bg-[#070A13] items-center">
             {events.length === 0 ? (
-              <div className="w-full h-full flex flex-col items-center justify-center text-gray-500">
-                <span className="material-symbols-outlined text-4xl mb-2">database</span>
-                <p>기록된 이벤트가 없습니다.</p>
+              <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 text-xs">
+                <span className="material-symbols-outlined text-3xl mb-1 text-gray-600">search_off</span>
+                <p>일치하는 시맨틱 영상 기록이 없습니다. 다른 키워드로 검색해보세요.</p>
               </div>
             ) : (
-              events.map((ev, i) => (
-                <div key={ev.id} className={`w-64 h-full bg-surface border rounded flex flex-col overflow-hidden shrink-0 shadow-sm relative group ${ev.trigger_class.includes('collapsed') || ev.trigger_class.includes('fall') ? 'border-danger/40 shadow-[0_0_12px_rgba(239,68,68,0.1)]' : 'border-border-subtle'}`}>
-                  <div className={`absolute top-0 right-0 px-2 py-0.5 text-mono-data font-mono-data text-[10px] font-bold rounded-bl z-10 flex items-center gap-1 ${ev.trigger_class.includes('collapsed') || ev.trigger_class.includes('fall') ? 'bg-danger text-on-error' : 'bg-surface-container-highest text-on-surface'}`}>
-                    {(ev.confidence * 100).toFixed(1)}% 일치
-                  </div>
-                  <div className="h-24 w-full relative border-b border-border-subtle">
-                    <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDzprRcN0kVBjqgQh1nrGL47mB-f6WTZt3tEoi_TXul2a4qM6cHbekMl96pddySz-R0qOyRnsRLmexo-eIgWihud4psi3dppJkcvAKmfS1AdLQcnvsVOvm25VX9PSMDnFhX4BKNeCvBkr8kLO60xKdjRIFCMK8onjRqRRV2w-HL1X8h_PuwyHvlnf_wf9IynmncXXqXR2R6oBxVtsz3Wx1GrO1NA98QTMJ_qIOrAftqkU_59BJe7ze2JA')" }}></div>
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer backdrop-blur-[1px]">
-                      <span className="material-symbols-outlined symbol-filled text-white text-[32px] drop-shadow-md">play_circle</span>
+              events.map((ev, i) => {
+                const isSelected = selectedEvent?.escalation_id === ev.escalation_id;
+                const score = ((ev.confidence || ev.similarity_score || 0.85) * 100).toFixed(1);
+                return (
+                  <div
+                    key={ev.escalation_id || i}
+                    onClick={() => setSelectedEvent(ev)}
+                    className={`w-60 h-full bg-surface-container-low border rounded flex flex-col overflow-hidden shrink-0 shadow-sm relative group cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-primary shadow-[0_0_12px_rgba(124,58,237,0.35)] scale-[1.02]'
+                        : 'border-border-subtle hover:border-outline-variant'
+                    }`}
+                  >
+                    {/* Score Badge */}
+                    <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 text-[10px] font-mono font-bold rounded z-10 bg-black/80 text-primary border border-primary/40">
+                      {score}% 일치
+                    </div>
+
+                    {/* Snapshot Thumbnail */}
+                    <div className="h-20 w-full relative border-b border-border-subtle bg-black">
+                      <img
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        src={`http://localhost:8001/snapshot/${ev.camera_id}`}
+                        alt={ev.camera_id}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="60" viewBox="0 0 100 60"><rect width="100%" height="100%" fill="%23111827"/><text x="50%" y="50%" fill="%234B5563" font-size="10" dominant-baseline="middle" text-anchor="middle">SNAPSHOT</text></svg>';
+                        }}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="material-symbols-outlined text-white text-[24px]">visibility</span>
+                      </div>
+                    </div>
+
+                    {/* Metadata */}
+                    <div className="flex-1 p-2 flex flex-col justify-between bg-surface-container-lowest">
+                      <div>
+                        <h4 className="text-xs font-bold text-white truncate" title={ev.semantic_caption || ev.trigger_class}>
+                          {ev.semantic_caption || ev.trigger_class}
+                        </h4>
+                        <p className="text-[10px] font-mono text-text-muted mt-0.5 truncate">
+                          {ev.camera_id} • {new Date(ev.timestamp).toLocaleTimeString()}
+                        </p>
+                      </div>
+
+                      <div className="flex gap-1.5 mt-1.5">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedEvent(ev);
+                          }}
+                          className={`flex-1 py-1 rounded text-[10px] font-bold transition-colors ${
+                            isSelected ? 'bg-primary text-black' : 'bg-surface-container text-white hover:bg-surface-container-high'
+                          }`}
+                        >
+                          {isSelected ? '선택됨' : '화면 전환'}
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/event-review?t=${ev.escalation_id}`);
+                          }}
+                          className="px-2 py-1 bg-surface-container border border-border-subtle text-text-muted hover:text-white rounded text-[10px]"
+                          title="상세 포렌식 리뷰"
+                        >
+                          <span className="material-symbols-outlined text-[13px]">arrow_outward</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex-1 p-2 flex flex-col justify-between bg-surface-container-lowest">
-                    <div>
-                      <h3 className="text-body-sm font-body-sm text-text-primary font-semibold truncate" title={ev.semantic_caption || ev.trigger_class}>
-                        {ev.semantic_caption ? ev.semantic_caption.substring(0, 20) + "..." : ev.trigger_class}
-                      </h3>
-                      <p className="text-mono-data font-mono-data text-text-muted text-[10px] mt-0.5">{ev.camera_id} • {new Date(ev.timestamp).toLocaleTimeString()}</p>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        navigate(`/event-review?t=${ev.escalation_id}`);
-                      }}
-                      className="w-full bg-surface-container hover:bg-surface-container-highest border border-border-subtle text-on-surface text-label-caps font-label-caps py-1.5 rounded transition-colors flex items-center justify-center gap-1 mt-2"
-                    > 
-                      이벤트로 이동 <span className="material-symbols-outlined text-[14px]">arrow_outward</span>
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-            {events.length > 0 && (
-              <div className="h-full border border-dashed border-border-subtle rounded w-32 shrink-0 flex flex-col items-center justify-center text-text-muted hover:bg-surface-container-low transition-colors cursor-pointer gap-2">
-                <span className="material-symbols-outlined text-[24px]">more_horiz</span>
-                <span className="text-label-caps font-label-caps text-[10px] text-center px-2">결과<br/>더보기</span>
-              </div>
+                );
+              })
             )}
           </div>
         </div>
@@ -208,4 +385,3 @@ export const VssSemanticSearch: React.FC = () => {
     </>
   );
 };
-

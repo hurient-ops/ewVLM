@@ -137,3 +137,18 @@ class NvrNode(Base):
     ram_usage = Column(Float, default=0.0)
     storage_total_tb = Column(Float, default=0.0)
     storage_used_tb = Column(Float, default=0.0)
+
+class FeedbackLog(Base):
+    __tablename__ = "feedback_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(String, index=True, nullable=False)
+    camera_id = Column(String, index=True, nullable=True)
+    feedback_type = Column(String, nullable=False) # 'true_positive', 'false_positive', 'misclassified'
+    original_caption = Column(String, nullable=True)
+    corrected_caption = Column(String, nullable=True)
+    corrected_class = Column(String, nullable=True)
+    image_path = Column(String, nullable=True)
+    operator_name = Column(String, default="admin", nullable=False)
+    is_exported_to_dataset = Column(Integer, default=0) # 1 if included in training dataset
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.UTC), nullable=False)
+

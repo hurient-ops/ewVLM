@@ -6,10 +6,15 @@ from typing import Dict, Any
 logger = logging.getLogger("ewVLMSNMP")
 
 try:
-    from pysnmp.hlapi.asyncio import *
+    from pysnmp.hlapi.asyncio import (
+        getCmd, SnmpEngine, CommunityData, UdpTransportTarget,
+        ContextData, ObjectType, ObjectIdentity
+    )
     SNMP_AVAILABLE = True
 except ImportError:
     SNMP_AVAILABLE = False
+    getCmd = SnmpEngine = CommunityData = UdpTransportTarget = None  # type: ignore
+    ContextData = ObjectType = ObjectIdentity = None  # type: ignore
     logger.warning("pysnmp library not installed. SNMP will run in Mock mode.")
 
 class SNMPController:

@@ -82,8 +82,16 @@ export const MobilePatrolApp: React.FC = () => {
     </div>
 {/* Video Frame (Level 2) */}
 <div className="relative w-full h-full min-h-[300px] rounded border-2 border-primary-container video-glow active-glow bg-surface-dim overflow-hidden group">
-<div className="absolute inset-0 flex items-center justify-center text-text-muted">
-<img className="w-full h-full object-cover mix-blend-luminosity opacity-80" data-alt="A gritty, high-contrast security camera feed showing an industrial alleyway at night. The image has a subtle digital noise overlay and a cyan/magenta chromatic aberration effect at the edges. A person in dark clothing is partially visible near a chain-link fence. The lighting is sparse, primarily from a harsh, artificial sodium vapor lamp." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdTy9iuO87bdj5MxYu8ZMG4Nb80hPGkg9g8cVWUbBHFa98GQ79vK4ZAJFqDk5VfsST_oxTGlI2KnQCmnZNljIHYTsUvTpsKFHtPZU7H49SWZ0jqAkXI23rD8Bn7wDAMFqm9rEMisjvb_tqgP_LPC2qPw7l-OhKjzc18BOpeTpbvAOJP5eQEAVNlpASAr7tcx3eHQDotmbeKGZ9HQFLXtjWC38299zQGCi5npkiv7tSYlZ6ePOAQloHsw"/>
+<div className="absolute inset-0 flex items-center justify-center bg-black">
+<img 
+  className="w-full h-full object-cover" 
+  src="http://localhost:8001/stream/cam-01" 
+  alt="Mobile Patrol Live Feed"
+  onError={(e) => {
+    const target = e.target as HTMLImageElement;
+    target.src = "http://localhost:8001/snapshot/cam-01";
+  }}
+/>
 </div>
 {/* OSD Overlays (Level 3) */}
 <div className="absolute top-2 left-2 bg-surface/80 backdrop-blur px-1.5 py-0.5 rounded border border-border-subtle">

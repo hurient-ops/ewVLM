@@ -1,12 +1,25 @@
 import asyncio
-import hashlib
-import json
+import sys
+import os
+import time
 import logging
+import json
+import base64
+import hashlib
 import httpx
 import random
 import uuid
-import os
-import time
+
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+if hasattr(sys.stderr, 'reconfigure'):
+    try:
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,10 +38,17 @@ from snmp_controller import SNMPController
 from ssh_agent_controller import EdgeAgentController
 from video_export_processor import generate_privacy_video
 from mlops_lora_trainer import run_lora_finetuning
+from mlops.dataset_orchestrator import DatasetOrchestrator
+from mlops.inhouse_train_engine import inhouse_train_engine
+from mlops.adapter_manager import adapter_manager
 from dotenv import load_dotenv
+
 
 load_dotenv()
 vlm_bridge = LMStudioVLMBridge()
+
+# Active RTSP/GStreamer Live Pipelines state
+ACTIVE_PIPELINES: Dict[int, Any] = {}
 
 # Create upload dir
 os.makedirs("uploads", exist_ok=True)
@@ -313,7 +333,7 @@ class KafkaManager:
                         crop_box_coordinates=[0,0,0,0],
                         video_segment_chunk_path="/tmp/mock_path.mp4"
                     )
-                    asyncio.create_task(simulate_slow_loop_inference(req))
+                    asyncio.create_task(execute_vlm_inference_pipeline(req))
                 except Exception as e:
                     logger.error(f"Error processing kafka event: {e}")
         except Exception as e:
@@ -478,15 +498,15 @@ Fast-loop YOLOv11 모델이 다음 객체를 1차 감지했습니다: '{escalati
             "person_detected": (
                 "인물/보행자 감지 (정상 보행 여부 객관적 검증)",
                 "사람 객체가 감지되었습니다. 절대로 상황을 침입이나 월담으로 예단하지 마십시오.\n"
-                "- 정상 보행, 통로 통과, 일상적 이동인 경우 ➔ 반드시 'safe' 판정\n"
-                "- 손과 발로 펜스를 기어오르는 명백한 물리적 월담이 4컷 중 입증될 때만 ➔ 'critical_danger' 판정\n"
+                "- 정상 보행, 통로 통과, 일상적 이동인 경우 -> 반드시 'safe' 판정\n"
+                "- 손과 발로 펜스를 기어오르는 명백한 물리적 월담이 4컷 중 입증될 때만 -> 'critical_danger' 판정\n"
                 "- 확실하지 않거나 단순 보행일 경우 무조건 'safe'로 판정하십시오."
             ),
             "unauthorized_entry": (
                 "인물/보행자 감지 (정상 보행 여부 객관적 검증)",
                 "사람 객체가 감지되었습니다. 절대로 상황을 침입이나 월담으로 예단하지 마십시오.\n"
-                "- 정상 보행, 통로 통과, 일상적 이동인 경우 ➔ 반드시 'safe' 판정\n"
-                "- 손과 발로 펜스를 기어오르는 명백한 물리적 월담이 4컷 중 입증될 때만 ➔ 'critical_danger' 판정\n"
+                "- 정상 보행, 통로 통과, 일상적 이동인 경우 -> 반드시 'safe' 판정\n"
+                "- 손과 발로 펜스를 기어오르는 명백한 물리적 월담이 4컷 중 입증될 때만 -> 'critical_danger' 판정\n"
                 "- 확실하지 않거나 단순 보행일 경우 무조건 'safe'로 판정하십시오."
             ),
             "vehicle_detected": (
@@ -1609,23 +1629,74 @@ async def transform_coordinates(camera_id: str, request: TransformRequest):
 class EventFeedbackRequest(BaseModel):
     is_true_positive: bool
     notes: Optional[str] = None
+    corrected_class: Optional[str] = None
+    corrected_caption: Optional[str] = None
+    operator_name: Optional[str] = "admin"
 
 @app.post("/api/v1/events/{escalation_id}/feedback", status_code=status.HTTP_200_OK)
 async def submit_event_feedback(escalation_id: str, req: EventFeedbackRequest, db: AsyncSession = Depends(get_db)):
-    """API Endpoint to collect Active Learning feedback from operators."""
-    # Mocking the DB update
-    logger.info(f"📝 [ACTIVE LEARNING] Feedback received for {escalation_id}: {'True Positive' if req.is_true_positive else 'False Positive (오탐)'}")
+    """API Endpoint to collect and permanently persist Active Learning feedback from operators into SQLite DB."""
+    feedback_type = "true_positive" if req.is_true_positive else "false_positive"
+    if req.corrected_class or req.corrected_caption:
+        feedback_type = "corrected_label"
+
+    event = await crud.get_event_by_escalation_id(db, escalation_id)
+    camera_id = event.camera_id if event else "unknown"
+    original_caption = event.semantic_caption if event else ""
+    image_path = event.video_segment_chunk_path if event else ""
+
+    feedback_entry = await crud.create_feedback_log(db, {
+        "event_id": escalation_id,
+        "camera_id": camera_id,
+        "feedback_type": feedback_type,
+        "original_caption": original_caption,
+        "corrected_caption": req.corrected_caption or req.notes,
+        "corrected_class": req.corrected_class,
+        "image_path": image_path,
+        "operator_name": req.operator_name or "admin"
+    })
+
+    logger.info(f"📝 [ACTIVE LEARNING] Feedback saved to DB (ID={feedback_entry.id}) for {escalation_id}: {feedback_type}")
     
     # Audit log
     tx_hash = hashlib.sha256(f"{escalation_id}FEEDBACK{datetime.utcnow().isoformat()}".encode()).hexdigest()
     await crud.create_audit_log(db, {
-        "username": "api_user",
+        "username": req.operator_name or "admin",
         "action_type": "EVENT_FEEDBACK_SUBMITTED",
-        "resource_query": f"{escalation_id} marked as {'TP' if req.is_true_positive else 'FP'}",
+        "resource_query": f"{escalation_id} marked as {feedback_type} (DB Log #{feedback_entry.id})",
         "tx_hash": tx_hash
     })
     
-    return {"status": "SUCCESS", "message": "Feedback recorded for VLM Active Learning"}
+    return {
+        "status": "SUCCESS", 
+        "feedback_id": feedback_entry.id,
+        "message": "Feedback permanently recorded in DB for 폐쇄망 LoRA 파인튜닝"
+    }
+
+@app.get("/api/v1/events/feedback/list", status_code=status.HTTP_200_OK)
+async def list_event_feedbacks(limit: int = 100, unexported_only: bool = False, db: AsyncSession = Depends(get_db)):
+    """Fetch stored feedback logs for MLOps dataset generation."""
+    feedbacks = await crud.get_feedback_logs(db, limit=limit, unexported_only=unexported_only)
+    return {
+        "status": "SUCCESS",
+        "count": len(feedbacks),
+        "feedbacks": [
+            {
+                "id": fb.id,
+                "event_id": fb.event_id,
+                "camera_id": fb.camera_id,
+                "feedback_type": fb.feedback_type,
+                "original_caption": fb.original_caption,
+                "corrected_caption": fb.corrected_caption,
+                "corrected_class": fb.corrected_class,
+                "image_path": fb.image_path,
+                "operator_name": fb.operator_name,
+                "is_exported_to_dataset": fb.is_exported_to_dataset,
+                "created_at": fb.created_at.isoformat() if fb.created_at else None
+            }
+            for fb in feedbacks
+        ]
+    }
 
 class NLRuleRequest(BaseModel):
     natural_language_prompt: str
@@ -1898,6 +1969,67 @@ async def start_lora_training(request: MLOpsActionRequest, background_tasks: Bac
         "message": "LoRA fine-tuning job successfully scheduled to Database."
     }
 
+# =====================================================================
+# [AIR-GAPPED IN-HOUSE MLOPS] LLaMA-Factory 4-bit QLoRA API Layer
+# =====================================================================
+
+class InHouseTrainRequest(BaseModel):
+    base_model_path: Optional[str] = "google/paligemma-3b-pt-448"
+    lora_rank: Optional[int] = 16
+    lora_alpha: Optional[int] = 32
+    learning_rate: Optional[float] = 0.0002
+    num_epochs: Optional[float] = 3.0
+    batch_size: Optional[int] = 1
+    gradient_accumulation_steps: Optional[int] = 4
+    output_adapter_name: Optional[str] = "ewvlm_active_adapter"
+
+class AdapterActivateRequest(BaseModel):
+    adapter_name: str
+
+@app.post("/api/v1/lora/local-dataset/build", status_code=status.HTTP_200_OK)
+async def build_local_dataset(db: AsyncSession = Depends(get_db)):
+    """Convert accumulated feedback logs into LLaMA-Factory Vision dataset format."""
+    orchestrator = DatasetOrchestrator()
+    result = await orchestrator.build_llama_factory_dataset(db)
+    return result
+
+@app.post("/api/v1/lora/local-train/start", status_code=status.HTTP_200_OK)
+async def start_inhouse_training(req: InHouseTrainRequest):
+    """Start LLaMA-Factory 4-bit QLoRA training in offline air-gapped mode."""
+    params = req.dict()
+    result = await inhouse_train_engine.start_training(params)
+    return result
+
+@app.post("/api/v1/lora/local-train/stop", status_code=status.HTTP_200_OK)
+async def stop_inhouse_training():
+    """Safely terminate currently running in-house training process."""
+    result = await inhouse_train_engine.stop_training()
+    return result
+
+@app.get("/api/v1/lora/local-train/status", status_code=status.HTTP_200_OK)
+async def get_inhouse_training_status():
+    """Get real-time training status, loss curves, and VRAM telemetry."""
+    return inhouse_train_engine.get_status()
+
+@app.get("/api/v1/lora/adapters", status_code=status.HTTP_200_OK)
+async def list_lora_adapters():
+    """List all available LoRA adapter weights in offline storage."""
+    adapters = adapter_manager.list_available_adapters()
+    active_info = adapter_manager.get_active_adapter()
+    return {
+        "status": "SUCCESS",
+        "active_adapter": active_info,
+        "adapters": adapters
+    }
+
+@app.post("/api/v1/lora/adapters/activate", status_code=status.HTTP_200_OK)
+async def activate_lora_adapter(req: AdapterActivateRequest):
+    """Hot-swap selected LoRA adapter into live VLM inference engine without restarting."""
+    result = adapter_manager.activate_adapter(req.adapter_name)
+    return result
+
+
+
 @app.post("/api/v1/mlops/deploy/prompt")
 async def deploy_prompt_gateway(request: MLOpsActionRequest, db = Depends(get_db)):
     """Deploy prompt to edge nodes and save to DB."""
@@ -2161,28 +2293,63 @@ class VLMChatReq(BaseModel):
 
 @app.post("/api/v1/vlm/chat")
 async def vlm_chat(req: VLMChatReq):
-    video_path = "mock_videos/cam-01.mp4" # Default fallback
-    if req.camera_id:
-        req_id_lower = req.camera_id.lower()
+    cam_id = (req.camera_id or "cam-01").strip()
+    base64_img = None
+    
+    # 1. Fast-Loop (포트 8001) 실시간 스냅샷 프레임 조회 시도
+    snapshot_url = f"http://localhost:8001/snapshot/{cam_id}"
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=2.5) as client:
+            resp = await client.get(snapshot_url)
+            if resp.status_code == 200 and resp.content:
+                base64_img = base64.b64encode(resp.content).decode('utf-8')
+    except Exception as e:
+        logger.warning(f"Fast-Loop 실시간 스냅샷 획득 실패({cam_id}): {e}. 비디오 파일/목 프레임으로 폴백합니다.")
+
+    # 2. 로컬 비디오 파일 폴백
+    if not base64_img:
+        video_path = "mock_videos/cam-01.mp4"
+        req_id_lower = cam_id.lower()
         if "01" in req_id_lower: video_path = "mock_videos/cam-01.mp4"
         elif "02" in req_id_lower: video_path = "mock_videos/cam-02.mp4"
         elif "03" in req_id_lower: video_path = "mock_videos/cam-03.mp4"
         elif "04" in req_id_lower: video_path = "mock_videos/cam-04.mp4"
         
-    abs_video_path = os.path.join(os.path.dirname(__file__), video_path)
-    if os.path.exists(abs_video_path):
-        base64_img, _, _ = vlm_bridge.extract_and_encode_frame(abs_video_path, 0)
-    else:
+        abs_video_path = os.path.join(os.path.dirname(__file__), video_path)
+        if os.path.exists(abs_video_path):
+            extracted, _, _ = vlm_bridge.extract_and_encode_frame(abs_video_path, 0)
+            if extracted:
+                base64_img = extracted
+        
+    if not base64_img:
         base64_img = vlm_bridge._generate_mock_base64_image()
         
-    prompt = f"[System] 당신은 산업 관제 VLM입니다. 사용자 질문에 정확하고 간결하게 답변하세요.\n[User] {req.message}"
+    prompt = f"""[System] 당신은 ewVLM 지능형 CCTV 관제 AI 어시스턴트입니다.
+현재 모니터링 중인 카메라 [{cam_id}]의 실시간 시각 프레임(이미지)이 제공되었습니다.
+화면에 보이는 객체, 인물, 차량, 주변 환경 상태를 객관적으로 분석하여 사용자의 질문에 한국어로 친절하고 명확하게 답변하십시오.
+
+[사용자 질문]
+{req.message}"""
+
     try:
         # Use asyncio.to_thread because query_lmstudio_vision is blocking
-        reply, _ = await asyncio.to_thread(vlm_bridge.query_lmstudio_vision, base64_img, "local-model", prompt)
-        return {"status": "SUCCESS", "reply": reply}
+        reply, latency_ms = await asyncio.to_thread(vlm_bridge.query_lmstudio_vision, base64_img, "local-model", prompt)
+        return {
+            "status": "SUCCESS", 
+            "reply": reply, 
+            "camera_id": cam_id,
+            "snapshot_base64": base64_img,
+            "latency_ms": latency_ms
+        }
     except Exception as e:
         logger.error(f"VLM Chat Error: {e}")
-        return {"status": "ERROR", "reply": "VLM 분석 응답 생성 중 오류가 발생했습니다. (LM Studio 상태를 확인하세요)"}
+        return {
+            "status": "ERROR", 
+            "reply": "VLM 분석 응답 생성 중 오류가 발생했습니다. (LM Studio 상태를 확인하세요)",
+            "camera_id": cam_id,
+            "snapshot_base64": base64_img
+        }
 
 @app.get("/api/v1/nvr/status")
 async def get_nvr_status(db = Depends(get_db)):
@@ -2280,7 +2447,80 @@ async def search_semantic_events(req: VssSearchRequest, db: AsyncSession = Depen
     return {"query": query, "results": response}
 
 # =====================================================================
-# ACTIVE LEARNING FEEDBACK API
+# AIR-GAPPED IN-HOUSE MLOps & LoRA HOT-SWAP API
+# =====================================================================
+from mlops.dataset_orchestrator import dataset_orchestrator
+from mlops.inhouse_train_engine import inhouse_train_engine
+from mlops.adapter_manager import adapter_manager
+
+@app.post("/api/v1/lora/local-dataset/build", status_code=status.HTTP_200_OK)
+async def build_local_dataset(db: AsyncSession = Depends(get_db)):
+    """Convert accumulated operator feedback logs into LLaMA-Factory Vision dataset format."""
+    try:
+        res = await dataset_orchestrator.build_llama_factory_dataset(db)
+        return res
+    except Exception as e:
+        logger.error(f"Failed to build local dataset: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class StartTrainRequest(BaseModel):
+    adapter_name: Optional[str] = None
+    epochs: Optional[int] = 3
+    learning_rate: Optional[float] = 2e-4
+    lora_rank: Optional[int] = 16
+    batch_size: Optional[int] = 1
+    quantization_bit: Optional[int] = 4
+
+@app.post("/api/v1/lora/local-train/start", status_code=status.HTTP_200_OK)
+async def start_local_training(req: StartTrainRequest):
+    """Launch asynchronous in-house LLaMA-Factory 4-bit QLoRA training in air-gapped environment."""
+    res = inhouse_train_engine.start_training(req.dict())
+    if res.get("status") == "ERROR":
+        raise HTTPException(status_code=400, detail=res.get("message"))
+    return res
+
+@app.post("/api/v1/lora/local-train/stop", status_code=status.HTTP_200_OK)
+async def stop_local_training():
+    """Cancel or stop currently running in-house training job."""
+    return inhouse_train_engine.stop_training()
+
+@app.get("/api/v1/lora/local-train/status", status_code=status.HTTP_200_OK)
+async def get_local_training_status():
+    """Poll progress and logs of in-house training engine."""
+    return inhouse_train_engine.get_status()
+
+@app.get("/api/v1/lora/adapters", status_code=status.HTTP_200_OK)
+async def get_available_adapters():
+    """List all trained LoRA adapters available in offline models/lora_adapters directory."""
+    adapters = adapter_manager.list_available_adapters()
+    active_info = adapter_manager.get_active_adapter()
+    return {
+        "status": "SUCCESS",
+        "count": len(adapters),
+        "active_adapter": active_info,
+        "adapters": adapters
+    }
+
+class ActivateAdapterRequest(BaseModel):
+    adapter_name: str
+
+@app.post("/api/v1/lora/adapters/activate", status_code=status.HTTP_200_OK)
+async def activate_adapter_hot_swap(req: ActivateAdapterRequest):
+    """Hot-swap active LoRA weights for zero-downtime live VLM inference."""
+    res = adapter_manager.activate_adapter(req.adapter_name)
+    if res.get("status") == "ERROR":
+        raise HTTPException(status_code=404, detail=res.get("message"))
+    return res
+
+@app.get("/api/v1/mlops/hardware/recommendation", status_code=status.HTTP_200_OK)
+async def get_hardware_adaptive_recommendation():
+    """Detect current GPU/VRAM hardware and return dynamically recommended VLM (Qwen2-VL, PaliGemma, Llama 3.2, Solar)."""
+    from mlops.hardware_profiler import hardware_profiler
+    return {
+        "status": "SUCCESS",
+        "data": hardware_profiler.get_adaptive_vlm_recommendation()
+    }
+
 # ==============================================================================
 # 6. Main Executable Entry Point
 # ==============================================================================

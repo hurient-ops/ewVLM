@@ -78,7 +78,15 @@ export const GeometryCalibrationConsole: React.FC = () => {
 </div>
 {/* Simulated Camera Feed with Calibration Overlay */}
 <div className="relative w-full h-full bg-surface-container-lowest grid-overlay overflow-hidden cursor-crosshair" onClick={handleImageClick}>
-<img alt="Camera Feed Background" className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-screen" data-alt="A wide-angle, high-resolution security camera feed looking down at an industrial perimeter fence line during dusk. The scene is slightly desaturated, emphasizing the concrete textures and steel fencing. A digital 3D perspective grid in bright primary violet is overlaid on the ground plane, receding towards the horizon, simulating a calibration tool interface. Technical, precise, dark mode aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBoMFKlCS3W7LW3VPx4asiUb-QnQ4mJw0rZ_tDnHyZ7JFeB7gb-TNnOyFlfQmZIj6bVaNp73b9sIwohnNMTwZ7TQAhoVXYgaKHGtl9xTuSxWEP0oF_dxJLhAnjhPOlEO-SQTaVDgTW-nhbbJ8jiVwBY-QcJMcj3oBevhl-ztrtstonX15QrgJF0NYCyDxUx4SW5DKL8iwq5z3QiBajpE8fh7wDVSqIE1vgef7diEuY3RPkYVtQVxjqm6Q"/>
+<img 
+  alt="Camera Feed Background" 
+  className="absolute inset-0 w-full h-full object-cover opacity-80" 
+  src="http://localhost:8001/stream/cam-01"
+  onError={(e) => {
+    const target = e.target as HTMLImageElement;
+    target.src = "http://localhost:8001/snapshot/cam-01";
+  }}
+/>
 {/* Click Overlay */}
 {clickPos && (
   <div className="absolute pointer-events-none" style={{ left: clickPos.x, top: clickPos.y, transform: 'translate(-50%, -50%)' }}>

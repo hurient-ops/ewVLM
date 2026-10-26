@@ -1,0 +1,182 @@
+[
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "<image> 카메라 [CAM-01]의 현장 영상을 분석하고 관제 위험도를 판단하세요."
+      },
+      {
+        "role": "assistant",
+        "content": "위험 등급: CONFIRMED. 현장 상황: 외곽 1구역 펜스 월담 침입자 감지. 관제사 확인 완료된 실제 위험 상황입니다."
+      }
+    ],
+    "images": [
+      "images/cctv_default.jpg"
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "<image> 카메라 [CAM-02]의 현장 영상을 분석하고 관제 위험도를 판단하세요."
+      },
+      {
+        "role": "assistant",
+        "content": "위험 등급: SAFE. 현장 상황: 오탐(False Alarm)으로 판정됨. 일반적인 환경 요인(그림자/바람/조명)이며 특이사항 없습니다."
+      }
+    ],
+    "images": [
+      "images/cctv_default.jpg"
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "<image> 카메라 [CAM-01]의 현장 영상을 분석하고 관제 위험도를 판단하세요."
+      },
+      {
+        "role": "assistant",
+        "content": "위험 등급: CONFIRMED. 현장 상황: 외곽 1구역 펜스 월담 침입자 감지. 관제사 확인 완료된 실제 위험 상황입니다."
+      }
+    ],
+    "images": [
+      "images/cctv_default.jpg"
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "<image> 카메라 [CAM-02]의 현장 영상을 분석하고 관제 위험도를 판단하세요."
+      },
+      {
+        "role": "assistant",
+        "content": "위험 등급: SAFE. 현장 상황: 오탐(False Alarm)으로 판정됨. 일반적인 환경 요인(그림자/바람/조명)이며 특이사항 없습니다."
+      }
+    ],
+    "images": [
+      "images/cctv_default.jpg"
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "<image> 카메라 [CAM-01]의 현장 영상을 분석하고 관제 위험도를 판단하세요."
+      },
+      {
+        "role": "assistant",
+        "content": "위험 등급: CONFIRMED. 현장 상황: 외곽 1구역 펜스 월담 침입자 감지. 관제사 확인 완료된 실제 위험 상황입니다."
+      }
+    ],
+    "images": [
+      "images/cctv_default.jpg"
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "<image> 카메라 [CAM-02]의 현장 영상을 분석하고 관제 위험도를 판단하세요."
+      },
+      {
+        "role": "assistant",
+        "content": "위험 등급: SAFE. 현장 상황: 오탐(False Alarm)으로 판정됨. 일반적인 환경 요인(그림자/바람/조명)이며 특이사항 없습니다."
+      }
+    ],
+    "images": [
+      "images/cctv_default.jpg"
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "<image> 카메라 [CAM-01]의 현장 영상을 분석하고 관제 위험도를 판단하세요."
+      },
+      {
+        "role": "assistant",
+        "content": "위험 등급: CONFIRMED. 현장 상황: 외곽 1구역 펜스 월담 침입자 감지. 관제사 확인 완료된 실제 위험 상황입니다."
+      }
+    ],
+    "images": [
+      "images/cctv_default.jpg"
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "<image> 카메라 [CAM-02]의 현장 영상을 분석하고 관제 위험도를 판단하세요."
+      },
+      {
+        "role": "assistant",
+        "content": "위험 등급: SAFE. 현장 상황: 오탐(False Alarm)으로 판정됨. 일반적인 환경 요인(그림자/바람/조명)이며 특이사항 없습니다."
+      }
+    ],
+    "images": [
+      "images/cctv_default.jpg"
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "<image> 카메라 [CAM-01]의 현장 영상을 분석하고 관제 위험도를 판단하세요."
+      },
+      {
+        "role": "assistant",
+        "content": "위험 등급: CONFIRMED. 현장 상황: 외곽 1구역 펜스 월담 침입자 감지. 관제사 확인 완료된 실제 위험 상황입니다."
+      }
+    ],
+    "images": [
+      "images/cctv_default.jpg"
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "<image> 카메라 [CAM-02]의 현장 영상을 분석하고 관제 위험도를 판단하세요."
+      },
+      {
+        "role": "assistant",
+        "content": "위험 등급: SAFE. 현장 상황: 오탐(False Alarm)으로 판정됨. 일반적인 환경 요인(그림자/바람/조명)이며 특이사항 없습니다."
+      }
+    ],
+    "images": [
+      "images/cctv_default.jpg"
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "<image> 카메라 [CAM-01]의 현장 영상을 분석하고 관제 위험도를 판단하세요."
+      },
+      {
+        "role": "assistant",
+        "content": "위험 등급: CONFIRMED. 현장 상황: 외곽 1구역 펜스 월담 침입자 감지. 관제사 확인 완료된 실제 위험 상황입니다."
+      }
+    ],
+    "images": [
+      "images/cctv_default.jpg"
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "<image> 카메라 [CAM-02]의 현장 영상을 분석하고 관제 위험도를 판단하세요."
+      },
+      {
+        "role": "assistant",
+        "content": "위험 등급: SAFE. 현장 상황: 오탐(False Alarm)으로 판정됨. 일반적인 환경 요인(그림자/바람/조명)이며 특이사항 없습니다."
+      }
+    ],
+    "images": [
+      "images/cctv_default.jpg"
+    ]
+  }
+]

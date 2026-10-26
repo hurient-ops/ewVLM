@@ -33,8 +33,16 @@ export const HardwareSelfHealingShell: React.FC = () => {
 <div className="lg:w-2/3 flex-1 flex flex-col gap-unit h-full min-h-0">
 {/* Video Feed Area */}
 <div className="relative bg-surface rounded flex-grow border-2 border-border-subtle overflow-hidden flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
-{/* Using placeholder for camera feed */}
-<img className="absolute inset-0 w-full h-full object-cover opacity-60" data-alt="A highly detailed, gritty, high-contrast industrial security camera feed showing an outdoor perimeter at dusk. The scene is illuminated by harsh sodium-vapor floodlights, casting deep shadows across concrete barriers and chain-link fences. The image has a subtle digital noise grain and scanlines typical of a tactical surveillance feed. The overall mood is tense and secure, fitting a mission-critical military or high-end corporate facility context." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBL6lv80Gg85sr0F5jplwPRxrDrvg32Lk8bS-yRabyvPd6vg1ohQ1JMo62-rKH7zdu1C3bedK7TYVt0a8EGtZVgPhpjclNQe4lB2Igf6fbQrGIsYH3dlr_14O1b-KtipZ3bcX82pSVX879Nxml0iQRL2uEb_zBTcdGpyimdyiG1rg3AKaGhC0EPFagnae2UyEeqspZwxnAJGpRxw3DO1XTl7MEi79iiAUyeHE2QcRkI2wquTYUyXBxyJQ"/>
+{/* Live Camera Feed */}
+<img 
+  className="absolute inset-0 w-full h-full object-cover" 
+  src="http://localhost:8001/stream/cam-01" 
+  alt="Self-Healing Camera Feed"
+  onError={(e) => {
+    const target = e.target as HTMLImageElement;
+    target.src = "http://localhost:8001/snapshot/cam-01";
+  }}
+/>
 {/* OSD Elements */}
 <div className="absolute top-osd-margin left-osd-margin text-osd-label font-osd-label text-white bg-black/50 px-2 py-1 rounded">CAM-042-NORTH // 4K 60FPS</div>
 <div className="absolute top-osd-margin right-osd-margin flex gap-2">

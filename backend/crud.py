@@ -463,3 +463,39 @@ async def seed_db_if_empty(db: AsyncSession):
         db.add_all(dummy_nvrs)
 
     await db.commit()
+
+async def create_feedback_log(db: AsyncSession, feedback_data: dict):
+    db_feedback = models.FeedbackLog(
+        event_id=feedback_data.get("event_id"),
+        camera_id=feedback_data.get("camera_id"),
+        feedback_type=feedback_data.get("feedback_type", "true_positive"),
+        original_caption=feedback_data.get("original_caption"),
+        corrected_caption=feedback_data.get("corrected_caption"),
+        corrected_class=feedback_data.get("corrected_class"),
+        image_path=feedback_data.get("image_path"),
+        operator_name=feedback_data.get("operator_name", "admin"),
+        created_at=datetime.datetime.now(datetime.UTC)
+    )
+    db.add(db_feedback)
+    await db.commit()
+    await db.refresh(db_feedback)
+    return db_feedback
+
+async def get_feedback_logs(db: AsyncSession, limit: int = 100, unexported_only: bool = False):
+    query = select(models.FeedbackLog).order_by(desc(models.FeedbackLog.created_at))
+    if unexported_only:
+        query = query.where(models.FeedbackLog.is_exported_to_dataset == 0)
+    query = query.limit(limit)
+    result = await db.execute(query)
+    return result.scalars().all()
+
+async def mark_feedbacks_as_exported(db: AsyncSession, feedback_ids: list):
+    result = await db.execute(
+        select(models.FeedbackLog).where(models.FeedbackLog.id.in_(feedback_ids))
+    )
+    feedbacks = result.scalars().all()
+    for fb in feedbacks:
+        fb.is_exported_to_dataset = 1
+    await db.commit()
+    return len(feedbacks)
+

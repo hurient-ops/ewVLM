@@ -89,8 +89,18 @@ export const PrivacyExportWorkshop: React.FC = () => {
 </div>
 {/* Video Frame Container */}
 <div className="relative w-full max-w-4xl aspect-video border-[2px] border-border-subtle rounded bg-black shadow-[0_4px_12px_rgba(0,0,0,0.5)] overflow-hidden">
-{/* Video Placeholder Image */}
-<div className="absolute inset-0 bg-cover bg-center opacity-85" data-alt="A still frame from a high-definition CCTV security camera monitoring a busy urban intersection at night. The lighting is characterized by harsh, high-contrast neon signs and streetlamps piercing through a dark, moody atmosphere. Several vehicles and pedestrians are visible, serving as subjects for automated privacy redaction. The visual style is realistic, gritty, and industrial-grade, fitting a professional surveillance system context." style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBWzN3ugr8EzYLAirjd1Y2fPLIJKeU_lcL5s6sfxgZ1gEYfAW6hq7-8usrYQmzaPqB4zwazYAwvdGv3gMCDRg-aQbQWoK1PZcnK0in7AgG2LP4cyuTiix3v_14ZnM3P6B8QkcvlDEqRkDLSEZVgv_opzw79H9aXLTknsGYerF8ot3ybXqSqkocg_9nZuR9qTOaSPdZSa-IZkN_DASa1R67mlxCnBEnojBay8a-2HB1eoDKe7RyM022eGw')" }}></div>
+{/* Video Frame Feed */}
+<div className="absolute inset-0 bg-black flex items-center justify-center">
+<img 
+  src="http://localhost:8001/stream/cam-01" 
+  alt="Live Surveillance Feed" 
+  className="w-full h-full object-cover opacity-85"
+  onError={(e) => {
+    const target = e.target as HTMLImageElement;
+    target.src = "http://localhost:8001/snapshot/cam-01";
+  }}
+/>
+</div>
 {/* OSD Overlays / Redaction Zones */}
 {/* Automated Face Blur */}
 <div className="absolute top-[35%] left-[45%] w-16 h-16 border-2 border-primary-container/80 bg-black/60 backdrop-blur-xl rounded-sm flex items-start justify-start p-1 shadow-[0_0_8px_rgba(124,58,237,0.4)]">

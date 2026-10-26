@@ -90,9 +90,20 @@ export const IpAudioBroadcastConsole: React.FC = () => {
 <span className="text-mono-data font-mono-data text-primary px-2 py-0.5 bg-primary-fixed-dim bg-opacity-20 rounded border border-primary">준비</span>
 </div>
 <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
-{/* Decorative visualization */}
-<div className="absolute inset-0 opacity-20 pointer-events-none">
-<div className="w-full h-full bg-cover bg-center" data-alt="A dark, abstract digital visualization of soundwaves in an industrial setting. Glowing violet lines undulate against a deep black-blue background, representing audio frequencies. The style is modern, technical, and data-driven." style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDLH-4kJeCx1BSIlwKKZaysB9eowJHlTof-AjdZMo0roJ16FmK6YBJh3BuA2KyL4_nJTCZMv5zJ5zrZlFMbAhR0AFfqddC8USXZZ3KT2ciEsFPECKln7wXHM3oCM-Q1_0CGTEiv9qHNOwGnELXTJpTOIGL6FGbqX6DOxxmjIhVx9itWU_cu7ekhQfVwGqZf138XzQsHr4w8zVJYItvXMS6G_wJ__WhmEkUv8av5YgTyDSyaYP4pz7Cwnw')" }}></div>
+{/* Audio Waveform visualization */}
+<div className="absolute inset-0 opacity-30 pointer-events-none flex items-center justify-center overflow-hidden">
+  <div className="flex items-center gap-1.5 h-24">
+    {[30, 60, 45, 80, 95, 60, 40, 75, 90, 50, 70, 85, 40, 60].map((h, i) => (
+      <div 
+        key={i} 
+        className="w-1.5 bg-primary rounded-full transition-all duration-300"
+        style={{ 
+          height: isPttActive ? `${h}%` : '20%',
+          opacity: isPttActive ? 0.9 : 0.3
+        }}
+      />
+    ))}
+  </div>
 </div>
 <button 
   className={`w-32 h-32 rounded-full border-4 flex flex-col items-center justify-center gap-2 transition-all shadow-[0_4px_12px_rgba(0,0,0,0.5)] z-10 ${isPttActive ? 'bg-danger/20 border-danger' : 'bg-surface-container-highest border-surface-variant hover:border-primary'}`} 
